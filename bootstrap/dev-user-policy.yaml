@@ -71,7 +71,9 @@ Resources:
           - Sid: LambdaScoped
             Effect: Allow
             Action: lambda:*
-            Resource: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:kbdb-dev-*
+            Resource:
+              - !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:kbdb-api-kbdb-dev-*
+              - !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:kbdb-moderate-kbdb-dev-*
           - Sid: ApiGatewayManagement
             Effect: Allow
             Action: apigateway:*
@@ -125,6 +127,10 @@ Resources:
               - s3:GetBucketTagging
               - s3:PutBucketCORS
               - s3:GetBucketCORS
+              - s3:PutBucketNotification
+              - s3:GetBucketNotification
+              - s3:PutLifecycleConfiguration
+              - s3:GetLifecycleConfiguration
               - s3:ListBucket
             Resource: !Sub arn:aws:s3:::kbdb-images-${AWS::AccountId}-kbdb-dev-*
           - Sid: ImagesBucketObjects
@@ -158,9 +164,45 @@ Resources:
               - logs:DeleteLogGroup
               - logs:PutRetentionPolicy
               - logs:TagResource
-            # template.yaml's ApiFunctionLogGroup. Mirrors
-            # bootstrap/ci-oidc-role.yaml's equivalent statement.
-            Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-api-kbdb-dev-*
+            # template.yaml's ApiFunctionLogGroup and ModerateFunctionLogGroup.
+            # Mirrors bootstrap/ci-oidc-role.yaml's equivalent statement.
+            Resource:
+              - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-api-kbdb-dev-*
+              - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-moderate-kbdb-dev-*
+          # template.yaml's ModerationDLQ, named <StackName>-ModerationDLQ-<random>.
+          # Mirrors bootstrap/ci-oidc-role.yaml's equivalent statement.
+          - Sid: SqsScoped
+            Effect: Allow
+            Action:
+              - sqs:CreateQueue
+              - sqs:DeleteQueue
+              - sqs:GetQueueAttributes
+              - sqs:SetQueueAttributes
+              - sqs:TagQueue
+              - sqs:UntagQueue
+              - sqs:ListQueueTags
+            Resource: !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:kbdb-dev-*
+          # template.yaml's AlarmTopic and alarms, created only when the
+          # environment sets AlarmEmail. CI never does, so ci-oidc-role.yaml
+          # has no equivalent.
+          - Sid: AlarmsScoped
+            Effect: Allow
+            Action:
+              - sns:CreateTopic
+              - sns:DeleteTopic
+              - sns:GetTopicAttributes
+              - sns:SetTopicAttributes
+              - sns:Subscribe
+              - sns:Unsubscribe
+              - sns:ListSubscriptionsByTopic
+              - sns:TagResource
+              - cloudwatch:PutMetricAlarm
+              - cloudwatch:DeleteAlarms
+              - cloudwatch:DescribeAlarms
+              - cloudwatch:TagResource
+            Resource:
+              - !Sub arn:aws:sns:${AWS::Region}:${AWS::AccountId}:kbdb-dev-*
+              - !Sub arn:aws:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:kbdb-dev-*
           - Sid: EcrAuth
             Effect: Allow
             Action: ecr:GetAuthorizationToken

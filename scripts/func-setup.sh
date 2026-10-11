@@ -73,6 +73,7 @@ if [[ ! -f "$CERT_DIR/truststore.p12" ]] ||
     { echo "func-setup: could not build $CERT_DIR/truststore.p12" >&2; exit 1; }
 fi
 
+mkdir -p .floci-ai-mock
 docker compose -f docker-compose.floci.yml up -d floci
 
 for _ in $(seq 1 30); do
@@ -113,6 +114,7 @@ sam deploy \
   --no-confirm-changeset --no-fail-on-empty-changeset \
   --resolve-s3 \
   --image-repositories "ApiFunction=$REPO_URI" \
+  --image-repositories "ModerateFunction=$REPO_URI" \
   --capabilities CAPABILITY_IAM \
   --parameter-overrides \
     "OidcIssuerBaseUrl=$ISSUER" \
@@ -128,12 +130,24 @@ out() {
 
 API_ID=$(aws apigatewayv2 get-apis --query 'Items[0].ApiId' --output text)
 
+# floci drops ImagesBucket's NotificationConfiguration on deploy (#503), so
+# set it directly. Remove once floci applies it.
+IMAGES_BUCKET=$(out ImagesBucketName)
+aws s3api put-bucket-notification-configuration --bucket "$IMAGES_BUCKET" \
+  --notification-configuration "{\"LambdaFunctionConfigurations\":[{\"LambdaFunctionArn\":\"$(out ModerateFunctionArn)\",\"Events\":[\"s3:ObjectCreated:*\"]}]}"
+
+# docker-compose.floci.yml mounts this directory and points floci's
+# AI_MOCK_CONFIG at mock.json in it; the functional suite writes canned
+# Rekognition responses there.
+AI_MOCK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/.floci-ai-mock"
+
 # func-test.sh sources this directly, so `mise run func-test` picks up a
 # fresh deploy's stack-derived values without any manual export step.
 ENV_FILE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/.env.floci"
 cat <<ENVEOF > "$ENV_FILE"
 export KBDB_API_BASE_URL='$ENDPOINT/execute-api/$API_ID/\$default'
 export KBDB_DYNAMODB_ENDPOINT_URL=$ENDPOINT
+export KBDB_S3_ENDPOINT_URL=$ENDPOINT
 export KBDB_SWITCH_TABLE_NAME=$(out SwitchTableName)
 export KBDB_KEYBOARD_TABLE_NAME=$(out KeyboardTableName)
 export KBDB_KEYCAP_SET_TABLE_NAME=$(out KeycapSetTableName)
@@ -141,6 +155,8 @@ export KBDB_BUILD_TABLE_NAME=$(out BuildTableName)
 export KBDB_PROFILE_TABLE_NAME=$(out ProfileTableName)
 export KBDB_PROFILE_USERNAME_TABLE_NAME=$(out ProfileUsernameTableName)
 export KBDB_UPLOAD_COUNTER_TABLE_NAME=$(out UploadCounterTableName)
+export KBDB_IMAGES_BUCKET_NAME=$IMAGES_BUCKET
+export KBDB_AI_MOCK_CONFIG='$AI_MOCK_DIR/mock.json'
 export KBDB_OIDC_ISSUER='$ISSUER'
 export KBDB_OIDC_AUDIENCE='$AUDIENCE'
 export KBDB_OIDC_SIGNING_KEY_PATH='$KEY_PATH'

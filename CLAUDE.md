@@ -51,6 +51,10 @@ Shared business rules (deliberately transport-neutral, called by both REST and M
 - `profileread/` — resolves a profile identifier and applies the discoverable-or-owner visibility rule.
 - `profilevalidate/` — field-level rules for a profile's writable body.
 
+Image moderation:
+- `imagekey/` — parses an image's object key back into the entity, owner and IDs it belongs to.
+- `moderation/` — the moderation function's logic (`functions/moderate` only wires it to Lambda): read the image's status first, ask Rekognition, write approved/rejected. `moderation.Images` routes a key to its repository's status read/write, for the operator CLI too.
+
 Follow this same split when adding an entity: a handler per route in `handlers/` and a tool in `mcp/`, both thin; the repository interface in `repository/` with its implementation in `repository/dynamo/`; mapping in `repoapi/`/`repomcp/`; and any rule both transports enforce in its own shared package rather than duplicated on each side or inlined in `router.go`.
 
 **Lambda entrypoints live in `functions/`, standalone CLIs in `cmd/`.** `functions/api/` deliberately does not follow the `golang-standards/project-layout` convention of `cmd/<binary-name>/` — this was raised and considered explicitly, and `functions/api/` was kept because it more directly signals "this is a Lambda function" in this AWS-specific codebase. Don't "fix" this to `cmd/api/`; it's an intentional, discussed deviation, not an oversight. `cmd/` is not unused, though — `cmd/kbdb-migrate/` (the dump/restore CLI, built via `mise run migrate-build`) is a real binary and belongs there. `internal/` and `test/` follow the convention.

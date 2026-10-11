@@ -119,7 +119,9 @@ Resources:
               - Sid: LambdaScoped
                 Effect: Allow
                 Action: lambda:*
-                Resource: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:kbdb-api-kbdb-pr-*
+                Resource:
+                  - !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:kbdb-api-kbdb-pr-*
+                  - !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:kbdb-moderate-kbdb-pr-*
               - Sid: ApiGatewayManagement
                 Effect: Allow
                 Action: apigateway:*
@@ -188,6 +190,10 @@ Resources:
                   - s3:GetBucketTagging
                   - s3:PutBucketCORS
                   - s3:GetBucketCORS
+                  - s3:PutBucketNotification
+                  - s3:GetBucketNotification
+                  - s3:PutLifecycleConfiguration
+                  - s3:GetLifecycleConfiguration
                   - s3:ListBucket
                 Resource: !Sub arn:aws:s3:::kbdb-images-${AWS::AccountId}-kbdb-pr-*
               - Sid: ImagesBucketObjects
@@ -242,6 +248,7 @@ Resources:
                   - dynamodb:DescribeTimeToLive
                   - dynamodb:UpdateTimeToLive
                   - dynamodb:PutItem
+                  - dynamodb:GetItem
                   - dynamodb:DeleteItem
                 Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/kbdb-pr-*
               - Sid: LogsScoped
@@ -253,7 +260,21 @@ Resources:
                   - logs:TagResource
                 Resource:
                   - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-api-kbdb-pr-*
+                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-moderate-kbdb-pr-*
                   - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/apigateway/kbdb-api-kbdb-pr-*
+              # template.yaml's ModerationDLQ. CloudFormation names it
+              # <StackName>-ModerationDLQ-<random>.
+              - Sid: SqsScoped
+                Effect: Allow
+                Action:
+                  - sqs:CreateQueue
+                  - sqs:DeleteQueue
+                  - sqs:GetQueueAttributes
+                  - sqs:SetQueueAttributes
+                  - sqs:TagQueue
+                  - sqs:UntagQueue
+                  - sqs:ListQueueTags
+                Resource: !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:kbdb-pr-*
               - Sid: LogsDelivery
                 Effect: Allow
                 Action:

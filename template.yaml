@@ -1,9 +1,10 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  kbdb - keyboard database. Infrastructure for the kbdb API: a single
-  Lambda function fronted by an HTTP API with a native OIDC JWT authorizer,
-  DynamoDB tables, an S3 bucket for images, and a budget cost tripwire.
+  kbdb - keyboard database. Infrastructure for the kbdb API: a Lambda
+  function fronted by an HTTP API with a native OIDC JWT authorizer, DynamoDB
+  tables, an S3 bucket for images with an event-driven moderation function,
+  and a budget cost tripwire.
 
 Globals:
   Function:
@@ -75,9 +76,31 @@ Parameters:
       Image upload URLs issued per UTC day across every user. Each upload can
       trigger a paid moderation call, so this bounds that cost. Once reached,
       upload-URL requests get 429 until the next UTC day.
+  RejectedImageExpirationDays:
+    Type: Number
+    Default: 30
+    MinValue: 1
+    Description: >-
+      Days a rejected image's file is kept (for reviewing a false positive)
+      before the bucket's lifecycle rule deletes it.
+  ModerationCalibration:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: >-
+      'true' has the moderation function log every label Rekognition sees,
+      at any confidence, for tuning internal/moderation's thresholds.
+      Decisions are unchanged.
+  AlarmEmail:
+    Type: String
+    Default: ''
+    Description: >-
+      Address the alarm topic emails (confirm the subscription by hand
+      once). Empty, the default, creates no topic and no alarms.
 
 Conditions:
   HasCustomDomain: !Not [!Equals [!Ref CustomDomainName, '']]
+  HasAlarmEmail: !Not [!Equals [!Ref AlarmEmail, '']]
 
 Resources:
   # Holds user-uploaded images (build photos, keycap kit renders). Private -
@@ -86,6 +109,8 @@ Resources:
   # environments isolated).
   ImagesBucket:
     Type: AWS::S3::Bucket
+    # S3 checks it may invoke the function when the notification is set.
+    DependsOn: ModerateFunctionS3Permission
     Properties:
       # AccountId+StackName suffix: S3 bucket names are globally unique, and
       # multiple kbdb-pr-<N> stacks share the kbdb-ci account.
@@ -108,6 +133,19 @@ Resources:
             AllowedHeaders: ["*"]
             ExposedHeaders: [ETag]
             MaxAge: 3000
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: s3:ObjectCreated:*
+            Function: !GetAtt ModerateFunction.Arn
+      # The moderation function tags each image it rejects.
+      LifecycleConfiguration:
+        Rules:
+          - Id: expire-rejected-images
+            Status: Enabled
+            TagFilters:
+              - Key: moderation
+                Value: rejected
+            ExpirationInDays: !Ref RejectedImageExpirationDays
 
   # ApiFunction assumes this role solely to sign presigned GET URLs. A
   # presigned URL dies with the credentials that signed it, and Lambda's own
@@ -362,6 +400,139 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/apigateway/kbdb-api-${AWS::StackName}
       RetentionInDays: 14
+
+  # Longer than RejectedImageExpirationDays's default, so a rejection's
+  # decision line is still here for as long as its file can be reviewed. 60,
+  # not 30 (which would race the file's expiry) or 31 (not a valid value).
+  ModerateFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/kbdb-moderate-${AWS::StackName}
+      RetentionInDays: 60
+
+  # Events the moderation function still failed after Lambda's retries,
+  # kept for a manual re-drive. 14 days is SQS's maximum.
+  ModerationDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600
+
+  # Invoked by ImagesBucket for every uploaded image; marks it approved or
+  # rejected - see internal/moderation. Packaged as a container image like
+  # ApiFunction, without the web adapter. No ReservedConcurrentExecutions:
+  # setting it to 0 by hand is the pause switch, and a deploy mustn't undo
+  # a pause.
+  ModerateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub kbdb-moderate-${AWS::StackName}
+      PackageType: Image
+      Architectures:
+        - arm64
+      # Decoding and re-encoding a WebP needs more than the default.
+      MemorySize: 512
+      Timeout: 30
+      Environment:
+        Variables:
+          SWITCH_TABLE_NAME: !Ref SwitchTable
+          KEYBOARD_TABLE_NAME: !Ref KeyboardTable
+          KEYCAP_SET_TABLE_NAME: !Ref KeycapSetTable
+          BUILD_TABLE_NAME: !Ref BuildTable
+          PROFILE_TABLE_NAME: !Ref ProfileTable
+          PROFILE_USERNAME_TABLE_NAME: !Ref ProfileUsernameTable
+          MODERATION_CALIBRATION: !Ref ModerationCalibration
+      # The bucket is named by string, not !GetAtt: ImagesBucket already
+      # depends on this function through its notification.
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:PutObjectTagging
+              Resource: !Sub "arn:aws:s3:::kbdb-images-${AWS::AccountId}-${AWS::StackName}/*"
+            - Effect: Allow
+              Action: rekognition:DetectModerationLabels
+              Resource: "*"
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:UpdateItem
+              Resource:
+                - !GetAtt SwitchTable.Arn
+                - !GetAtt KeyboardTable.Arn
+                - !GetAtt KeycapSetTable.Arn
+                - !GetAtt BuildTable.Arn
+                - !GetAtt ProfileTable.Arn
+      # Two retries, then the DLQ. Events throttled by a pause keep retrying
+      # for up to 6 hours, so a short pause catches up on its own.
+      EventInvokeConfig:
+        MaximumRetryAttempts: 2
+        MaximumEventAgeInSeconds: 21600
+        DestinationConfig:
+          OnFailure:
+            Type: SQS
+            Destination: !GetAtt ModerationDLQ.Arn
+    Metadata:
+      Dockerfile: functions/moderate/Dockerfile
+      DockerContext: .
+      DockerTag: latest
+
+  ModerateFunctionS3Permission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt ModerateFunction.Arn
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !Sub "arn:aws:s3:::kbdb-images-${AWS::AccountId}-${AWS::StackName}"
+
+  AlarmTopic:
+    Type: AWS::SNS::Topic
+    Condition: HasAlarmEmail
+    Properties:
+      Subscription:
+        - Protocol: email
+          Endpoint: !Ref AlarmEmail
+
+  # Any event in the DLQ is an image left pending until it's re-driven.
+  ModerationDLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasAlarmEmail
+    Properties:
+      AlarmDescription: Moderation events failed every retry and are waiting in the DLQ
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt ModerationDLQ.QueueName
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref AlarmTopic
+
+  ModerateFunctionErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasAlarmEmail
+    Properties:
+      AlarmDescription: The moderation function returned errors
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref ModerateFunction
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref AlarmTopic
 
   # Single Lambda function for all routes (REST entities + MCP), not split
   # by protocol or by entity - see plan rationale. Packaged as a container
@@ -1051,3 +1222,9 @@ Outputs:
   UploadCounterTableName:
     Description: DynamoDB table counting image upload URLs issued per UTC day
     Value: !Ref UploadCounterTable
+  ModerateFunctionArn:
+    Description: The moderation function ImagesBucket invokes for each upload
+    Value: !GetAtt ModerateFunction.Arn
+  ModerationDLQUrl:
+    Description: Moderation events that failed every retry
+    Value: !Ref ModerationDLQ
