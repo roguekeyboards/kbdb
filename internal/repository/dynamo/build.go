@@ -413,7 +413,7 @@ func (r *BuildRepository) AddImage(ctx context.Context, buildID string, image re
 	if !ok {
 		return fmt.Errorf("adding image %q to build: %w", image.ImageID, errInvalidMapKey)
 	}
-	entry := repository.BuildImageEntry{Path: image.Path, Seq: int(time.Now().UnixNano())}
+	entry := repository.BuildImageEntry{Path: image.Path, Seq: int(time.Now().UnixNano()), Status: repository.ImageStatusPending}
 	update := expression.Set(imagePath, expression.Value(entry))
 	cond := expression.AttributeExists(expression.Name("id")).
 		And(expression.AttributeNotExists(imagePath)).
@@ -554,6 +554,40 @@ func (r *BuildRepository) SetImageGetCache(ctx context.Context, ownerID, buildID
 			return false, nil
 		}
 		return false, fmt.Errorf("setting image %q get-cache for build %q owner %q: %w", imageID, buildID, ownerID, err)
+	}
+
+	return true, nil
+}
+
+// SetImageStatus implements repository.BuildRepository.
+func (r *BuildRepository) SetImageStatus(ctx context.Context, ownerID, buildID, imageID string, forPath repository.BuildImageKey, from, to repository.ImageStatus, reason *string) (bool, error) {
+	imagePath, ok := mapKey("images", imageID)
+	if !ok {
+		return false, nil
+	}
+	update := statusUpdate(field(imagePath, "status"), field(imagePath, "rejection_reason"), to, reason)
+	cond := expression.AttributeExists(imagePath).
+		And(field(imagePath, "path").Equal(expression.Value(forPath))).
+		And(statusIs(field(imagePath, "status"), from))
+
+	expr, err := expression.NewBuilder().WithUpdate(update).WithCondition(cond).Build()
+	if err != nil {
+		return false, fmt.Errorf("building image status update for build %q: %w", buildID, err)
+	}
+
+	_, err = r.client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+		TableName:                 &r.tableName,
+		Key:                       buildKey(ownerID, buildID),
+		UpdateExpression:          expr.Update(),
+		ConditionExpression:       expr.Condition(),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+	})
+	if err != nil {
+		if _, ok := errors.AsType[*types.ConditionalCheckFailedException](err); ok {
+			return false, nil
+		}
+		return false, fmt.Errorf("setting image %q status for build %q owner %q: %w", imageID, buildID, ownerID, err)
 	}
 
 	return true, nil

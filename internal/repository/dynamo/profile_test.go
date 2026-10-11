@@ -1363,3 +1363,83 @@ func (s *ProfileRepositorySuite) TestListPublic_QueryError_Propagates() {
 
 	s.Require().Error(err)
 }
+
+func (s *ProfileRepositorySuite) TestSetAvatarPath_MarksPending() {
+	var captured *dynamodb.UpdateItemInput
+	s.mockClient.EXPECT().
+		UpdateItem(mock.Anything, mock.MatchedBy(func(in *dynamodb.UpdateItemInput) bool {
+			captured = in
+			return true
+		})).
+		Return(&dynamodb.UpdateItemOutput{}, nil)
+
+	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	s.Require().NoError(s.repo.SetAvatarPath(ctx, "profiles/alice/avatar/up1"))
+
+	s.True(setsAttr(captured, "avatar_status"))
+	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "pending"))
+	s.True(removesAttr(captured, "avatar_rejection_reason"))
+}
+
+func (s *ProfileRepositorySuite) TestClearAvatarPath_ClearsStatus() {
+	var captured *dynamodb.UpdateItemInput
+	s.mockClient.EXPECT().
+		UpdateItem(mock.Anything, mock.MatchedBy(func(in *dynamodb.UpdateItemInput) bool {
+			captured = in
+			return true
+		})).
+		Return(&dynamodb.UpdateItemOutput{}, nil)
+
+	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	_, err := s.repo.ClearAvatarPath(ctx)
+	s.Require().NoError(err)
+
+	s.True(removesAttr(captured, "avatar_status"))
+	s.True(removesAttr(captured, "avatar_rejection_reason"))
+}
+
+func (s *ProfileRepositorySuite) TestSetAvatarStatus_ConditionedOnPathAndStatus() {
+	var captured *dynamodb.UpdateItemInput
+	s.mockClient.EXPECT().
+		UpdateItem(mock.Anything, mock.MatchedBy(func(in *dynamodb.UpdateItemInput) bool {
+			captured = in
+			return true
+		})).
+		Return(&dynamodb.UpdateItemOutput{}, nil)
+
+	reason := "unprocessable"
+	ok, err := s.repo.SetAvatarStatus(s.T().Context(), "alice", "profiles/alice/avatar/up1", repository.ImageStatusPending, repository.ImageStatusRejected, &reason)
+
+	s.Require().NoError(err)
+	s.True(ok)
+	s.Equal("alice", captured.Key["user_id"].(*types.AttributeValueMemberS).Value)
+	s.True(names(captured.ExpressionAttributeNames, "avatar_path", "avatar_status"))
+	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "profiles/alice/avatar/up1"))
+	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "pending"))
+	s.True(setsAttr(captured, "avatar_status"))
+	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "rejected"))
+	s.True(setsAttr(captured, "avatar_rejection_reason"))
+	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "unprocessable"))
+}
+
+func (s *ProfileRepositorySuite) TestSetAvatarStatus_ConditionFails_ReturnsFalseWithoutError() {
+	s.mockClient.EXPECT().
+		UpdateItem(mock.Anything, mock.Anything).
+		Return(nil, &types.ConditionalCheckFailedException{})
+
+	ok, err := s.repo.SetAvatarStatus(s.T().Context(), "alice", "profiles/alice/avatar/up1", repository.ImageStatusPending, repository.ImageStatusApproved, nil)
+
+	s.Require().NoError(err)
+	s.False(ok)
+}
+
+func (s *ProfileRepositorySuite) TestSetAvatarStatus_UpdateItemError_Propagates() {
+	s.mockClient.EXPECT().
+		UpdateItem(mock.Anything, mock.Anything).
+		Return(nil, errors.New("dynamodb: throttled"))
+
+	ok, err := s.repo.SetAvatarStatus(s.T().Context(), "alice", "profiles/alice/avatar/up1", repository.ImageStatusPending, repository.ImageStatusApproved, nil)
+
+	s.Require().Error(err)
+	s.False(ok)
+}

@@ -424,6 +424,8 @@ func (r *ProfileRepository) SetAvatarPath(ctx context.Context, key repository.Pr
 	}
 
 	update := expression.Set(expression.Name("avatar_path"), expression.Value(key)).
+		Set(expression.Name("avatar_status"), expression.Value(repository.ImageStatusPending)).
+		Remove(expression.Name("avatar_rejection_reason")).
 		Remove(expression.Name("get_url")).
 		Remove(expression.Name("get_url_expires_at"))
 	expr, err := expression.NewBuilder().
@@ -462,6 +464,8 @@ func (r *ProfileRepository) ClearAvatarPath(ctx context.Context) (*repository.Pr
 	}
 
 	update := expression.Remove(expression.Name("avatar_path")).
+		Remove(expression.Name("avatar_status")).
+		Remove(expression.Name("avatar_rejection_reason")).
 		Remove(expression.Name("get_url")).
 		Remove(expression.Name("get_url_expires_at"))
 	expr, err := expression.NewBuilder().
@@ -526,6 +530,36 @@ func (r *ProfileRepository) SetImageGetCache(ctx context.Context, ownerID string
 			return false, nil
 		}
 		return false, fmt.Errorf("setting image get-cache for user %q: %w", ownerID, err)
+	}
+
+	return true, nil
+}
+
+// SetAvatarStatus implements repository.ProfileRepository.
+func (r *ProfileRepository) SetAvatarStatus(ctx context.Context, ownerID string, forPath repository.ProfileImageKey, from, to repository.ImageStatus, reason *string) (bool, error) {
+	update := statusUpdate(expression.Name("avatar_status"), expression.Name("avatar_rejection_reason"), to, reason)
+	cond := expression.AttributeExists(expression.Name("user_id")).
+		And(expression.Name("avatar_path").Equal(expression.Value(forPath))).
+		And(statusIs(expression.Name("avatar_status"), from))
+
+	expr, err := expression.NewBuilder().WithUpdate(update).WithCondition(cond).Build()
+	if err != nil {
+		return false, fmt.Errorf("building avatar status update for user %q: %w", ownerID, err)
+	}
+
+	_, err = r.client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+		TableName:                 &r.profileTableName,
+		Key:                       map[string]types.AttributeValue{"user_id": &types.AttributeValueMemberS{Value: ownerID}},
+		UpdateExpression:          expr.Update(),
+		ConditionExpression:       expr.Condition(),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+	})
+	if err != nil {
+		if _, ok := errors.AsType[*types.ConditionalCheckFailedException](err); ok {
+			return false, nil
+		}
+		return false, fmt.Errorf("setting avatar status for user %q: %w", ownerID, err)
 	}
 
 	return true, nil

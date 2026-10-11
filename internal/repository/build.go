@@ -49,6 +49,11 @@ type BuildImageEntry struct {
 	Path BuildImageKey `dynamodbav:"path" json:"-"`
 	Seq  int           `dynamodbav:"seq" json:"-"`
 
+	// Status is empty on images stored before moderation; read it through
+	// ImageStatus.Effective. RejectionReason is set only when rejected.
+	Status          ImageStatus `dynamodbav:"status,omitempty" json:"-"`
+	RejectionReason *string     `dynamodbav:"rejection_reason,omitempty" json:"-"`
+
 	// GetURL/GetURLExpiresAt cache the last presigned GET URL for Path.
 	GetURL          *string    `dynamodbav:"get_url,omitempty" json:"-"`
 	GetURLExpiresAt *time.Time `dynamodbav:"get_url_expires_at,omitempty" json:"-"`
@@ -61,6 +66,10 @@ type BuildImage struct {
 	ImageID string
 	Path    BuildImageKey
 	Seq     int
+
+	// Status is the entry's effective status, never empty.
+	Status          ImageStatus
+	RejectionReason *string
 
 	// GetURL/GetURLExpiresAt mirror BuildImageEntry's cache fields.
 	GetURL          *string
@@ -76,6 +85,8 @@ func SortedBuildImages(images map[string]BuildImageEntry) []BuildImage {
 			ImageID:         id,
 			Path:            entry.Path,
 			Seq:             entry.Seq,
+			Status:          entry.Status.Effective(),
+			RejectionReason: entry.RejectionReason,
 			GetURL:          entry.GetURL,
 			GetURLExpiresAt: entry.GetURLExpiresAt,
 		})
@@ -148,7 +159,8 @@ type BuildRepository interface {
 
 	// AddImage adds image (image.ImageID must be set) to the build's Images
 	// map with a server-assigned Seq that sorts it after every existing
-	// image; image.Seq is ignored. Returns ErrNotFound if the parent build
+	// image, with Status pending; image.Seq and image.Status are ignored.
+	// Returns ErrNotFound if the parent build
 	// doesn't exist, ErrImageLimitReached if it already has
 	// MaxImagesPerItem images, or a wrapped duplicate-id error if
 	// image.ImageID is already present.
@@ -166,6 +178,14 @@ type BuildRepository interface {
 	// ok=false (not an error) if that condition fails or buildID/imageID
 	// doesn't exist.
 	SetImageGetCache(ctx context.Context, ownerID, buildID, imageID string, forPath BuildImageKey, url string, expiresAt time.Time) (ok bool, err error)
+
+	// SetImageStatus sets the matching image's moderation status to `to` and
+	// its rejection reason to reason (cleared when nil), conditioned on Path
+	// still equalling forPath and the status still being from (a missing
+	// status counts as approved). Takes an explicit ownerID: the moderation
+	// Lambda and operator CLI act on any owner's images. Returns ok=false (not
+	// an error) if that condition fails or the item doesn't exist.
+	SetImageStatus(ctx context.Context, ownerID, buildID, imageID string, forPath BuildImageKey, from, to ImageStatus, reason *string) (ok bool, err error)
 
 	// FindBuildsReferencingKeyboard returns the ids of every build owned by
 	// ownerID whose keyboard field is keyboardID. Used by KeyboardRepository

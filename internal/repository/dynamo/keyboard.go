@@ -241,10 +241,10 @@ func (r *KeyboardRepository) Delete(ctx context.Context, id string) error {
 }
 
 // AddImage implements repository.KeyboardRepository. One UpdateItem sets
-// images.<id> = {path, seq}. Seq is time.Now().UnixNano(), so a new image
-// sorts after every existing one without reading the current max (see
-// KeyboardImageEntry.Seq for the wall-clock caveat). The condition rejects
-// a missing keyboard, a keyboard already at MaxImagesPerItem, or a
+// images.<id> = {path, seq, status: pending}. Seq is time.Now().UnixNano(),
+// so a new image sorts after every existing one without reading the current
+// max (see KeyboardImageEntry.Seq for the wall-clock caveat). The condition
+// rejects a missing keyboard, a keyboard already at MaxImagesPerItem, or a
 // duplicate id server-side, so concurrent adds can't overshoot the cap; on
 // failure the returned item tells the three apart.
 func (r *KeyboardRepository) AddImage(ctx context.Context, keyboardID string, image repository.KeyboardImage) error {
@@ -261,7 +261,7 @@ func (r *KeyboardRepository) AddImage(ctx context.Context, keyboardID string, im
 	if !ok {
 		return fmt.Errorf("adding image %q to keyboard: %w", image.ImageID, errInvalidMapKey)
 	}
-	entry := repository.KeyboardImageEntry{Path: image.Path, Seq: int(time.Now().UnixNano())}
+	entry := repository.KeyboardImageEntry{Path: image.Path, Seq: int(time.Now().UnixNano()), Status: repository.ImageStatusPending}
 	update := expression.Set(imagePath, expression.Value(entry))
 	cond := expression.AttributeExists(expression.Name("id")).
 		And(expression.AttributeNotExists(imagePath)).
@@ -407,6 +407,40 @@ func (r *KeyboardRepository) SetImageGetCache(ctx context.Context, ownerID, keyb
 			return false, nil
 		}
 		return false, fmt.Errorf("setting image %q get-cache for keyboard %q owner %q: %w", imageID, keyboardID, ownerID, err)
+	}
+
+	return true, nil
+}
+
+// SetImageStatus implements repository.KeyboardRepository.
+func (r *KeyboardRepository) SetImageStatus(ctx context.Context, ownerID, keyboardID, imageID string, forPath repository.KeyboardImageKey, from, to repository.ImageStatus, reason *string) (bool, error) {
+	imagePath, ok := mapKey("images", imageID)
+	if !ok {
+		return false, nil
+	}
+	update := statusUpdate(field(imagePath, "status"), field(imagePath, "rejection_reason"), to, reason)
+	cond := expression.AttributeExists(imagePath).
+		And(field(imagePath, "path").Equal(expression.Value(forPath))).
+		And(statusIs(field(imagePath, "status"), from))
+
+	expr, err := expression.NewBuilder().WithUpdate(update).WithCondition(cond).Build()
+	if err != nil {
+		return false, fmt.Errorf("building image status update for keyboard %q: %w", keyboardID, err)
+	}
+
+	_, err = r.client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+		TableName:                 &r.tableName,
+		Key:                       keyboardKey(ownerID, keyboardID),
+		UpdateExpression:          expr.Update(),
+		ConditionExpression:       expr.Condition(),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+	})
+	if err != nil {
+		if _, ok := errors.AsType[*types.ConditionalCheckFailedException](err); ok {
+			return false, nil
+		}
+		return false, fmt.Errorf("setting image %q status for keyboard %q owner %q: %w", imageID, keyboardID, ownerID, err)
 	}
 
 	return true, nil

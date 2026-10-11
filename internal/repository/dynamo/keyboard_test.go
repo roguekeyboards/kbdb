@@ -466,6 +466,7 @@ func (s *KeyboardRepositorySuite) TestAddImage_Succeeds_SetsMonotonicSeq() {
 	s.Require().NoError(convErr)
 	s.GreaterOrEqual(seq, before)
 	s.LessOrEqual(seq, time.Now().UnixNano())
+	s.Equal("pending", entry.Value["status"].(*types.AttributeValueMemberS).Value)
 }
 
 func (s *KeyboardRepositorySuite) TestAddImage_ParentKeyboardNotFound_ReturnsErrNotFound() {
@@ -653,4 +654,68 @@ func (s *KeyboardRepositorySuite) storedKeyboard() *dynamodb.GetItemOutput {
 		"id":      &types.AttributeValueMemberS{Value: "kb1"},
 		"brand":   &types.AttributeValueMemberS{Value: "Keychron"},
 	}}
+}
+
+func (s *KeyboardRepositorySuite) TestSetImageStatus_ConditionedOnPathAndStatus() {
+	var captured *dynamodb.UpdateItemInput
+	s.mockClient.EXPECT().
+		UpdateItem(mock.Anything, mock.MatchedBy(func(in *dynamodb.UpdateItemInput) bool {
+			captured = in
+			return true
+		})).
+		Return(&dynamodb.UpdateItemOutput{}, nil)
+
+	reason := "unprocessable"
+	ok, err := s.repo.SetImageStatus(s.T().Context(), "alice", "kb1", "img1", "keyboards/alice/kb1/images/img1", repository.ImageStatusPending, repository.ImageStatusRejected, &reason)
+
+	s.Require().NoError(err)
+	s.True(ok)
+	s.Equal("alice", captured.Key["user_id"].(*types.AttributeValueMemberS).Value)
+	s.Equal("kb1", captured.Key["id"].(*types.AttributeValueMemberS).Value)
+	s.True(names(captured.ExpressionAttributeNames, "images", "img1", "path", "status"))
+	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "keyboards/alice/kb1/images/img1"))
+	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "pending"))
+	s.NotContains(*captured.ConditionExpression, "attribute_not_exists", "only approved may match a missing status")
+	s.True(setsAttr(captured, "status"))
+	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "rejected"))
+	s.True(setsAttr(captured, "rejection_reason"))
+	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "unprocessable"))
+}
+
+func (s *KeyboardRepositorySuite) TestSetImageStatus_NoReason_RemovesRejectionReason() {
+	var captured *dynamodb.UpdateItemInput
+	s.mockClient.EXPECT().
+		UpdateItem(mock.Anything, mock.MatchedBy(func(in *dynamodb.UpdateItemInput) bool {
+			captured = in
+			return true
+		})).
+		Return(&dynamodb.UpdateItemOutput{}, nil)
+
+	ok, err := s.repo.SetImageStatus(s.T().Context(), "alice", "kb1", "img1", "keyboards/alice/kb1/images/img1", repository.ImageStatusRejected, repository.ImageStatusApproved, nil)
+
+	s.Require().NoError(err)
+	s.True(ok)
+	s.True(removesAttr(captured, "rejection_reason"))
+}
+
+func (s *KeyboardRepositorySuite) TestSetImageStatus_ConditionFails_ReturnsFalseWithoutError() {
+	s.mockClient.EXPECT().
+		UpdateItem(mock.Anything, mock.Anything).
+		Return(nil, &types.ConditionalCheckFailedException{})
+
+	ok, err := s.repo.SetImageStatus(s.T().Context(), "alice", "kb1", "img1", "keyboards/alice/kb1/images/img1", repository.ImageStatusPending, repository.ImageStatusApproved, nil)
+
+	s.Require().NoError(err)
+	s.False(ok)
+}
+
+func (s *KeyboardRepositorySuite) TestSetImageStatus_UpdateItemError_Propagates() {
+	s.mockClient.EXPECT().
+		UpdateItem(mock.Anything, mock.Anything).
+		Return(nil, errors.New("dynamodb: throttled"))
+
+	ok, err := s.repo.SetImageStatus(s.T().Context(), "alice", "kb1", "img1", "keyboards/alice/kb1/images/img1", repository.ImageStatusPending, repository.ImageStatusApproved, nil)
+
+	s.Require().Error(err)
+	s.False(ok)
 }

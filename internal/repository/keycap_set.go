@@ -32,6 +32,12 @@ type KeycapKit struct {
 	Purchase  KeycapKitPurchase  `dynamodbav:"purchase" json:"purchase"`
 	Seq       int                `dynamodbav:"seq" json:"-"`
 
+	// ImageStatus is ImagePath's moderation status, empty on images stored
+	// before moderation (see ImageStatus.Effective).
+	// ImageRejectionReason is set only when rejected.
+	ImageStatus          ImageStatus `dynamodbav:"image_status,omitempty" json:"-"`
+	ImageRejectionReason *string     `dynamodbav:"image_rejection_reason,omitempty" json:"-"`
+
 	// GetURL/GetURLExpiresAt cache the last presigned GET URL for
 	// ImagePath. SetKitImagePath clears both when ImagePath changes.
 	GetURL          *string    `dynamodbav:"get_url,omitempty" json:"-"`
@@ -202,11 +208,13 @@ type KeycapSetRepository interface {
 	// setID doesn't exist for the owner.
 	DeleteKit(ctx context.Context, setID, kitID string) error
 
-	// SetKitImagePath sets the kit matching kitID's ImagePath. Returns
-	// ErrNotFound if setID or the kit doesn't exist.
+	// SetKitImagePath sets the kit matching kitID's ImagePath, with
+	// ImageStatus pending. Returns ErrNotFound if setID or the kit doesn't
+	// exist.
 	SetKitImagePath(ctx context.Context, setID, kitID string, key KeycapKitImageKey) error
 
-	// ClearKitImagePath clears the kit matching kitID's ImagePath and
+	// ClearKitImagePath clears the kit matching kitID's ImagePath (and its
+	// moderation status) and
 	// returns the key that was cleared, or nil if it was already unset.
 	// Idempotent: a kit with no ImagePath already set is not an error.
 	// Returns ErrNotFound if setID or the kit doesn't exist.
@@ -219,6 +227,15 @@ type KeycapSetRepository interface {
 	// Returns ok=false (not an error) if that condition fails or setID/the
 	// kit doesn't exist.
 	SetKitImageGetCache(ctx context.Context, ownerID, setID, kitID string, forPath KeycapKitImageKey, url string, expiresAt time.Time) (ok bool, err error)
+
+	// SetKitImageStatus sets the matching kit's image's moderation status to
+	// `to` and its rejection reason to reason (cleared when nil), conditioned
+	// on ImagePath still equalling forPath and the status still being from (a
+	// missing status counts as approved). Takes an explicit ownerID: the
+	// moderation Lambda and operator CLI act on any owner's images. Returns
+	// ok=false (not an error) if that condition fails or the item doesn't
+	// exist.
+	SetKitImageStatus(ctx context.Context, ownerID, setID, kitID string, forPath KeycapKitImageKey, from, to ImageStatus, reason *string) (ok bool, err error)
 }
 
 // KeycapKitImageKey is the object key a kit's image is stored under in a

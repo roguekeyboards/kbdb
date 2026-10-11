@@ -131,6 +131,11 @@ type KeyboardImageEntry struct {
 	Path KeyboardImageKey `dynamodbav:"path" json:"-"`
 	Seq  int              `dynamodbav:"seq" json:"-"`
 
+	// Status is empty on images stored before moderation; read it through
+	// ImageStatus.Effective. RejectionReason is set only when rejected.
+	Status          ImageStatus `dynamodbav:"status,omitempty" json:"-"`
+	RejectionReason *string     `dynamodbav:"rejection_reason,omitempty" json:"-"`
+
 	// GetURL/GetURLExpiresAt cache the last presigned GET URL for Path.
 	GetURL          *string    `dynamodbav:"get_url,omitempty" json:"-"`
 	GetURLExpiresAt *time.Time `dynamodbav:"get_url_expires_at,omitempty" json:"-"`
@@ -143,6 +148,10 @@ type KeyboardImage struct {
 	ImageID string
 	Path    KeyboardImageKey
 	Seq     int
+
+	// Status is the entry's effective status, never empty.
+	Status          ImageStatus
+	RejectionReason *string
 
 	// GetURL/GetURLExpiresAt mirror KeyboardImageEntry's cache fields.
 	GetURL          *string
@@ -158,6 +167,8 @@ func SortedKeyboardImages(images map[string]KeyboardImageEntry) []KeyboardImage 
 			ImageID:         id,
 			Path:            entry.Path,
 			Seq:             entry.Seq,
+			Status:          entry.Status.Effective(),
+			RejectionReason: entry.RejectionReason,
 			GetURL:          entry.GetURL,
 			GetURLExpiresAt: entry.GetURLExpiresAt,
 		})
@@ -344,8 +355,8 @@ type KeyboardRepository interface {
 
 	// AddImage adds image (image.ImageID must be set) to the keyboard's
 	// Images map with a server-assigned Seq that sorts it after every
-	// existing image (see KeyboardImageEntry.Seq); image.Seq is ignored.
-	// Returns ErrNotFound if the keyboard doesn't exist, ErrImageLimitReached
+	// existing image (see KeyboardImageEntry.Seq), with Status pending;
+	// image.Seq and image.Status are ignored. Returns ErrNotFound if the keyboard doesn't exist, ErrImageLimitReached
 	// if it already has MaxImagesPerItem images, or a wrapped duplicate-id
 	// error if image.ImageID is already present.
 	AddImage(ctx context.Context, keyboardID string, image KeyboardImage) error
@@ -363,6 +374,14 @@ type KeyboardRepository interface {
 	// ok=false (not an error) if that condition fails or
 	// keyboardID/imageID doesn't exist.
 	SetImageGetCache(ctx context.Context, ownerID, keyboardID, imageID string, forPath KeyboardImageKey, url string, expiresAt time.Time) (ok bool, err error)
+
+	// SetImageStatus sets the matching image's moderation status to `to` and
+	// its rejection reason to reason (cleared when nil), conditioned on Path
+	// still equalling forPath and the status still being from (a missing
+	// status counts as approved). Takes an explicit ownerID: the moderation
+	// Lambda and operator CLI act on any owner's images. Returns ok=false (not
+	// an error) if that condition fails or the item doesn't exist.
+	SetImageStatus(ctx context.Context, ownerID, keyboardID, imageID string, forPath KeyboardImageKey, from, to ImageStatus, reason *string) (ok bool, err error)
 }
 
 // KeyboardImageKey is the object key an image is stored under in a

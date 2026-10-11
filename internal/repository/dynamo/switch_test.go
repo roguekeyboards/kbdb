@@ -550,3 +550,84 @@ func (s *SwitchRepositorySuite) TestSetImageGetCache_UpdateItemError_Propagates(
 	s.Require().Error(err)
 	s.False(ok)
 }
+
+func (s *SwitchRepositorySuite) TestSetImagePath_MarksPending() {
+	var captured *dynamodb.UpdateItemInput
+	s.mockClient.EXPECT().
+		UpdateItem(mock.Anything, mock.MatchedBy(func(in *dynamodb.UpdateItemInput) bool {
+			captured = in
+			return true
+		})).
+		Return(&dynamodb.UpdateItemOutput{}, nil)
+
+	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	s.Require().NoError(s.repo.SetImagePath(ctx, "sw1", "switches/alice/sw1/image/up1"))
+
+	s.True(setsAttr(captured, "image_status"))
+	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "pending"))
+	s.True(removesAttr(captured, "image_rejection_reason"))
+}
+
+func (s *SwitchRepositorySuite) TestClearImagePath_ClearsStatus() {
+	var captured *dynamodb.UpdateItemInput
+	s.mockClient.EXPECT().
+		UpdateItem(mock.Anything, mock.MatchedBy(func(in *dynamodb.UpdateItemInput) bool {
+			captured = in
+			return true
+		})).
+		Return(&dynamodb.UpdateItemOutput{}, nil)
+
+	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	_, err := s.repo.ClearImagePath(ctx, "sw1")
+	s.Require().NoError(err)
+
+	s.True(removesAttr(captured, "image_status"))
+	s.True(removesAttr(captured, "image_rejection_reason"))
+}
+
+func (s *SwitchRepositorySuite) TestSetImageStatus_ConditionedOnPathAndStatus() {
+	var captured *dynamodb.UpdateItemInput
+	s.mockClient.EXPECT().
+		UpdateItem(mock.Anything, mock.MatchedBy(func(in *dynamodb.UpdateItemInput) bool {
+			captured = in
+			return true
+		})).
+		Return(&dynamodb.UpdateItemOutput{}, nil)
+
+	reason := "unprocessable"
+	ok, err := s.repo.SetImageStatus(s.T().Context(), "alice", "sw1", "switches/alice/sw1/image/up1", repository.ImageStatusPending, repository.ImageStatusRejected, &reason)
+
+	s.Require().NoError(err)
+	s.True(ok)
+	s.Equal("alice", captured.Key["user_id"].(*types.AttributeValueMemberS).Value)
+	s.Equal("sw1", captured.Key["id"].(*types.AttributeValueMemberS).Value)
+	s.True(names(captured.ExpressionAttributeNames, "image_path", "image_status"))
+	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "switches/alice/sw1/image/up1"))
+	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "pending"))
+	s.True(setsAttr(captured, "image_status"))
+	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "rejected"))
+	s.True(setsAttr(captured, "image_rejection_reason"))
+	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "unprocessable"))
+}
+
+func (s *SwitchRepositorySuite) TestSetImageStatus_ConditionFails_ReturnsFalseWithoutError() {
+	s.mockClient.EXPECT().
+		UpdateItem(mock.Anything, mock.Anything).
+		Return(nil, &types.ConditionalCheckFailedException{})
+
+	ok, err := s.repo.SetImageStatus(s.T().Context(), "alice", "sw1", "switches/alice/sw1/image/up1", repository.ImageStatusPending, repository.ImageStatusApproved, nil)
+
+	s.Require().NoError(err)
+	s.False(ok)
+}
+
+func (s *SwitchRepositorySuite) TestSetImageStatus_UpdateItemError_Propagates() {
+	s.mockClient.EXPECT().
+		UpdateItem(mock.Anything, mock.Anything).
+		Return(nil, errors.New("dynamodb: throttled"))
+
+	ok, err := s.repo.SetImageStatus(s.T().Context(), "alice", "sw1", "switches/alice/sw1/image/up1", repository.ImageStatusPending, repository.ImageStatusApproved, nil)
+
+	s.Require().Error(err)
+	s.False(ok)
+}

@@ -248,6 +248,8 @@ func (r *SwitchRepository) SetImagePath(ctx context.Context, id string, key repo
 	}
 
 	update := expression.Set(expression.Name("image_path"), expression.Value(key)).
+		Set(expression.Name("image_status"), expression.Value(repository.ImageStatusPending)).
+		Remove(expression.Name("image_rejection_reason")).
 		Remove(expression.Name("get_url")).
 		Remove(expression.Name("get_url_expires_at"))
 	expr, err := expression.NewBuilder().
@@ -286,6 +288,8 @@ func (r *SwitchRepository) ClearImagePath(ctx context.Context, id string) (*repo
 	}
 
 	update := expression.Remove(expression.Name("image_path")).
+		Remove(expression.Name("image_status")).
+		Remove(expression.Name("image_rejection_reason")).
 		Remove(expression.Name("get_url")).
 		Remove(expression.Name("get_url_expires_at"))
 	expr, err := expression.NewBuilder().
@@ -350,6 +354,36 @@ func (r *SwitchRepository) SetImageGetCache(ctx context.Context, ownerID, id str
 			return false, nil
 		}
 		return false, fmt.Errorf("setting image get-cache for switch %q owner %q: %w", id, ownerID, err)
+	}
+
+	return true, nil
+}
+
+// SetImageStatus implements repository.SwitchRepository.
+func (r *SwitchRepository) SetImageStatus(ctx context.Context, ownerID, id string, forPath repository.SwitchImageKey, from, to repository.ImageStatus, reason *string) (bool, error) {
+	update := statusUpdate(expression.Name("image_status"), expression.Name("image_rejection_reason"), to, reason)
+	cond := expression.AttributeExists(expression.Name("id")).
+		And(expression.Name("image_path").Equal(expression.Value(forPath))).
+		And(statusIs(expression.Name("image_status"), from))
+
+	expr, err := expression.NewBuilder().WithUpdate(update).WithCondition(cond).Build()
+	if err != nil {
+		return false, fmt.Errorf("building image status update for switch %q: %w", id, err)
+	}
+
+	_, err = r.client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+		TableName:                 &r.tableName,
+		Key:                       switchKey(ownerID, id),
+		UpdateExpression:          expr.Update(),
+		ConditionExpression:       expr.Condition(),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+	})
+	if err != nil {
+		if _, ok := errors.AsType[*types.ConditionalCheckFailedException](err); ok {
+			return false, nil
+		}
+		return false, fmt.Errorf("setting image status for switch %q owner %q: %w", id, ownerID, err)
 	}
 
 	return true, nil
