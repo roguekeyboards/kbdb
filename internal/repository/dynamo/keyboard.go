@@ -412,13 +412,16 @@ func (r *KeyboardRepository) SetImageGetCache(ctx context.Context, ownerID, keyb
 	return true, nil
 }
 
-// SetImageStatus implements repository.KeyboardRepository.
+// SetImageStatus implements repository.KeyboardRepository. Also clears any
+// cached GET URL, so a rejected image's URL isn't served from the cache.
 func (r *KeyboardRepository) SetImageStatus(ctx context.Context, ownerID, keyboardID, imageID string, forPath repository.KeyboardImageKey, from, to repository.ImageStatus, reason *string) (bool, error) {
 	imagePath, ok := mapKey("images", imageID)
 	if !ok {
 		return false, nil
 	}
-	update := statusUpdate(field(imagePath, "status"), field(imagePath, "rejection_reason"), to, reason)
+	update := statusUpdate(field(imagePath, "status"), field(imagePath, "rejection_reason"), to, reason).
+		Remove(field(imagePath, "get_url")).
+		Remove(field(imagePath, "get_url_expires_at"))
 	cond := expression.AttributeExists(imagePath).
 		And(field(imagePath, "path").Equal(expression.Value(forPath))).
 		And(statusIs(field(imagePath, "status"), from))

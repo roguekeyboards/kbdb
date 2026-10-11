@@ -1420,6 +1420,8 @@ func (s *ProfileRepositorySuite) TestSetAvatarStatus_ConditionedOnPathAndStatus(
 	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "rejected"))
 	s.True(setsAttr(captured, "avatar_rejection_reason"))
 	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "unprocessable"))
+	s.True(removesAttr(captured, "get_url"), "a cached URL must not outlive a status change")
+	s.True(removesAttr(captured, "get_url_expires_at"))
 }
 
 func (s *ProfileRepositorySuite) TestSetAvatarStatus_ConditionFails_ReturnsFalseWithoutError() {

@@ -359,9 +359,12 @@ func (r *SwitchRepository) SetImageGetCache(ctx context.Context, ownerID, id str
 	return true, nil
 }
 
-// SetImageStatus implements repository.SwitchRepository.
+// SetImageStatus implements repository.SwitchRepository. Also clears any
+// cached GET URL, so a rejected image's URL isn't served from the cache.
 func (r *SwitchRepository) SetImageStatus(ctx context.Context, ownerID, id string, forPath repository.SwitchImageKey, from, to repository.ImageStatus, reason *string) (bool, error) {
-	update := statusUpdate(expression.Name("image_status"), expression.Name("image_rejection_reason"), to, reason)
+	update := statusUpdate(expression.Name("image_status"), expression.Name("image_rejection_reason"), to, reason).
+		Remove(expression.Name("get_url")).
+		Remove(expression.Name("get_url_expires_at"))
 	cond := expression.AttributeExists(expression.Name("id")).
 		And(expression.Name("image_path").Equal(expression.Value(forPath))).
 		And(statusIs(expression.Name("image_status"), from))

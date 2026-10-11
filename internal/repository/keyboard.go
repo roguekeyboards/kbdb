@@ -353,12 +353,12 @@ type KeyboardRepository interface {
 	// Idempotent: a nonexistent id is not an error.
 	Delete(ctx context.Context, id string) error
 
-	// AddImage adds image (image.ImageID must be set) to the keyboard's
-	// Images map with a server-assigned Seq that sorts it after every
-	// existing image (see KeyboardImageEntry.Seq), with Status pending;
-	// image.Seq and image.Status are ignored. Returns ErrNotFound if the keyboard doesn't exist, ErrImageLimitReached
-	// if it already has MaxImagesPerItem images, or a wrapped duplicate-id
-	// error if image.ImageID is already present.
+	// AddImage adds image (image.ImageID must be set) to the keyboard's Images
+	// map with a server-assigned Seq that sorts it after every existing image
+	// (see KeyboardImageEntry.Seq), with Status pending; image.Seq and
+	// image.Status are ignored. Returns ErrNotFound if the keyboard doesn't
+	// exist, ErrImageLimitReached if it already has MaxImagesPerItem images,
+	// or a wrapped duplicate-id error if image.ImageID is already present.
 	AddImage(ctx context.Context, keyboardID string, image KeyboardImage) error
 
 	// DeleteImage removes imageID from keyboardID's Images map and returns
@@ -378,9 +378,10 @@ type KeyboardRepository interface {
 	// SetImageStatus sets the matching image's moderation status to `to` and
 	// its rejection reason to reason (cleared when nil), conditioned on Path
 	// still equalling forPath and the status still being from (a missing
-	// status counts as approved). Takes an explicit ownerID: the moderation
-	// Lambda and operator CLI act on any owner's images. Returns ok=false (not
-	// an error) if that condition fails or the item doesn't exist.
+	// status counts as approved). Also drops any cached GET URL. Takes an
+	// explicit ownerID: the moderation Lambda and operator CLI act on any
+	// owner's images. Returns ok=false (not an error) if that condition fails
+	// or the item doesn't exist.
 	SetImageStatus(ctx context.Context, ownerID, keyboardID, imageID string, forPath KeyboardImageKey, from, to ImageStatus, reason *string) (ok bool, err error)
 }
 

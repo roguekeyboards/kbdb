@@ -37,7 +37,9 @@ type Ref struct {
 	ImageID string
 }
 
-// Parse returns the Ref key addresses, or ErrUnknownKey.
+// Parse returns the Ref key addresses, or ErrUnknownKey. key is the
+// object key as stored, not URL-encoded: an S3 event notification's key
+// must be decoded first.
 func Parse(key string) (Ref, error) {
 	p := strings.Split(key, "/")
 	switch {

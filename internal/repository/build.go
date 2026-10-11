@@ -158,12 +158,11 @@ type BuildRepository interface {
 	Delete(ctx context.Context, id string) error
 
 	// AddImage adds image (image.ImageID must be set) to the build's Images
-	// map with a server-assigned Seq that sorts it after every existing
-	// image, with Status pending; image.Seq and image.Status are ignored.
-	// Returns ErrNotFound if the parent build
-	// doesn't exist, ErrImageLimitReached if it already has
-	// MaxImagesPerItem images, or a wrapped duplicate-id error if
-	// image.ImageID is already present.
+	// map with a server-assigned Seq that sorts it after every existing image,
+	// with Status pending; image.Seq and image.Status are ignored. Returns
+	// ErrNotFound if the parent build doesn't exist, ErrImageLimitReached if
+	// it already has MaxImagesPerItem images, or a wrapped duplicate-id error
+	// if image.ImageID is already present.
 	AddImage(ctx context.Context, buildID string, image BuildImage) error
 
 	// DeleteImage removes imageID from buildID's Images map and returns the
@@ -182,9 +181,10 @@ type BuildRepository interface {
 	// SetImageStatus sets the matching image's moderation status to `to` and
 	// its rejection reason to reason (cleared when nil), conditioned on Path
 	// still equalling forPath and the status still being from (a missing
-	// status counts as approved). Takes an explicit ownerID: the moderation
-	// Lambda and operator CLI act on any owner's images. Returns ok=false (not
-	// an error) if that condition fails or the item doesn't exist.
+	// status counts as approved). Also drops any cached GET URL. Takes an
+	// explicit ownerID: the moderation Lambda and operator CLI act on any
+	// owner's images. Returns ok=false (not an error) if that condition fails
+	// or the item doesn't exist.
 	SetImageStatus(ctx context.Context, ownerID, buildID, imageID string, forPath BuildImageKey, from, to ImageStatus, reason *string) (ok bool, err error)
 
 	// FindBuildsReferencingKeyboard returns the ids of every build owned by

@@ -535,9 +535,12 @@ func (r *ProfileRepository) SetImageGetCache(ctx context.Context, ownerID string
 	return true, nil
 }
 
-// SetAvatarStatus implements repository.ProfileRepository.
+// SetAvatarStatus implements repository.ProfileRepository. Also clears any
+// cached GET URL, so a rejected image's URL isn't served from the cache.
 func (r *ProfileRepository) SetAvatarStatus(ctx context.Context, ownerID string, forPath repository.ProfileImageKey, from, to repository.ImageStatus, reason *string) (bool, error) {
-	update := statusUpdate(expression.Name("avatar_status"), expression.Name("avatar_rejection_reason"), to, reason)
+	update := statusUpdate(expression.Name("avatar_status"), expression.Name("avatar_rejection_reason"), to, reason).
+		Remove(expression.Name("get_url")).
+		Remove(expression.Name("get_url_expires_at"))
 	cond := expression.AttributeExists(expression.Name("user_id")).
 		And(expression.Name("avatar_path").Equal(expression.Value(forPath))).
 		And(statusIs(expression.Name("avatar_status"), from))

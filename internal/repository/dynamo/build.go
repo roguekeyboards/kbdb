@@ -559,13 +559,16 @@ func (r *BuildRepository) SetImageGetCache(ctx context.Context, ownerID, buildID
 	return true, nil
 }
 
-// SetImageStatus implements repository.BuildRepository.
+// SetImageStatus implements repository.BuildRepository. Also clears any
+// cached GET URL, so a rejected image's URL isn't served from the cache.
 func (r *BuildRepository) SetImageStatus(ctx context.Context, ownerID, buildID, imageID string, forPath repository.BuildImageKey, from, to repository.ImageStatus, reason *string) (bool, error) {
 	imagePath, ok := mapKey("images", imageID)
 	if !ok {
 		return false, nil
 	}
-	update := statusUpdate(field(imagePath, "status"), field(imagePath, "rejection_reason"), to, reason)
+	update := statusUpdate(field(imagePath, "status"), field(imagePath, "rejection_reason"), to, reason).
+		Remove(field(imagePath, "get_url")).
+		Remove(field(imagePath, "get_url_expires_at"))
 	cond := expression.AttributeExists(imagePath).
 		And(field(imagePath, "path").Equal(expression.Value(forPath))).
 		And(statusIs(field(imagePath, "status"), from))

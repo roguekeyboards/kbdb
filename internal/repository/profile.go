@@ -151,9 +151,9 @@ type ProfileRepository interface {
 	SetAvatarPath(ctx context.Context, key ProfileImageKey) error
 
 	// ClearAvatarPath clears the caller's profile's AvatarPath (and its
-	// moderation status) and returns
-	// the key that was cleared, or nil if it was already unset (idempotent,
-	// not an error). Returns ErrNotFound if the caller has no profile.
+	// moderation status) and returns the key that was cleared, or nil if it
+	// was already unset (idempotent, not an error). Returns ErrNotFound if the
+	// caller has no profile.
 	ClearAvatarPath(ctx context.Context) (*ProfileImageKey, error)
 
 	// SetImageGetCache stores url/expiresAt as ownerID's cached avatar GET
@@ -167,10 +167,10 @@ type ProfileRepository interface {
 	// SetAvatarStatus sets ownerID's avatar's moderation status to `to` and
 	// its rejection reason to reason (cleared when nil), conditioned on
 	// AvatarPath still equalling forPath and the status still being from (a
-	// missing status counts as approved). Takes an explicit ownerID: the
-	// moderation Lambda and operator CLI act on any owner's images. Returns
-	// ok=false (not an error) if that condition fails or the item doesn't
-	// exist.
+	// missing status counts as approved). Also drops any cached GET URL. Takes
+	// an explicit ownerID: the moderation Lambda and operator CLI act on any
+	// owner's images. Returns ok=false (not an error) if that condition fails
+	// or the item doesn't exist.
 	SetAvatarStatus(ctx context.Context, ownerID string, forPath ProfileImageKey, from, to ImageStatus, reason *string) (ok bool, err error)
 }
 
