@@ -347,7 +347,7 @@ func fullRepoKeycapKit() repository.KeycapKit {
 	return repository.KeycapKit{
 		KitID:     "kit1",
 		Name:      "Base",
-		ImagePath: imageKeyPtr("keycap-sets/alice/ks1/kits/kit1/image"),
+		ImagePath: imageKeyPtr("keycap-sets/alice/ks1/kits/kit1/image/up1"),
 		Purchase: repository.KeycapKitPurchase{
 			Vendor:       strPtr("CannonKeys"),
 			Price:        floatPtr(120.00),
@@ -456,7 +456,7 @@ func (s *KeycapKitToAPISuite) TestOwner_IncludesPrice() {
 }
 
 func (s *KeycapKitToAPISuite) TestPresignGetFails_ReturnsError() {
-	k := repository.KeycapKit{KitID: "kit1", Name: "Base", ImagePath: imageKeyPtr("keycap-sets/alice/ks1/kits/kit1/image")}
+	k := repository.KeycapKit{KitID: "kit1", Name: "Base", ImagePath: imageKeyPtr("keycap-sets/alice/ks1/kits/kit1/image/up1")}
 
 	images := mocks.NewMockKeycapKitImageStore(s.T())
 	images.EXPECT().PresignGet(mock.Anything, *k.ImagePath).Return("", time.Time{}, errors.New("s3: access denied"))

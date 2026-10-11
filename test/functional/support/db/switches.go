@@ -49,7 +49,7 @@ func SeedSwitchWithImage(ctx context.Context, ownerID, id, visibility string) er
 			"vendor": "NovelKeys",
 			"price":  0.35,
 		},
-		"image_path": fmt.Sprintf("switches/%s/%s/image", ownerID, id),
+		"image_path": fmt.Sprintf("switches/%s/%s/image/up1", ownerID, id),
 	})
 }
 

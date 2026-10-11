@@ -49,7 +49,7 @@ var deleteSwitchTool = &mcp.Tool{
 
 var setSwitchImageTool = &mcp.Tool{
 	Name:        "set_switch_image",
-	Description: "Mints a presigned URL to upload a switch's image to. Doesn't upload the image itself - PUT the image bytes to the returned upload_url using the same content_type as the Content-Type header and a body of exactly size_bytes. Images are capped at 5 MB; resize anything larger first.",
+	Description: "Mints a presigned URL to upload a switch's image to. Doesn't upload the image itself - PUT the image bytes to the returned upload_url using the same content_type as the Content-Type header, an If-None-Match: * header, and a body of exactly size_bytes. The upload_url is for one upload: another PUT to it fails with 412 while that image is stored. Images are capped at 5 MB; resize anything larger first.",
 }
 
 var deleteSwitchImageTool = &mcp.Tool{
@@ -244,7 +244,17 @@ func handleSetSwitchImage(
 			return nil, schema.SetSwitchImageOutput{}, err
 		}
 
-		key, err := repository.NewSwitchImageKey(ctx, in.SwitchID)
+		ownerID, err := resolveOwnerID(ctx, "")
+		if err != nil {
+			return nil, schema.SetSwitchImageOutput{}, err
+		}
+
+		sw, err := switchRepo.Get(ctx, ownerID, in.SwitchID)
+		if mutErr := handleMutationError(ctx, err, log.SwitchID, in.SwitchID); mutErr != nil {
+			return nil, schema.SetSwitchImageOutput{}, mutErr
+		}
+
+		key, err := repository.NewSwitchImageKey(ctx, in.SwitchID, uuid.NewString())
 		if err != nil {
 			log.FromContext(ctx).Error("building switch image key", log.SwitchID, in.SwitchID, log.Error, err)
 			return nil, schema.SetSwitchImageOutput{}, errors.New("failed to set switch image")
@@ -254,6 +264,13 @@ func handleSetSwitchImage(
 		if err != nil {
 			log.FromContext(ctx).Error("presigning switch image upload", log.SwitchID, in.SwitchID, log.Error, err)
 			return nil, schema.SetSwitchImageOutput{}, errors.New("failed to set switch image")
+		}
+
+		if sw.ImagePath != nil {
+			if err := images.Delete(ctx, *sw.ImagePath); err != nil {
+				log.FromContext(ctx).Error("deleting previous switch image object", log.SwitchID, in.SwitchID, log.Error, err)
+				return nil, schema.SetSwitchImageOutput{}, errors.New("failed to set switch image")
+			}
 		}
 
 		err = switchRepo.SetImagePath(ctx, in.SwitchID, key)

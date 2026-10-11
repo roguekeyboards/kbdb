@@ -160,16 +160,17 @@ type ProfileRepository interface {
 // ProfileImageKey is the object key a profile's avatar is stored under.
 type ProfileImageKey string
 
-// NewProfileImageKey builds the caller's avatar object key. ownerID comes
-// from ctx so a caller can't address another user's prefix. Fixed key, no
-// per-image id - a re-upload overwrites in place.
-func NewProfileImageKey(ctx context.Context) (ProfileImageKey, error) {
+// NewProfileImageKey builds the object key for one upload of the caller's
+// avatar. ownerID comes from ctx so a caller can't address another user's
+// prefix. Each upload gets its own key because upload URLs are single-use:
+// a replacement can't be written over the previous object.
+func NewProfileImageKey(ctx context.Context, uploadID string) (ProfileImageKey, error) {
 	ownerID, ok := kbdbctx.UserID(ctx)
 	if !ok {
 		return "", ErrNoUserID
 	}
 
-	return ProfileImageKey(fmt.Sprintf("profiles/%s/avatar", ownerID)), nil
+	return ProfileImageKey(fmt.Sprintf("profiles/%s/avatar/%s", ownerID, uploadID)), nil
 }
 
 // ProfileImageStore stores a profile's avatar object in a private object
@@ -182,6 +183,8 @@ type ProfileImageStore interface {
 	// PresignPut returns a short-lived presigned PUT URL for key, locked to
 	// contentType and size via the Content-Type and Content-Length the upload
 	// must match.
+	// Single-use: the upload must also send If-None-Match: *, so once an
+	// object exists at key the URL can't write it again.
 	PresignPut(ctx context.Context, key ProfileImageKey, contentType string, size int64) (url string, err error)
 
 	// Delete removes the object at key. Idempotent, matching S3 DeleteObject.

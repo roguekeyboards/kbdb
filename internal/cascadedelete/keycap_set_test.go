@@ -55,8 +55,8 @@ func (s *DeleteKeycapSetSuite) TestBlock_NoReferencingBuilds_DeletesSet() {
 }
 
 func (s *DeleteKeycapSetSuite) TestBlock_SetHadKitImages_DeletesEachFromS3BeforeDB() {
-	key1 := repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit1/image")
-	key2 := repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit2/image")
+	key1 := repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit1/image/up1")
+	key2 := repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit2/image/up1")
 	s.mockBuilds.EXPECT().
 		FindBuildsReferencingKeycapSet(s.ctx, "alice", "ks1").
 		Return(nil, nil)
@@ -84,7 +84,7 @@ func (s *DeleteKeycapSetSuite) TestBlock_SetHadKitImages_DeletesEachFromS3Before
 }
 
 func (s *DeleteKeycapSetSuite) TestBlock_KitImageDeleteFails_ReturnsErrorWithoutDeletingSet() {
-	key1 := repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit1/image")
+	key1 := repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit1/image/up1")
 	s.mockBuilds.EXPECT().
 		FindBuildsReferencingKeycapSet(s.ctx, "alice", "ks1").
 		Return(nil, nil)

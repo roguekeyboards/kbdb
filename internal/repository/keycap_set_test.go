@@ -21,14 +21,14 @@ func TestNewKeycapKitImageKeySuite(t *testing.T) {
 func (s *NewKeycapKitImageKeySuite) TestSucceeds() {
 	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
 
-	key, err := repository.NewKeycapKitImageKey(ctx, "ks1", "kit1")
+	key, err := repository.NewKeycapKitImageKey(ctx, "ks1", "kit1", "up1")
 
 	s.Require().NoError(err)
-	s.Equal(repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit1/image"), key)
+	s.Equal(repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit1/image/up1"), key)
 }
 
 func (s *NewKeycapKitImageKeySuite) TestNoUserIDInContext_ReturnsError() {
-	key, err := repository.NewKeycapKitImageKey(context.Background(), "ks1", "kit1")
+	key, err := repository.NewKeycapKitImageKey(context.Background(), "ks1", "kit1", "up1")
 
 	s.Require().ErrorIs(err, repository.ErrNoUserID)
 	s.Empty(key)

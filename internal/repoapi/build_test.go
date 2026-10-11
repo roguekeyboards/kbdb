@@ -422,7 +422,7 @@ func (s *BuildToAPISuite) TestKitWithImage_MintsFreshPresignedURL() {
 		Return(&repository.Keyboard{UserID: "alice", ID: "kb1", Brand: "Keychron", Name: "Q1"}, nil)
 	d.switchRepo.EXPECT().Get(mock.Anything, "alice", "sw1").
 		Return(&repository.Switch{UserID: "alice", ID: "sw1", Brand: "Gateron", Name: "Oil King", Type: "Linear"}, nil)
-	imgPath := repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit1/image")
+	imgPath := repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit1/image/up1")
 	d.keycapSetRepo.EXPECT().Get(mock.Anything, "alice", "ks1").
 		Return(&repository.KeycapSet{
 			UserID: "alice", ID: "ks1", Brand: "GMK", Name: "Olivia",
@@ -448,7 +448,7 @@ func (s *BuildToAPISuite) TestKitImagePresignFails_ReturnsError() {
 		Return(&repository.Keyboard{UserID: "alice", ID: "kb1", Brand: "Keychron", Name: "Q1"}, nil)
 	d.switchRepo.EXPECT().Get(mock.Anything, "alice", "sw1").
 		Return(&repository.Switch{UserID: "alice", ID: "sw1", Brand: "Gateron", Name: "Oil King", Type: "Linear"}, nil)
-	imgPath := repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit1/image")
+	imgPath := repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit1/image/up1")
 	d.keycapSetRepo.EXPECT().Get(mock.Anything, "alice", "ks1").
 		Return(&repository.KeycapSet{
 			UserID: "alice", ID: "ks1", Brand: "GMK", Name: "Olivia",
@@ -522,7 +522,7 @@ func (s *BuildToAPISuite) TestSwitchWithImage_MintsFreshPresignedURL() {
 	d := newBuildToAPIDeps(s.T())
 	d.keyboardRepo.EXPECT().Get(mock.Anything, "alice", "kb1").
 		Return(&repository.Keyboard{UserID: "alice", ID: "kb1", Brand: "Keychron", Name: "Q1"}, nil)
-	imgPath := repository.SwitchImageKey("switches/alice/sw1/image")
+	imgPath := repository.SwitchImageKey("switches/alice/sw1/image/up1")
 	d.switchRepo.EXPECT().Get(mock.Anything, "alice", "sw1").
 		Return(&repository.Switch{UserID: "alice", ID: "sw1", Brand: "Gateron", Name: "Oil King", Type: "Linear", ImagePath: &imgPath}, nil)
 	d.keycapSetRepo.EXPECT().Get(mock.Anything, "alice", "ks1").
@@ -560,7 +560,7 @@ func (s *BuildToAPISuite) TestSwitchImagePresignFails_ReturnsError() {
 	d := newBuildToAPIDeps(s.T())
 	d.keyboardRepo.EXPECT().Get(mock.Anything, "alice", "kb1").
 		Return(&repository.Keyboard{UserID: "alice", ID: "kb1", Brand: "Keychron", Name: "Q1"}, nil)
-	imgPath := repository.SwitchImageKey("switches/alice/sw1/image")
+	imgPath := repository.SwitchImageKey("switches/alice/sw1/image/up1")
 	d.switchRepo.EXPECT().Get(mock.Anything, "alice", "sw1").
 		Return(&repository.Switch{UserID: "alice", ID: "sw1", Brand: "Gateron", Name: "Oil King", Type: "Linear", ImagePath: &imgPath}, nil)
 	d.switchImages.EXPECT().PresignGet(mock.Anything, imgPath).Return("", time.Time{}, errors.New("s3: access denied"))

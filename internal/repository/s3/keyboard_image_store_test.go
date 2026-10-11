@@ -138,7 +138,7 @@ func (s *KeyboardImageStoreSuite) TestPresignPutKeyboardImage_Succeeds() {
 	s.mockPresign.EXPECT().
 		PresignPutObject(mock.Anything, mock.MatchedBy(func(in *s3.PutObjectInput) bool {
 			return *in.Bucket == "images-bucket" && *in.Key == "keyboards/alice/kb1/images/img1" && *in.ContentType == "image/png" &&
-				*in.ContentLength == 1234
+				*in.ContentLength == 1234 && *in.IfNoneMatch == "*"
 		})).
 		Return(&v4.PresignedHTTPRequest{URL: "https://example.com/presigned-put"}, nil)
 

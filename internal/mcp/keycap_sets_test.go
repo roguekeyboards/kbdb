@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
@@ -253,7 +254,7 @@ func (s *HandleGetKeycapSetSuite) TestSucceeds() {
 
 func (s *HandleGetKeycapSetSuite) TestKitsMapWithHasImage() {
 	s.mockPrefs.EXPECT().GetPreferences(mock.Anything, callerID).Return(repository.DefaultProfilePreferences(), nil)
-	imagePath := repository.KeycapKitImageKey("keycap-sets/caller-0001/ks-1/kits/kit-1/image")
+	imagePath := repository.KeycapKitImageKey("keycap-sets/caller-0001/ks-1/kits/kit-1/image/up1")
 	s.mockRepo.EXPECT().
 		Get(mock.Anything, callerID, "ks-1").
 		Return(&repository.KeycapSet{
@@ -643,8 +644,8 @@ func (s *HandleDeleteKeycapSetSuite) TestNotFound_StillSucceeds() {
 }
 
 func (s *HandleDeleteKeycapSetSuite) TestKitImagesAreDeletedFromS3BeforeDB() {
-	key1 := repository.KeycapKitImageKey("keycap-sets/u/ks-1/kits/kit-1/image")
-	key2 := repository.KeycapKitImageKey("keycap-sets/u/ks-1/kits/kit-2/image")
+	key1 := repository.KeycapKitImageKey("keycap-sets/u/ks-1/kits/kit-1/image/up1")
+	key2 := repository.KeycapKitImageKey("keycap-sets/u/ks-1/kits/kit-2/image/up1")
 	s.mockBuilds.EXPECT().FindBuildsReferencingKeycapSet(mock.Anything, mock.Anything, "ks-1").Return(nil, nil)
 	s.mockRepo.EXPECT().
 		Get(mock.Anything, mock.Anything, "ks-1").
@@ -674,7 +675,7 @@ func (s *HandleDeleteKeycapSetSuite) TestRepositoryError_ReturnsError() {
 }
 
 func (s *HandleDeleteKeycapSetSuite) TestKitImageDeleteFails_ReturnsError_DoesNotDeleteSet() {
-	key1 := repository.KeycapKitImageKey("keycap-sets/u/ks-1/kits/kit-1/image")
+	key1 := repository.KeycapKitImageKey("keycap-sets/u/ks-1/kits/kit-1/image/up1")
 	s.mockBuilds.EXPECT().FindBuildsReferencingKeycapSet(mock.Anything, mock.Anything, "ks-1").Return(nil, nil)
 	s.mockRepo.EXPECT().
 		Get(mock.Anything, mock.Anything, "ks-1").
@@ -1123,7 +1124,7 @@ func (s *HandleDeleteKeycapKitSuite) TestKeycapSetNotFound_ReturnsNotFound() {
 }
 
 func (s *HandleDeleteKeycapKitSuite) TestImageIsDeletedFromS3BeforeDB() {
-	key := repository.KeycapKitImageKey("keycap-sets/u/ks-1/kits/kit-1/image")
+	key := repository.KeycapKitImageKey("keycap-sets/u/ks-1/kits/kit-1/image/up1")
 	s.mockBuilds.EXPECT().FindBuildsReferencingKeycapKit(mock.Anything, mock.Anything, "ks-1", "kit-1").Return(nil, nil)
 	s.mockRepo.EXPECT().
 		Get(mock.Anything, mock.Anything, "ks-1").
@@ -1138,7 +1139,7 @@ func (s *HandleDeleteKeycapKitSuite) TestImageIsDeletedFromS3BeforeDB() {
 }
 
 func (s *HandleDeleteKeycapKitSuite) TestImageDeleteFails_ReturnsError_DoesNotDeleteKit() {
-	key := repository.KeycapKitImageKey("keycap-sets/u/ks-1/kits/kit-1/image")
+	key := repository.KeycapKitImageKey("keycap-sets/u/ks-1/kits/kit-1/image/up1")
 	s.mockBuilds.EXPECT().FindBuildsReferencingKeycapKit(mock.Anything, mock.Anything, "ks-1", "kit-1").Return(nil, nil)
 	s.mockRepo.EXPECT().
 		Get(mock.Anything, mock.Anything, "ks-1").
@@ -1215,24 +1216,74 @@ func (s *HandleSetKeycapKitImageSuite) SetupTest() {
 	s.mockImages = mocks.NewMockKeycapKitImageStore(s.T())
 }
 
-func (s *HandleSetKeycapKitImageSuite) TestSucceeds() {
-	s.mockRepo.EXPECT().
-		SetKitImagePath(mock.Anything, "ks-1", "kit-1", mock.Anything).
-		Return(nil)
-	s.mockImages.EXPECT().
-		PresignPut(mock.Anything, mock.Anything, "image/png", int64(524288)).
-		Return("https://example.com/upload", nil)
+// previousKitImageKey is kit-1's image key before a replacement.
+func previousKitImageKey() repository.KeycapKitImageKey {
+	return repository.KeycapKitImageKey("keycap-sets/" + callerID + "/ks-1/kits/kit-1/image/old-upload")
+}
 
-	handler := handleSetKeycapKitImage(s.mockRepo, s.mockImages)
-	_, out, err := handler(callerContext(s.T()), nil, schema.SetKeycapKitImageInput{
+// newKitImageKey matches a freshly minted per-upload key for kit-1, which
+// must never be the previous image's key.
+func newKitImageKey() any {
+	return mock.MatchedBy(func(k repository.KeycapKitImageKey) bool {
+		return strings.HasPrefix(string(k), "keycap-sets/"+callerID+"/ks-1/kits/kit-1/image/") && k != previousKitImageKey()
+	})
+}
+
+// setWithKit returns set ks-1 holding kit-1, with imagePath as its image.
+func setWithKit(imagePath *repository.KeycapKitImageKey) *repository.KeycapSet {
+	return &repository.KeycapSet{ID: "ks-1", Kits: map[string]repository.KeycapKit{"kit-1": {ImagePath: imagePath}}}
+}
+
+func (s *HandleSetKeycapKitImageSuite) call(kitID string) (schema.SetKeycapKitImageOutput, error) {
+	_, out, err := handleSetKeycapKitImage(s.mockRepo, s.mockImages)(callerContext(s.T()), nil, schema.SetKeycapKitImageInput{
 		KeycapSetID: "ks-1",
-		KitID:       "kit-1",
+		KitID:       kitID,
 		ContentType: "image/png",
 		SizeBytes:   524288,
 	})
+	return out, err
+}
+
+func (s *HandleSetKeycapKitImageSuite) TestSucceeds() {
+	s.mockRepo.EXPECT().
+		Get(mock.Anything, callerID, "ks-1").
+		Return(setWithKit(nil), nil)
+	var presigned repository.KeycapKitImageKey
+	s.mockImages.EXPECT().
+		PresignPut(mock.Anything, newKitImageKey(), "image/png", int64(524288)).
+		Run(func(_ context.Context, key repository.KeycapKitImageKey, _ string, _ int64) { presigned = key }).
+		Return("https://example.com/upload", nil)
+	s.mockRepo.EXPECT().
+		SetKitImagePath(mock.Anything, "ks-1", "kit-1", newKitImageKey()).
+		Run(func(_ context.Context, _, _ string, key repository.KeycapKitImageKey) { s.Equal(presigned, key) }).
+		Return(nil)
+
+	out, err := s.call("kit-1")
 
 	s.Require().NoError(err)
 	s.Equal("https://example.com/upload", out.UploadURL)
+}
+
+func (s *HandleSetKeycapKitImageSuite) TestReplacingImage_DeletesPreviousObjectFirst() {
+	previous := previousKitImageKey()
+	s.mockRepo.EXPECT().
+		Get(mock.Anything, callerID, "ks-1").
+		Return(setWithKit(&previous), nil)
+	s.mockImages.EXPECT().
+		PresignPut(mock.Anything, newKitImageKey(), "image/png", int64(524288)).
+		Return("https://example.com/upload", nil)
+	deleted := s.mockImages.EXPECT().
+		Delete(mock.Anything, previous).
+		Return(nil).
+		Call
+	s.mockRepo.EXPECT().
+		SetKitImagePath(mock.Anything, "ks-1", "kit-1", newKitImageKey()).
+		Return(nil).
+		NotBefore(deleted)
+
+	_, err := s.call("kit-1")
+
+	s.Require().NoError(err)
 }
 
 func (s *HandleSetKeycapKitImageSuite) TestBlankKeycapSetID_ReturnsError() {
@@ -1283,41 +1334,59 @@ func (s *HandleSetKeycapKitImageSuite) TestUnapprovedContentType_ReturnsError() 
 	s.Require().ErrorContains(err, "not an approved")
 }
 
-func (s *HandleSetKeycapKitImageSuite) TestKitNotFound_ReturnsNotFound() {
-	s.mockImages.EXPECT().
-		PresignPut(mock.Anything, mock.Anything, "image/png", int64(524288)).
-		Return("https://example.com/upload", nil)
+func (s *HandleSetKeycapKitImageSuite) TestSetNotFound_ReturnsNotFound() {
 	s.mockRepo.EXPECT().
-		SetKitImagePath(mock.Anything, "ks-1", "missing-kit", mock.Anything).
-		Return(repository.ErrNotFound)
+		Get(mock.Anything, callerID, "ks-1").
+		Return(nil, repository.ErrNotFound)
 
-	handler := handleSetKeycapKitImage(s.mockRepo, s.mockImages)
-	_, _, err := handler(callerContext(s.T()), nil, schema.SetKeycapKitImageInput{
-		KeycapSetID: "ks-1",
-		KitID:       "missing-kit",
-		ContentType: "image/png",
-		SizeBytes:   524288,
-	})
+	_, err := s.call("kit-1")
+
+	s.Require().ErrorIs(err, errMutationNotFound)
+}
+
+func (s *HandleSetKeycapKitImageSuite) TestKitNotFound_ReturnsNotFound() {
+	s.mockRepo.EXPECT().
+		Get(mock.Anything, callerID, "ks-1").
+		Return(setWithKit(nil), nil)
+
+	_, err := s.call("missing-kit")
 
 	s.Require().ErrorIs(err, errMutationNotFound)
 }
 
 func (s *HandleSetKeycapKitImageSuite) TestPresignError_ReturnsError() {
+	previous := previousKitImageKey()
+	s.mockRepo.EXPECT().
+		Get(mock.Anything, callerID, "ks-1").
+		Return(setWithKit(&previous), nil)
 	s.mockImages.EXPECT().
-		PresignPut(mock.Anything, mock.Anything, "image/png", int64(524288)).
+		PresignPut(mock.Anything, newKitImageKey(), "image/png", int64(524288)).
 		Return("", errors.New("presign failed"))
 
-	handler := handleSetKeycapKitImage(s.mockRepo, s.mockImages)
-	_, _, err := handler(callerContext(s.T()), nil, schema.SetKeycapKitImageInput{
-		KeycapSetID: "ks-1",
-		KitID:       "kit-1",
-		ContentType: "image/png",
-		SizeBytes:   524288,
-	})
+	_, err := s.call("kit-1")
 
 	s.Require().ErrorContains(err, "failed to set kit image")
-	// mockRepo has no .EXPECT() for SetKitImagePath - verifies the DB was
-	// never touched when presigning fails.
+	// No .EXPECT() for Delete or SetKitImagePath - verifies neither the
+	// previous object nor the DB was touched when presigning fails.
+}
+
+func (s *HandleSetKeycapKitImageSuite) TestDeletePreviousError_ReturnsError() {
+	previous := previousKitImageKey()
+	s.mockRepo.EXPECT().
+		Get(mock.Anything, callerID, "ks-1").
+		Return(setWithKit(&previous), nil)
+	s.mockImages.EXPECT().
+		PresignPut(mock.Anything, newKitImageKey(), "image/png", int64(524288)).
+		Return("https://example.com/upload", nil)
+	s.mockImages.EXPECT().
+		Delete(mock.Anything, previous).
+		Return(errors.New("s3: access denied"))
+
+	_, err := s.call("kit-1")
+
+	s.Require().ErrorContains(err, "failed to set kit image")
+	// No .EXPECT() for SetKitImagePath - the pointer stays on the previous
+	// image, which still exists.
 }
 
 type HandleDeleteKeycapKitImageSuite struct {
@@ -1337,7 +1406,7 @@ func (s *HandleDeleteKeycapKitImageSuite) SetupTest() {
 }
 
 func (s *HandleDeleteKeycapKitImageSuite) TestSucceeds() {
-	key := repository.KeycapKitImageKey("keycap-sets/u/ks-1/kits/kit-1/image")
+	key := repository.KeycapKitImageKey("keycap-sets/u/ks-1/kits/kit-1/image/up1")
 	s.mockRepo.EXPECT().
 		Get(mock.Anything, mock.Anything, "ks-1").
 		Return(&repository.KeycapSet{ID: "ks-1", Kits: map[string]repository.KeycapKit{"kit-1": {KitID: "kit-1", ImagePath: &key}}}, nil)
@@ -1365,7 +1434,7 @@ func (s *HandleDeleteKeycapKitImageSuite) TestBlankKitID_ReturnsError() {
 }
 
 func (s *HandleDeleteKeycapKitImageSuite) TestClearKitImagePathNotFound_IdempotentNoError() {
-	key := repository.KeycapKitImageKey("keycap-sets/u/ks-1/kits/kit-1/image")
+	key := repository.KeycapKitImageKey("keycap-sets/u/ks-1/kits/kit-1/image/up1")
 	s.mockRepo.EXPECT().
 		Get(mock.Anything, mock.Anything, "ks-1").
 		Return(&repository.KeycapSet{ID: "ks-1", Kits: map[string]repository.KeycapKit{"kit-1": {KitID: "kit-1", ImagePath: &key}}}, nil)
@@ -1423,7 +1492,7 @@ func (s *HandleDeleteKeycapKitImageSuite) TestRepositoryError_ReturnsError() {
 }
 
 func (s *HandleDeleteKeycapKitImageSuite) TestImageDeleteFailure_ReturnsError_DoesNotClearDBRecord() {
-	key := repository.KeycapKitImageKey("keycap-sets/u/ks-1/kits/kit-1/image")
+	key := repository.KeycapKitImageKey("keycap-sets/u/ks-1/kits/kit-1/image/up1")
 	s.mockRepo.EXPECT().
 		Get(mock.Anything, mock.Anything, "ks-1").
 		Return(&repository.KeycapSet{ID: "ks-1", Kits: map[string]repository.KeycapKit{"kit-1": {KitID: "kit-1", ImagePath: &key}}}, nil)

@@ -65,7 +65,8 @@ func downloadImage(ctx context.Context, presignedURL string) (data []byte, conte
 }
 
 // uploadImage PUTs data to a presigned S3 PUT URL with the given Content-Type,
-// which must match the type the presign was locked to.
+// which must match the type the presign was locked to, and the
+// If-None-Match: * the presign also requires.
 func uploadImage(ctx context.Context, presignedURL, contentType string, data []byte) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, presignedURL, nil)
 	if err != nil {
@@ -74,6 +75,7 @@ func uploadImage(ctx context.Context, presignedURL, contentType string, data []b
 	req.Body = io.NopCloser(bytes.NewReader(data))
 	req.ContentLength = int64(len(data))
 	req.Header.Set("Content-Type", contentType)
+	req.Header.Set("If-None-Match", "*")
 
 	resp, err := httpClientForBlobs.Do(req)
 	if err != nil {

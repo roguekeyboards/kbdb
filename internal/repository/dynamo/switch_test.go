@@ -285,7 +285,7 @@ func (s *SwitchRepositorySuite) TestUpdate_OmittedOptionalFields_AreRemoved() {
 
 func (s *SwitchRepositorySuite) TestUpdate_ReturnsPersistedImagePath() {
 	after := s.updatedItem()
-	after["image_path"] = &types.AttributeValueMemberS{Value: "switches/alice/sw1/image"}
+	after["image_path"] = &types.AttributeValueMemberS{Value: "switches/alice/sw1/image/up1"}
 	s.mockClient.EXPECT().
 		UpdateItem(mock.Anything, mock.Anything).
 		Return(&dynamodb.UpdateItemOutput{Attributes: after}, nil)
@@ -295,7 +295,7 @@ func (s *SwitchRepositorySuite) TestUpdate_ReturnsPersistedImagePath() {
 
 	s.Require().NoError(err)
 	s.Require().NotNil(sw.ImagePath)
-	s.Equal(repository.SwitchImageKey("switches/alice/sw1/image"), *sw.ImagePath)
+	s.Equal(repository.SwitchImageKey("switches/alice/sw1/image/up1"), *sw.ImagePath)
 }
 
 func (s *SwitchRepositorySuite) TestUpdate_ConditionFails_ReturnsErrNotFound() {
@@ -371,7 +371,7 @@ func (s *SwitchRepositorySuite) TestSetImagePath_Succeeds() {
 		Return(&dynamodb.UpdateItemOutput{}, nil)
 
 	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
-	err := s.repo.SetImagePath(ctx, "sw1", "switches/alice/sw1/image")
+	err := s.repo.SetImagePath(ctx, "sw1", "switches/alice/sw1/image/up1")
 
 	s.Require().NoError(err)
 }
@@ -388,7 +388,7 @@ func (s *SwitchRepositorySuite) TestSetImagePath_AlsoClearsCachedGetURL() {
 		Return(&dynamodb.UpdateItemOutput{}, nil)
 
 	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
-	err := s.repo.SetImagePath(ctx, "sw1", "switches/alice/sw1/image")
+	err := s.repo.SetImagePath(ctx, "sw1", "switches/alice/sw1/image/up1")
 	s.Require().NoError(err)
 
 	s.Contains(*captured.UpdateExpression, "REMOVE", "expected a REMOVE clause")
@@ -437,7 +437,7 @@ func (s *SwitchRepositorySuite) TestClearImagePath_Succeeds() {
 				in.ReturnValues == types.ReturnValueAllOld
 		})).
 		Return(&dynamodb.UpdateItemOutput{Attributes: map[string]types.AttributeValue{
-			"image_path": &types.AttributeValueMemberS{Value: "switches/alice/sw1/image"},
+			"image_path": &types.AttributeValueMemberS{Value: "switches/alice/sw1/image/up1"},
 		}}, nil)
 
 	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
@@ -445,7 +445,7 @@ func (s *SwitchRepositorySuite) TestClearImagePath_Succeeds() {
 
 	s.Require().NoError(err)
 	s.Require().NotNil(cleared)
-	s.Equal(repository.SwitchImageKey("switches/alice/sw1/image"), *cleared)
+	s.Equal(repository.SwitchImageKey("switches/alice/sw1/image/up1"), *cleared)
 }
 
 func (s *SwitchRepositorySuite) TestClearImagePath_ImageAlreadyAbsent_ReturnsNilWithoutError() {
@@ -516,7 +516,7 @@ func (s *SwitchRepositorySuite) TestSetImageGetCache_PathMatches_WritesURLAndRet
 		Return(&dynamodb.UpdateItemOutput{}, nil)
 
 	expiresAt := time.Now().Add(24 * time.Hour)
-	ok, err := s.repo.SetImageGetCache(s.T().Context(), "alice", "sw1", "switches/alice/sw1/image", "https://example.com/presigned", expiresAt)
+	ok, err := s.repo.SetImageGetCache(s.T().Context(), "alice", "sw1", "switches/alice/sw1/image/up1", "https://example.com/presigned", expiresAt)
 
 	s.Require().NoError(err)
 	s.True(ok)
@@ -534,7 +534,7 @@ func (s *SwitchRepositorySuite) TestSetImageGetCache_PathChanged_ReturnsFalseWit
 		UpdateItem(mock.Anything, mock.Anything).
 		Return(nil, &types.ConditionalCheckFailedException{})
 
-	ok, err := s.repo.SetImageGetCache(s.T().Context(), "alice", "sw1", "switches/alice/sw1/image", "https://example.com/presigned", time.Now().Add(24*time.Hour))
+	ok, err := s.repo.SetImageGetCache(s.T().Context(), "alice", "sw1", "switches/alice/sw1/image/up1", "https://example.com/presigned", time.Now().Add(24*time.Hour))
 
 	s.Require().NoError(err)
 	s.False(ok)
@@ -545,7 +545,7 @@ func (s *SwitchRepositorySuite) TestSetImageGetCache_UpdateItemError_Propagates(
 		UpdateItem(mock.Anything, mock.Anything).
 		Return(nil, errors.New("dynamodb: throttled"))
 
-	ok, err := s.repo.SetImageGetCache(s.T().Context(), "alice", "sw1", "switches/alice/sw1/image", "https://example.com/presigned", time.Now().Add(24*time.Hour))
+	ok, err := s.repo.SetImageGetCache(s.T().Context(), "alice", "sw1", "switches/alice/sw1/image/up1", "https://example.com/presigned", time.Now().Add(24*time.Hour))
 
 	s.Require().Error(err)
 	s.False(ok)

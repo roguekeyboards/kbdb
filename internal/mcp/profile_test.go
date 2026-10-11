@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
@@ -313,7 +314,7 @@ func (s *HandleDeleteProfileSuite) TestNoProfile_IdempotentNoError() {
 }
 
 func (s *HandleDeleteProfileSuite) TestAvatarDeletedBeforeDBDelete() {
-	key := repository.ProfileImageKey("profiles/" + callerID + "/avatar")
+	key := repository.ProfileImageKey("profiles/" + callerID + "/avatar/up1")
 	s.mockRepo.EXPECT().Get(mock.Anything, callerID).
 		Return(&repository.Profile{OwnerID: callerID, Username: "alice", AvatarPath: &key}, nil)
 
@@ -330,7 +331,7 @@ func (s *HandleDeleteProfileSuite) TestAvatarDeletedBeforeDBDelete() {
 }
 
 func (s *HandleDeleteProfileSuite) TestAvatarDeleteFails_ErrorNoDBDelete() {
-	key := repository.ProfileImageKey("profiles/" + callerID + "/avatar")
+	key := repository.ProfileImageKey("profiles/" + callerID + "/avatar/up1")
 	s.mockRepo.EXPECT().Get(mock.Anything, callerID).
 		Return(&repository.Profile{OwnerID: callerID, Username: "alice", AvatarPath: &key}, nil)
 	s.mockImages.EXPECT().Delete(mock.Anything, key).Return(errors.New("s3 down"))
@@ -467,19 +468,46 @@ func (s *HandleSetProfileImageSuite) call(in schema.SetProfileImageInput) (schem
 	return out, err
 }
 
-func (s *HandleSetProfileImageSuite) avatarKey() repository.ProfileImageKey {
-	return repository.ProfileImageKey("profiles/" + callerID + "/avatar")
+// previousAvatarKey is the caller's avatar key before a replacement.
+func previousAvatarKey() repository.ProfileImageKey {
+	return repository.ProfileImageKey("profiles/" + callerID + "/avatar/old-upload")
+}
+
+// newAvatarKey matches a freshly minted per-upload avatar key, which must
+// never be the previous avatar's key.
+func newAvatarKey() any {
+	return mock.MatchedBy(func(k repository.ProfileImageKey) bool {
+		return strings.HasPrefix(string(k), "profiles/"+callerID+"/avatar/") && k != previousAvatarKey()
+	})
 }
 
 func (s *HandleSetProfileImageSuite) TestValid_ReturnsUploadURL() {
-	s.mockRepo.EXPECT().SetAvatarPath(mock.Anything, s.avatarKey()).Return(nil)
-	s.mockImages.EXPECT().PresignPut(mock.Anything, s.avatarKey(), "image/png", int64(524288)).
+	s.mockRepo.EXPECT().Get(mock.Anything, callerID).Return(&repository.Profile{}, nil)
+	var presigned repository.ProfileImageKey
+	s.mockImages.EXPECT().PresignPut(mock.Anything, newAvatarKey(), "image/png", int64(524288)).
+		Run(func(_ context.Context, key repository.ProfileImageKey, _ string, _ int64) { presigned = key }).
 		Return("https://example.com/put", nil)
+	s.mockRepo.EXPECT().SetAvatarPath(mock.Anything, newAvatarKey()).
+		Run(func(_ context.Context, key repository.ProfileImageKey) { s.Equal(presigned, key) }).
+		Return(nil)
 
 	out, err := s.call(schema.SetProfileImageInput{ContentType: "image/png", SizeBytes: 524288})
 
 	s.Require().NoError(err)
 	s.Equal("https://example.com/put", out.UploadURL)
+}
+
+func (s *HandleSetProfileImageSuite) TestReplacingAvatar_DeletesPreviousObjectFirst() {
+	previous := previousAvatarKey()
+	s.mockRepo.EXPECT().Get(mock.Anything, callerID).Return(&repository.Profile{AvatarPath: &previous}, nil)
+	s.mockImages.EXPECT().PresignPut(mock.Anything, newAvatarKey(), "image/png", int64(524288)).
+		Return("https://example.com/put", nil)
+	deleted := s.mockImages.EXPECT().Delete(mock.Anything, previous).Return(nil).Call
+	s.mockRepo.EXPECT().SetAvatarPath(mock.Anything, newAvatarKey()).Return(nil).NotBefore(deleted)
+
+	_, err := s.call(schema.SetProfileImageInput{ContentType: "image/png", SizeBytes: 524288})
+
+	s.Require().NoError(err)
 }
 
 func (s *HandleSetProfileImageSuite) TestSizeOverCap_ErrorNoRepoCall() {
@@ -497,19 +525,18 @@ func (s *HandleSetProfileImageSuite) TestUnapprovedContentType_ErrorNoRepoCall()
 }
 
 func (s *HandleSetProfileImageSuite) TestNoProfile_NotFoundError() {
-	s.mockImages.EXPECT().PresignPut(mock.Anything, s.avatarKey(), "image/png", int64(524288)).
-		Return("https://example.com/put", nil)
-	s.mockRepo.EXPECT().SetAvatarPath(mock.Anything, s.avatarKey()).Return(repository.ErrNotFound)
+	s.mockRepo.EXPECT().Get(mock.Anything, callerID).Return(nil, repository.ErrNotFound)
 
 	_, err := s.call(schema.SetProfileImageInput{ContentType: "image/png", SizeBytes: 524288})
 
-	s.Require().Error(err)
+	s.Require().ErrorIs(err, errMutationNotFound)
 }
 
 func (s *HandleSetProfileImageSuite) TestMutationConflict_RetryableError() {
-	s.mockImages.EXPECT().PresignPut(mock.Anything, s.avatarKey(), "image/png", int64(524288)).
+	s.mockRepo.EXPECT().Get(mock.Anything, callerID).Return(&repository.Profile{}, nil)
+	s.mockImages.EXPECT().PresignPut(mock.Anything, newAvatarKey(), "image/png", int64(524288)).
 		Return("https://example.com/put", nil)
-	s.mockRepo.EXPECT().SetAvatarPath(mock.Anything, s.avatarKey()).Return(repository.ErrMutationConflict)
+	s.mockRepo.EXPECT().SetAvatarPath(mock.Anything, newAvatarKey()).Return(repository.ErrMutationConflict)
 
 	_, err := s.call(schema.SetProfileImageInput{ContentType: "image/png", SizeBytes: 524288})
 
@@ -517,12 +544,30 @@ func (s *HandleSetProfileImageSuite) TestMutationConflict_RetryableError() {
 }
 
 func (s *HandleSetProfileImageSuite) TestPresignError_GenericError() {
-	s.mockImages.EXPECT().PresignPut(mock.Anything, s.avatarKey(), "image/png", int64(524288)).
+	previous := previousAvatarKey()
+	s.mockRepo.EXPECT().Get(mock.Anything, callerID).Return(&repository.Profile{AvatarPath: &previous}, nil)
+	s.mockImages.EXPECT().PresignPut(mock.Anything, newAvatarKey(), "image/png", int64(524288)).
 		Return("", errors.New("s3 down"))
 
 	_, err := s.call(schema.SetProfileImageInput{ContentType: "image/png", SizeBytes: 524288})
 
 	s.Require().Error(err)
+	// No .EXPECT() for Delete or SetAvatarPath - verifies neither the
+	// previous object nor the DB was touched when presigning fails.
+}
+
+func (s *HandleSetProfileImageSuite) TestDeletePreviousError_GenericError() {
+	previous := previousAvatarKey()
+	s.mockRepo.EXPECT().Get(mock.Anything, callerID).Return(&repository.Profile{AvatarPath: &previous}, nil)
+	s.mockImages.EXPECT().PresignPut(mock.Anything, newAvatarKey(), "image/png", int64(524288)).
+		Return("https://example.com/put", nil)
+	s.mockImages.EXPECT().Delete(mock.Anything, previous).Return(errors.New("s3 down"))
+
+	_, err := s.call(schema.SetProfileImageInput{ContentType: "image/png", SizeBytes: 524288})
+
+	s.Require().Error(err)
+	// No .EXPECT() for SetAvatarPath - the pointer stays on the previous
+	// avatar, which still exists.
 }
 
 type HandleDeleteProfileImageSuite struct {
@@ -547,7 +592,7 @@ func (s *HandleDeleteProfileImageSuite) call() error {
 }
 
 func (s *HandleDeleteProfileImageSuite) avatarKey() repository.ProfileImageKey {
-	return repository.ProfileImageKey("profiles/" + callerID + "/avatar")
+	return repository.ProfileImageKey("profiles/" + callerID + "/avatar/up1")
 }
 
 func (s *HandleDeleteProfileImageSuite) TestDeletesAvatar_S3BeforeDB() {

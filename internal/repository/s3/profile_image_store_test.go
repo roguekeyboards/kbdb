@@ -39,13 +39,13 @@ func (s *ProfileImageStoreSuite) SetupTest() {
 func (s *ProfileImageStoreSuite) TestPresignGet_Succeeds() {
 	s.mockPresign.EXPECT().
 		PresignGetObject(mock.Anything, mock.MatchedBy(func(in *s3.GetObjectInput) bool {
-			return *in.Bucket == "images-bucket" && *in.Key == "profiles/user-alice/avatar"
+			return *in.Bucket == "images-bucket" && *in.Key == "profiles/user-alice/avatar/up1"
 		}), mock.Anything).
 		Return(&v4.PresignedHTTPRequest{URL: "https://example.com/presigned-get"}, nil)
 
 	before := time.Now()
 
-	url, expiresAt, err := s.store.PresignGet(s.T().Context(), "profiles/user-alice/avatar")
+	url, expiresAt, err := s.store.PresignGet(s.T().Context(), "profiles/user-alice/avatar/up1")
 
 	s.Require().NoError(err)
 	s.Equal("https://example.com/presigned-get", url)
@@ -69,7 +69,7 @@ func (s *ProfileImageStoreSuite) TestPresignGet_CapsExpiryToCredentialLifetime()
 		})).
 		Return(&v4.PresignedHTTPRequest{URL: "https://example.com/presigned-get"}, nil)
 
-	_, _, err := s.store.PresignGet(s.T().Context(), "profiles/user-alice/avatar")
+	_, _, err := s.store.PresignGet(s.T().Context(), "profiles/user-alice/avatar/up1")
 
 	s.Require().NoError(err)
 }
@@ -88,7 +88,7 @@ func (s *ProfileImageStoreSuite) TestPresignGet_StaticCredentials_UsesFixedTTL()
 		})).
 		Return(&v4.PresignedHTTPRequest{URL: "https://example.com/presigned-get"}, nil)
 
-	_, _, err := s.store.PresignGet(s.T().Context(), "profiles/user-alice/avatar")
+	_, _, err := s.store.PresignGet(s.T().Context(), "profiles/user-alice/avatar/up1")
 
 	s.Require().NoError(err)
 }
@@ -108,7 +108,7 @@ func (s *ProfileImageStoreSuite) TestPresignGet_CredentialsInsideMargin_StillSig
 		})).
 		Return(&v4.PresignedHTTPRequest{URL: "https://example.com/presigned-get"}, nil)
 
-	url, expiresAt, err := s.store.PresignGet(s.T().Context(), "profiles/user-alice/avatar")
+	url, expiresAt, err := s.store.PresignGet(s.T().Context(), "profiles/user-alice/avatar/up1")
 
 	s.Require().NoError(err)
 	s.Equal("https://example.com/presigned-get", url)
@@ -118,7 +118,7 @@ func (s *ProfileImageStoreSuite) TestPresignGet_CredentialsInsideMargin_StillSig
 func (s *ProfileImageStoreSuite) TestPresignGet_CredentialsAlreadyExpired_Fails() {
 	s.store.creds = expiringCredentials(-time.Minute)
 
-	_, _, err := s.store.PresignGet(s.T().Context(), "profiles/user-alice/avatar")
+	_, _, err := s.store.PresignGet(s.T().Context(), "profiles/user-alice/avatar/up1")
 
 	s.Require().ErrorContains(err, "signing credentials expired")
 }
@@ -128,7 +128,7 @@ func (s *ProfileImageStoreSuite) TestPresignGet_SDKError_Propagates() {
 		PresignGetObject(mock.Anything, mock.Anything, mock.Anything).
 		Return(nil, errors.New("s3: access denied"))
 
-	_, _, err := s.store.PresignGet(s.T().Context(), "profiles/user-alice/avatar")
+	_, _, err := s.store.PresignGet(s.T().Context(), "profiles/user-alice/avatar/up1")
 
 	s.Require().ErrorContains(err, "s3: access denied")
 }
@@ -137,13 +137,13 @@ func (s *ProfileImageStoreSuite) TestPresignPut_Succeeds() {
 	s.mockPresign.EXPECT().
 		PresignPutObject(mock.Anything, mock.MatchedBy(func(in *s3.PutObjectInput) bool {
 			return *in.Bucket == "images-bucket" &&
-				*in.Key == "profiles/user-alice/avatar" &&
+				*in.Key == "profiles/user-alice/avatar/up1" &&
 				*in.ContentType == "image/png" &&
-				*in.ContentLength == 1234
+				*in.ContentLength == 1234 && *in.IfNoneMatch == "*"
 		})).
 		Return(&v4.PresignedHTTPRequest{URL: "https://example.com/presigned-put"}, nil)
 
-	url, err := s.store.PresignPut(s.T().Context(), "profiles/user-alice/avatar", "image/png", 1234)
+	url, err := s.store.PresignPut(s.T().Context(), "profiles/user-alice/avatar/up1", "image/png", 1234)
 
 	s.Require().NoError(err)
 	s.Equal("https://example.com/presigned-put", url)
@@ -152,11 +152,11 @@ func (s *ProfileImageStoreSuite) TestPresignPut_Succeeds() {
 func (s *ProfileImageStoreSuite) TestDelete_Succeeds() {
 	s.mockClient.EXPECT().
 		DeleteObject(mock.Anything, mock.MatchedBy(func(in *s3.DeleteObjectInput) bool {
-			return *in.Bucket == "images-bucket" && *in.Key == "profiles/user-alice/avatar"
+			return *in.Bucket == "images-bucket" && *in.Key == "profiles/user-alice/avatar/up1"
 		})).
 		Return(&s3.DeleteObjectOutput{}, nil)
 
-	s.Require().NoError(s.store.Delete(s.T().Context(), "profiles/user-alice/avatar"))
+	s.Require().NoError(s.store.Delete(s.T().Context(), "profiles/user-alice/avatar/up1"))
 }
 
 func (s *ProfileImageStoreSuite) TestDelete_SDKError_Propagates() {
@@ -164,5 +164,5 @@ func (s *ProfileImageStoreSuite) TestDelete_SDKError_Propagates() {
 		DeleteObject(mock.Anything, mock.Anything).
 		Return(nil, errors.New("s3: boom"))
 
-	s.Require().ErrorContains(s.store.Delete(s.T().Context(), "profiles/user-alice/avatar"), "s3: boom")
+	s.Require().ErrorContains(s.store.Delete(s.T().Context(), "profiles/user-alice/avatar/up1"), "s3: boom")
 }

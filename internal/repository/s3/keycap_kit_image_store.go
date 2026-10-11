@@ -43,6 +43,7 @@ func (s *KeycapKitImageStore) PresignPut(ctx context.Context, key repository.Key
 		Key:           aws.String(string(key)),
 		ContentType:   aws.String(contentType),
 		ContentLength: aws.Int64(size),
+		IfNoneMatch:   aws.String("*"),
 	})
 	if err != nil {
 		return "", fmt.Errorf("presigning PUT s3://%s/%s (content-type %q, %d bytes): %w", s.bucket, key, contentType, size, err)

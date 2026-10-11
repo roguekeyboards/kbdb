@@ -862,7 +862,7 @@ func (s *KeycapSetRepositorySuite) TestSetKitImagePath_Succeeds() {
 		Return(&dynamodb.UpdateItemOutput{}, nil)
 
 	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
-	err := s.repo.SetKitImagePath(ctx, "ks1", "kit1", "keycap-sets/alice/ks1/kits/kit1/image")
+	err := s.repo.SetKitImagePath(ctx, "ks1", "kit1", "keycap-sets/alice/ks1/kits/kit1/image/up1")
 
 	s.Require().NoError(err)
 }
@@ -907,7 +907,7 @@ func (s *KeycapSetRepositorySuite) TestSetKitImagePath_AlsoClearsCachedGetURL() 
 		Return(&dynamodb.UpdateItemOutput{}, nil)
 
 	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
-	err := s.repo.SetKitImagePath(ctx, "ks1", "kit1", "keycap-sets/alice/ks1/kits/kit1/image")
+	err := s.repo.SetKitImagePath(ctx, "ks1", "kit1", "keycap-sets/alice/ks1/kits/kit1/image/up1")
 	s.Require().NoError(err)
 
 	s.Contains(*captured.UpdateExpression, "REMOVE", "expected a REMOVE clause")
@@ -920,7 +920,7 @@ func (s *KeycapSetRepositorySuite) TestSetKitImagePath_AlsoClearsCachedGetURL() 
 }
 
 func (s *KeycapSetRepositorySuite) TestClearKitImagePath_Succeeds() {
-	imagePath := "keycap-sets/alice/ks1/kits/kit1/image"
+	imagePath := "keycap-sets/alice/ks1/kits/kit1/image/up1"
 	s.mockClient.EXPECT().
 		UpdateItem(mock.Anything, mock.MatchedBy(func(in *dynamodb.UpdateItemInput) bool {
 			return strings.Contains(*in.UpdateExpression, "REMOVE") &&
@@ -1013,7 +1013,7 @@ func (s *KeycapSetRepositorySuite) TestSetKitImageGetCache_PathMatches_WritesURL
 		Return(&dynamodb.UpdateItemOutput{}, nil)
 
 	expiresAt := time.Now().Add(24 * time.Hour)
-	ok, err := s.repo.SetKitImageGetCache(s.T().Context(), "alice", "ks1", "kit1", "keycap-sets/alice/ks1/kits/kit1/image", "https://example.com/presigned", expiresAt)
+	ok, err := s.repo.SetKitImageGetCache(s.T().Context(), "alice", "ks1", "kit1", "keycap-sets/alice/ks1/kits/kit1/image/up1", "https://example.com/presigned", expiresAt)
 
 	s.Require().NoError(err)
 	s.True(ok)
@@ -1032,7 +1032,7 @@ func (s *KeycapSetRepositorySuite) TestSetKitImageGetCache_PathChanged_ReturnsFa
 		UpdateItem(mock.Anything, mock.Anything).
 		Return(nil, &types.ConditionalCheckFailedException{})
 
-	ok, err := s.repo.SetKitImageGetCache(s.T().Context(), "alice", "ks1", "kit1", "keycap-sets/alice/ks1/kits/kit1/image", "https://example.com/presigned", time.Now().Add(24*time.Hour))
+	ok, err := s.repo.SetKitImageGetCache(s.T().Context(), "alice", "ks1", "kit1", "keycap-sets/alice/ks1/kits/kit1/image/up1", "https://example.com/presigned", time.Now().Add(24*time.Hour))
 
 	s.Require().NoError(err)
 	s.False(ok)
@@ -1043,7 +1043,7 @@ func (s *KeycapSetRepositorySuite) TestSetKitImageGetCache_UpdateItemError_Propa
 		UpdateItem(mock.Anything, mock.Anything).
 		Return(nil, errors.New("dynamodb: throttled"))
 
-	ok, err := s.repo.SetKitImageGetCache(s.T().Context(), "alice", "ks1", "kit1", "keycap-sets/alice/ks1/kits/kit1/image", "https://example.com/presigned", time.Now().Add(24*time.Hour))
+	ok, err := s.repo.SetKitImageGetCache(s.T().Context(), "alice", "ks1", "kit1", "keycap-sets/alice/ks1/kits/kit1/image/up1", "https://example.com/presigned", time.Now().Add(24*time.Hour))
 
 	s.Require().Error(err)
 	s.False(ok)

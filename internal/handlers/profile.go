@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/google/uuid"
+
 	"github.com/rogueserenity/kbdb/internal/authz"
 	"github.com/rogueserenity/kbdb/internal/handlers/api"
 	"github.com/rogueserenity/kbdb/internal/log"
@@ -282,8 +284,9 @@ func DeleteProfile(repo repository.ProfileRepository, images repository.ProfileI
 // Doesn't upload the image itself: the response is a presigned S3 PUT URL
 // the client uploads directly to. Presigning runs before the repository
 // mutation, so a presign failure never leaves the DB pointing at an
-// object that was never uploaded. The avatar is a single fixed key, so a
-// re-upload overwrites in place - no need to delete first.
+// object that was never uploaded. Each upload gets a new key, so a
+// previous avatar's object is deleted before the pointer moves, S3-first
+// like [DeleteProfileImage].
 func SetProfileImage(repo repository.ProfileRepository, images repository.ProfileImageStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := r.PathValue("identifier")
@@ -306,7 +309,12 @@ func SetProfileImage(repo repository.ProfileRepository, images repository.Profil
 			return
 		}
 
-		key, err := repository.NewProfileImageKey(r.Context())
+		p, err := repo.Get(r.Context(), userID)
+		if handleMutationError(w, r, err, log.ProfileID, userID) {
+			return
+		}
+
+		key, err := repository.NewProfileImageKey(r.Context(), uuid.NewString())
 		if err != nil {
 			log.FromContext(r.Context()).Error("building profile image key", log.Error, err, log.ProfileID, userID)
 			problem.Internal(w, "failed to set profile image")
@@ -318,6 +326,14 @@ func SetProfileImage(repo repository.ProfileRepository, images repository.Profil
 			log.FromContext(r.Context()).Error("presigning profile image upload", log.Error, err, log.ProfileID, userID)
 			problem.Internal(w, "failed to set profile image")
 			return
+		}
+
+		if p.AvatarPath != nil {
+			if err := images.Delete(r.Context(), *p.AvatarPath); err != nil {
+				log.FromContext(r.Context()).Error("deleting previous profile avatar object", log.Error, err, log.ProfileID, userID)
+				problem.Internal(w, "failed to set profile image")
+				return
+			}
 		}
 
 		if handleMutationError(w, r, repo.SetAvatarPath(r.Context(), key), log.ProfileID, userID) {

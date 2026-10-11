@@ -65,11 +65,12 @@ func (s *ImagesSuite) TestDownloadImage_Non2xxIsError() {
 	s.ErrorContains(err, "403")
 }
 
-func (s *ImagesSuite) TestUploadImage_SendsBytesAndContentType() {
-	var gotCT string
+func (s *ImagesSuite) TestUploadImage_SendsBytesAndHeaders() {
+	var gotCT, gotIfNoneMatch string
 	var gotBody []byte
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotCT = r.Header.Get("Content-Type")
+		gotIfNoneMatch = r.Header.Get("If-None-Match")
 		gotBody, _ = io.ReadAll(r.Body)
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -79,6 +80,7 @@ func (s *ImagesSuite) TestUploadImage_SendsBytesAndContentType() {
 	err := uploadImage(context.Background(), srv.URL, "image/webp", data)
 	s.Require().NoError(err)
 	s.Equal("image/webp", gotCT)
+	s.Equal("*", gotIfNoneMatch)
 	s.Equal(data, gotBody)
 }
 

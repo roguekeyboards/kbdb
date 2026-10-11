@@ -213,6 +213,12 @@ type BuildImageStore interface {
 	// PresignGetBuildImage returns a presigned GET URL for key, and when it
 	// stops working - bounded by the signing credentials, not configured.
 	PresignGetBuildImage(ctx context.Context, key BuildImageKey) (url string, expiresAt time.Time, err error)
+
+	// PresignPutBuildImage returns a short-lived presigned PUT URL for key,
+	// locked to contentType and size via the Content-Type and Content-Length
+	// the upload must match.
+	// Single-use: the upload must also send If-None-Match: *, so once an
+	// object exists at key the URL can't write it again.
 	PresignPutBuildImage(ctx context.Context, key BuildImageKey, contentType string, size int64) (url string, err error)
 
 	// DeleteBuildImage is idempotent, matching S3's own DeleteObject.

@@ -47,7 +47,7 @@ func (s *ProfileMapperSuite) TestProfileToMCP_FullProfile() {
 }
 
 func (s *ProfileMapperSuite) TestProfileToMCP_AvatarReportedAsBool() {
-	key := repository.ProfileImageKey("profiles/user-alice/avatar")
+	key := repository.ProfileImageKey("profiles/user-alice/avatar/up1")
 	out := Profile{}.ToMCP(repository.Profile{Username: "alice", AvatarPath: &key}, true)
 
 	s.True(out.HasAvatar)

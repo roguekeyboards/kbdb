@@ -225,18 +225,18 @@ type KeycapSetRepository interface {
 // KeycapKitImageStore.
 type KeycapKitImageKey string
 
-// NewKeycapKitImageKey builds the deterministic object key for kitID's
+// NewKeycapKitImageKey builds the object key for one upload of kitID's
 // image within setID. ownerID comes from ctx, not a parameter, so a caller
-// can't build a key addressing anyone else's prefix. Fixed, no extension -
-// a re-upload overwrites the same object, so there's no orphan
-// accumulation from repeated uploads.
-func NewKeycapKitImageKey(ctx context.Context, setID, kitID string) (KeycapKitImageKey, error) {
+// can't build a key addressing anyone else's prefix. Each upload gets its
+// own key because upload URLs are single-use: a replacement can't be
+// written over the previous object.
+func NewKeycapKitImageKey(ctx context.Context, setID, kitID, uploadID string) (KeycapKitImageKey, error) {
 	ownerID, ok := kbdbctx.UserID(ctx)
 	if !ok {
 		return "", ErrNoUserID
 	}
 
-	return KeycapKitImageKey(fmt.Sprintf("keycap-sets/%s/%s/kits/%s/image", ownerID, setID, kitID)), nil
+	return KeycapKitImageKey(fmt.Sprintf("keycap-sets/%s/%s/kits/%s/image/%s", ownerID, setID, kitID, uploadID)), nil
 }
 
 // KeycapKitImageStore stores a kit's image object in a private object
@@ -251,6 +251,8 @@ type KeycapKitImageStore interface {
 	// PresignPut returns a short-lived presigned PUT URL for key, locked
 	// to contentType and size via the Content-Type and Content-Length the
 	// upload must match.
+	// Single-use: the upload must also send If-None-Match: *, so once an
+	// object exists at key the URL can't write it again.
 	PresignPut(ctx context.Context, key KeycapKitImageKey, contentType string, size int64) (url string, err error)
 
 	// Delete removes the object at key. Idempotent: a nonexistent key is

@@ -21,7 +21,7 @@ func (s *KeycapSetToMCPSuite) TestMapsAllFields() {
 	profile := "Cherry"
 	material := "ABS"
 	notes := "grail set"
-	imagePath := repository.KeycapKitImageKey("keycap-sets/u-1/ks-1/kits/kit-1/image")
+	imagePath := repository.KeycapKitImageKey("keycap-sets/u-1/ks-1/kits/kit-1/image/up1")
 	vendor := "Amazon"
 
 	out := KeycapSet{}.ToMCP(repository.KeycapSet{
@@ -218,7 +218,7 @@ func (s *KeycapSetToMCPSuite) TestKeycapSetToMCPSummary_OrderStatus_SetsAggregat
 }
 
 func (s *KeycapSetToMCPSuite) TestKeycapSetToMCPSummary_PrimaryKitWithImage_ReportsHasImageTrue() {
-	imagePath := repository.KeycapKitImageKey("keycap-sets/u-1/ks-1/kits/kit-1/image")
+	imagePath := repository.KeycapKitImageKey("keycap-sets/u-1/ks-1/kits/kit-1/image/up1")
 
 	out := KeycapSet{}.ToMCPSummary(repository.KeycapSet{
 		ID:           "ks-1",

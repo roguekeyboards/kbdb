@@ -392,6 +392,8 @@ type KeyboardImageStore interface {
 	// PresignPutKeyboardImage returns a short-lived presigned PUT URL for
 	// key, locked to contentType and size via the Content-Type and
 	// Content-Length the upload must match.
+	// Single-use: the upload must also send If-None-Match: *, so once an
+	// object exists at key the URL can't write it again.
 	PresignPutKeyboardImage(ctx context.Context, key KeyboardImageKey, contentType string, size int64) (url string, err error)
 
 	// DeleteKeyboardImage removes the object at key. Idempotent: a
