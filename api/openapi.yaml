@@ -445,6 +445,8 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+        "429":
+          $ref: "#/components/responses/UploadsUnavailableResponse"
         default:
           $ref: "#/components/responses/ProblemResponse"
 
@@ -654,6 +656,8 @@ paths:
           $ref: "#/components/responses/ProblemResponse"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
+        "429":
+          $ref: "#/components/responses/UploadsUnavailableResponse"
         default:
           $ref: "#/components/responses/ProblemResponse"
     delete:
@@ -902,6 +906,8 @@ paths:
           $ref: "#/components/responses/ProblemResponse"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
+        "429":
+          $ref: "#/components/responses/UploadsUnavailableResponse"
         default:
           $ref: "#/components/responses/ProblemResponse"
     delete:
@@ -1221,6 +1227,8 @@ paths:
           $ref: "#/components/responses/ProblemResponse"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
+        "429":
+          $ref: "#/components/responses/UploadsUnavailableResponse"
         default:
           $ref: "#/components/responses/ProblemResponse"
     delete:
@@ -1408,6 +1416,8 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+        "429":
+          $ref: "#/components/responses/UploadsUnavailableResponse"
         default:
           $ref: "#/components/responses/ProblemResponse"
 
@@ -1583,6 +1593,14 @@ components:
             $ref: "#/components/schemas/Problem"
     NotFoundResponse:
       description: The requested resource does not exist, or does not belong to the authenticated user.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    UploadsUnavailableResponse:
+      description: >
+        Image uploads aren't available at the moment, so no upload URL was
+        issued. Try again later.
       content:
         application/problem+json:
           schema:

@@ -47,6 +47,9 @@ packages:
       ProfileImageStore:
         config:
           structname: 'MockProfileImageStore'
+      UploadCounter:
+        config:
+          structname: 'MockUploadCounter'
   github.com/rogueserenity/kbdb/internal/repository/dynamo:
     config:
       dir: '{{.InterfaceDir}}/mocks'

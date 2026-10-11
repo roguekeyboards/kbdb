@@ -66,6 +66,12 @@ func ProfileUsernameTableName() string {
 	return os.Getenv("KBDB_PROFILE_USERNAME_TABLE_NAME")
 }
 
+// UploadCounterTableName returns the DynamoDB table name holding the
+// per-day image upload counts, so specs can put a day at its limit.
+func UploadCounterTableName() string {
+	return os.Getenv("KBDB_UPLOAD_COUNTER_TABLE_NAME")
+}
+
 // DynamoDBEndpointURL returns the DynamoDB endpoint specs should talk to.
 // Empty uses default AWS endpoint resolution.
 func DynamoDBEndpointURL() string {

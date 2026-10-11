@@ -118,7 +118,8 @@ sam deploy \
     "OidcIssuerBaseUrl=$ISSUER" \
     "OidcAudience=$AUDIENCE" \
     "IdpConsentPublicToken=public-token-test-local-kbdb" \
-    "LogoutReturnOrigins=http://localhost:5173"
+    "LogoutReturnOrigins=http://localhost:5173" \
+    "DailyUploadLimit=1000000"
 
 out() {
   aws cloudformation describe-stacks --stack-name "$STACK" \
@@ -139,6 +140,7 @@ export KBDB_KEYCAP_SET_TABLE_NAME=$(out KeycapSetTableName)
 export KBDB_BUILD_TABLE_NAME=$(out BuildTableName)
 export KBDB_PROFILE_TABLE_NAME=$(out ProfileTableName)
 export KBDB_PROFILE_USERNAME_TABLE_NAME=$(out ProfileUsernameTableName)
+export KBDB_UPLOAD_COUNTER_TABLE_NAME=$(out UploadCounterTableName)
 export KBDB_OIDC_ISSUER='$ISSUER'
 export KBDB_OIDC_AUDIENCE='$AUDIENCE'
 export KBDB_OIDC_SIGNING_KEY_PATH='$KEY_PATH'

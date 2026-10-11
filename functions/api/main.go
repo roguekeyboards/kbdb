@@ -25,6 +25,7 @@ import (
 	"github.com/rogueserenity/kbdb/internal/repository/dynamo"
 	imagestore "github.com/rogueserenity/kbdb/internal/repository/s3"
 	"github.com/rogueserenity/kbdb/internal/router"
+	"github.com/rogueserenity/kbdb/internal/uploadlimit"
 )
 
 // Version is set at build time via -ldflags "-X main.Version=...", derived
@@ -64,6 +65,7 @@ func main() {
 	keycapSetRepo := dynamo.NewKeycapSetRepository(dynamoClient, cfg.KeycapSetTableName)
 	buildRepo := dynamo.NewBuildRepository(dynamoClient, cfg.BuildTableName)
 	profileRepo := dynamo.NewProfileRepository(dynamoClient, cfg.ProfileTableName, cfg.ProfileUsernameTableName)
+	uploads := uploadlimit.New(dynamo.NewUploadCounter(dynamoClient, cfg.UploadCounterTableName), cfg.DailyUploadLimit)
 
 	s3Client := s3.NewFromConfig(awsCfg, func(o *s3.Options) {
 		if cfg.S3EndpointURL != "" {
@@ -96,7 +98,7 @@ func main() {
 	switchImageStore := imagestore.NewSwitchImageStore(s3Client, presignClient, cfg.ImagesBucketName, presignCreds)
 	profileImageStore := imagestore.NewProfileImageStore(s3Client, presignClient, cfg.ImagesBucketName, presignCreds)
 
-	handler := router.New(verifier, switchRepo, switchImageStore, keyboardRepo, keyboardImageStore, keycapSetRepo, keycapKitImageStore, buildRepo, buildImageStore, profileRepo, profileImageStore, cfg.OIDCIssuerURL, cfg.IDPConsentPublicToken, Version, strings.Split(cfg.LogoutReturnOrigins, ","))
+	handler := router.New(verifier, switchRepo, switchImageStore, keyboardRepo, keyboardImageStore, keycapSetRepo, keycapKitImageStore, buildRepo, buildImageStore, profileRepo, profileImageStore, uploads, cfg.OIDCIssuerURL, cfg.IDPConsentPublicToken, Version, strings.Split(cfg.LogoutReturnOrigins, ","))
 
 	// ReadHeaderTimeout bounds a slow/malicious client independently of
 	// Lambda's own per-invocation timeout.

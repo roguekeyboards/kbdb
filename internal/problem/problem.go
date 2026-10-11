@@ -105,3 +105,8 @@ func StillReferenced(w http.ResponseWriter, detail string, blockingBuildIDs []st
 func BadRequest(w http.ResponseWriter, detail string) {
 	Write(w, http.StatusBadRequest, "https://mykeebs.info/errors/bad-request", "Bad Request", detail)
 }
+
+// TooManyRequests writes a 429 Problem response.
+func TooManyRequests(w http.ResponseWriter, detail string) {
+	Write(w, http.StatusTooManyRequests, "https://mykeebs.info/errors/too-many-requests", "Too Many Requests", detail)
+}

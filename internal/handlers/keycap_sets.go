@@ -19,6 +19,7 @@ import (
 	"github.com/rogueserenity/kbdb/internal/problem"
 	"github.com/rogueserenity/kbdb/internal/repoapi"
 	"github.com/rogueserenity/kbdb/internal/repository"
+	"github.com/rogueserenity/kbdb/internal/uploadlimit"
 )
 
 // ListKeycapSets reads the {userId} path value and lists that owner's
@@ -525,7 +526,9 @@ func DeleteKeycapKit(
 // never uploaded. Each upload gets a new key, so a previous image's
 // object is deleted before the pointer moves, S3-first like
 // [DeleteKeycapKitImage].
-func SetKeycapKitImage(keycapSetRepo repository.KeycapSetRepository, images repository.KeycapKitImageStore) http.HandlerFunc {
+// Each issued URL counts against the daily upload limit; once it's
+// reached the request gets 429 and no URL is issued.
+func SetKeycapKitImage(keycapSetRepo repository.KeycapSetRepository, images repository.KeycapKitImageStore, uploads *uploadlimit.Limiter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ownerID := r.PathValue("userId")
 		setID := r.PathValue("keycapSetId")
@@ -557,6 +560,10 @@ func SetKeycapKitImage(keycapSetRepo repository.KeycapSetRepository, images repo
 		kit, ok := ks.Kits[kitID]
 		if !ok {
 			problem.NotFound(w, "resource not found")
+			return
+		}
+
+		if reserveUpload(w, r, uploads, log.KeycapSetID, setID, log.KeycapKitID, kitID) {
 			return
 		}
 

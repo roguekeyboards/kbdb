@@ -21,6 +21,7 @@ import (
 	"github.com/rogueserenity/kbdb/internal/repoapi"
 	"github.com/rogueserenity/kbdb/internal/repository"
 	"github.com/rogueserenity/kbdb/internal/repository/mocks"
+	"github.com/rogueserenity/kbdb/internal/uploadlimit"
 )
 
 type ListKeyboardsSuite struct {
@@ -1201,6 +1202,7 @@ type AddKeyboardImageSuite struct {
 
 	mockKeyboardRepo *mocks.MockKeyboardRepository
 	mockImages       *mocks.MockKeyboardImageStore
+	mockUploads      *mocks.MockUploadCounter
 	handler          http.HandlerFunc
 }
 
@@ -1211,7 +1213,8 @@ func TestAddKeyboardImageSuite(t *testing.T) {
 func (s *AddKeyboardImageSuite) SetupTest() {
 	s.mockKeyboardRepo = mocks.NewMockKeyboardRepository(s.T())
 	s.mockImages = mocks.NewMockKeyboardImageStore(s.T())
-	s.handler = AddKeyboardImage(s.mockKeyboardRepo, s.mockImages)
+	s.mockUploads = mocks.NewMockUploadCounter(s.T())
+	s.handler = AddKeyboardImage(s.mockKeyboardRepo, s.mockImages, uploadlimit.New(s.mockUploads, 500))
 }
 
 func (s *AddKeyboardImageSuite) newRequest(ctx context.Context, body string) *http.Request {
@@ -1226,6 +1229,7 @@ func (s *AddKeyboardImageSuite) ownerCtx() context.Context {
 }
 
 func (s *AddKeyboardImageSuite) TestAddKeyboardImage_Succeeds() {
+	reserved := expectUploadReserved(s.mockUploads)
 	s.mockKeyboardRepo.EXPECT().
 		AddImage(mock.Anything, "kb1", mock.MatchedBy(func(img repository.KeyboardImage) bool {
 			return img.ImageID != ""
@@ -1233,7 +1237,8 @@ func (s *AddKeyboardImageSuite) TestAddKeyboardImage_Succeeds() {
 		Return(nil)
 	s.mockImages.EXPECT().
 		PresignPutKeyboardImage(mock.Anything, mock.Anything, "image/png", int64(524288)).
-		Return("https://example.com/presigned-put", nil)
+		Return("https://example.com/presigned-put", nil).
+		NotBefore(reserved)
 
 	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
@@ -1297,6 +1302,7 @@ func (s *AddKeyboardImageSuite) TestAddKeyboardImage_UnapprovedContentType_Retur
 }
 
 func (s *AddKeyboardImageSuite) TestAddKeyboardImage_NotFound_Returns404() {
+	expectUploadReserved(s.mockUploads)
 	s.mockImages.EXPECT().
 		PresignPutKeyboardImage(mock.Anything, mock.Anything, "image/png", int64(524288)).
 		Return("https://example.com/presigned-put", nil)
@@ -1313,6 +1319,7 @@ func (s *AddKeyboardImageSuite) TestAddKeyboardImage_NotFound_Returns404() {
 }
 
 func (s *AddKeyboardImageSuite) TestAddKeyboardImage_ImageLimitReached_Returns409() {
+	expectUploadReserved(s.mockUploads)
 	s.mockImages.EXPECT().
 		PresignPutKeyboardImage(mock.Anything, mock.Anything, "image/png", int64(524288)).
 		Return("https://example.com/presigned-put", nil)
@@ -1329,6 +1336,7 @@ func (s *AddKeyboardImageSuite) TestAddKeyboardImage_ImageLimitReached_Returns40
 }
 
 func (s *AddKeyboardImageSuite) TestAddKeyboardImage_PresignError_Returns500() {
+	expectUploadReserved(s.mockUploads)
 	s.mockImages.EXPECT().
 		PresignPutKeyboardImage(mock.Anything, mock.Anything, "image/png", int64(524288)).
 		Return("", errors.New("s3: access denied"))
@@ -1344,6 +1352,7 @@ func (s *AddKeyboardImageSuite) TestAddKeyboardImage_PresignError_Returns500() {
 }
 
 func (s *AddKeyboardImageSuite) TestAddKeyboardImage_RepositoryError_Returns500() {
+	expectUploadReserved(s.mockUploads)
 	s.mockImages.EXPECT().
 		PresignPutKeyboardImage(mock.Anything, mock.Anything, "image/png", int64(524288)).
 		Return("https://example.com/presigned-put", nil)
@@ -1530,4 +1539,28 @@ func (s *UpdateKeyboardSuite) TestUpdateKeyboard_ReturnsOwnersCurrencyWithPrice(
 	s.Require().NoError(json.Unmarshal(rec.Body.Bytes(), &got))
 	s.Require().NotNil(got.Purchase.Currency)
 	s.Equal("EUR", *got.Purchase.Currency)
+}
+
+func (s *AddKeyboardImageSuite) TestAddKeyboardImage_UploadLimitReached_Returns429() {
+	s.mockUploads.EXPECT().
+		Increment(mock.Anything, mock.Anything, int64(500), mock.Anything).
+		Return(repository.ErrUploadLimitReached)
+
+	rec := httptest.NewRecorder()
+	s.handler(rec, s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`))
+
+	s.Equal(http.StatusTooManyRequests, rec.Code)
+	s.Equal("application/problem+json", rec.Header().Get("Content-Type"))
+	s.Contains(rec.Body.String(), "image uploads aren't available at the moment")
+}
+
+func (s *AddKeyboardImageSuite) TestAddKeyboardImage_ReserveError_Returns500() {
+	s.mockUploads.EXPECT().
+		Increment(mock.Anything, mock.Anything, int64(500), mock.Anything).
+		Return(errors.New("dynamo: boom"))
+
+	rec := httptest.NewRecorder()
+	s.handler(rec, s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`))
+
+	s.Equal(http.StatusInternalServerError, rec.Code)
 }

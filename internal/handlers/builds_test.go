@@ -20,6 +20,7 @@ import (
 	"github.com/rogueserenity/kbdb/internal/repoapi"
 	"github.com/rogueserenity/kbdb/internal/repository"
 	"github.com/rogueserenity/kbdb/internal/repository/mocks"
+	"github.com/rogueserenity/kbdb/internal/uploadlimit"
 )
 
 func floatPtr(f float64) *float64 { return &f }
@@ -1331,6 +1332,7 @@ type AddBuildImageSuite struct {
 
 	mockBuildRepo *mocks.MockBuildRepository
 	mockImages    *mocks.MockBuildImageStore
+	mockUploads   *mocks.MockUploadCounter
 	handler       http.HandlerFunc
 }
 
@@ -1341,7 +1343,8 @@ func TestAddBuildImageSuite(t *testing.T) {
 func (s *AddBuildImageSuite) SetupTest() {
 	s.mockBuildRepo = mocks.NewMockBuildRepository(s.T())
 	s.mockImages = mocks.NewMockBuildImageStore(s.T())
-	s.handler = AddBuildImage(s.mockBuildRepo, s.mockImages)
+	s.mockUploads = mocks.NewMockUploadCounter(s.T())
+	s.handler = AddBuildImage(s.mockBuildRepo, s.mockImages, uploadlimit.New(s.mockUploads, 500))
 }
 
 func (s *AddBuildImageSuite) newRequest(ctx context.Context, body string) *http.Request {
@@ -1356,6 +1359,7 @@ func (s *AddBuildImageSuite) ownerCtx() context.Context {
 }
 
 func (s *AddBuildImageSuite) TestAddBuildImage_Succeeds() {
+	reserved := expectUploadReserved(s.mockUploads)
 	s.mockBuildRepo.EXPECT().
 		AddImage(mock.Anything, "build1", mock.MatchedBy(func(img repository.BuildImage) bool {
 			return img.ImageID != ""
@@ -1363,7 +1367,8 @@ func (s *AddBuildImageSuite) TestAddBuildImage_Succeeds() {
 		Return(nil)
 	s.mockImages.EXPECT().
 		PresignPutBuildImage(mock.Anything, mock.Anything, "image/png", int64(524288)).
-		Return("https://example.com/presigned-put", nil)
+		Return("https://example.com/presigned-put", nil).
+		NotBefore(reserved)
 
 	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
@@ -1427,6 +1432,7 @@ func (s *AddBuildImageSuite) TestAddBuildImage_UnapprovedContentType_Returns400(
 }
 
 func (s *AddBuildImageSuite) TestAddBuildImage_NotFound_Returns404() {
+	expectUploadReserved(s.mockUploads)
 	s.mockImages.EXPECT().
 		PresignPutBuildImage(mock.Anything, mock.Anything, "image/png", int64(524288)).
 		Return("https://example.com/presigned-put", nil)
@@ -1443,6 +1449,7 @@ func (s *AddBuildImageSuite) TestAddBuildImage_NotFound_Returns404() {
 }
 
 func (s *AddBuildImageSuite) TestAddBuildImage_ImageLimitReached_Returns409() {
+	expectUploadReserved(s.mockUploads)
 	s.mockImages.EXPECT().
 		PresignPutBuildImage(mock.Anything, mock.Anything, "image/png", int64(524288)).
 		Return("https://example.com/presigned-put", nil)
@@ -1459,6 +1466,7 @@ func (s *AddBuildImageSuite) TestAddBuildImage_ImageLimitReached_Returns409() {
 }
 
 func (s *AddBuildImageSuite) TestAddBuildImage_PresignError_Returns500() {
+	expectUploadReserved(s.mockUploads)
 	s.mockImages.EXPECT().
 		PresignPutBuildImage(mock.Anything, mock.Anything, "image/png", int64(524288)).
 		Return("", errors.New("s3: access denied"))
@@ -1474,6 +1482,7 @@ func (s *AddBuildImageSuite) TestAddBuildImage_PresignError_Returns500() {
 }
 
 func (s *AddBuildImageSuite) TestAddBuildImage_RepositoryError_Returns500() {
+	expectUploadReserved(s.mockUploads)
 	s.mockImages.EXPECT().
 		PresignPutBuildImage(mock.Anything, mock.Anything, "image/png", int64(524288)).
 		Return("https://example.com/presigned-put", nil)
@@ -1661,4 +1670,28 @@ func (s *UpdateBuildSuite) TestUpdateBuild_ReturnsOwnersCurrencyWithPrice() {
 	s.Require().NoError(json.Unmarshal(rec.Body.Bytes(), &got))
 	s.Require().NotNil(got.Stabs.Currency)
 	s.Equal("EUR", *got.Stabs.Currency)
+}
+
+func (s *AddBuildImageSuite) TestAddBuildImage_UploadLimitReached_Returns429() {
+	s.mockUploads.EXPECT().
+		Increment(mock.Anything, mock.Anything, int64(500), mock.Anything).
+		Return(repository.ErrUploadLimitReached)
+
+	rec := httptest.NewRecorder()
+	s.handler(rec, s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`))
+
+	s.Equal(http.StatusTooManyRequests, rec.Code)
+	s.Equal("application/problem+json", rec.Header().Get("Content-Type"))
+	s.Contains(rec.Body.String(), "image uploads aren't available at the moment")
+}
+
+func (s *AddBuildImageSuite) TestAddBuildImage_ReserveError_Returns500() {
+	s.mockUploads.EXPECT().
+		Increment(mock.Anything, mock.Anything, int64(500), mock.Anything).
+		Return(errors.New("dynamo: boom"))
+
+	rec := httptest.NewRecorder()
+	s.handler(rec, s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`))
+
+	s.Equal(http.StatusInternalServerError, rec.Code)
 }

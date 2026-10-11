@@ -13,6 +13,7 @@ import (
 	"github.com/rogueserenity/kbdb/internal/mcp/schema"
 	"github.com/rogueserenity/kbdb/internal/repository"
 	"github.com/rogueserenity/kbdb/internal/repository/mocks"
+	"github.com/rogueserenity/kbdb/internal/uploadlimit"
 )
 
 func validBuildInput() schema.BuildInput {
@@ -851,8 +852,9 @@ func (s *HandleDeleteBuildSuite) TestMutationConflict_ReturnsConflictError() {
 type HandleAddBuildImageSuite struct {
 	suite.Suite
 
-	mockBuilds *mocks.MockBuildRepository
-	mockImages *mocks.MockBuildImageStore
+	mockBuilds  *mocks.MockBuildRepository
+	mockImages  *mocks.MockBuildImageStore
+	mockUploads *mocks.MockUploadCounter
 }
 
 func TestHandleAddBuildImageSuite(t *testing.T) {
@@ -862,9 +864,11 @@ func TestHandleAddBuildImageSuite(t *testing.T) {
 func (s *HandleAddBuildImageSuite) SetupTest() {
 	s.mockBuilds = mocks.NewMockBuildRepository(s.T())
 	s.mockImages = mocks.NewMockBuildImageStore(s.T())
+	s.mockUploads = mocks.NewMockUploadCounter(s.T())
 }
 
 func (s *HandleAddBuildImageSuite) TestSucceeds() {
+	reserved := expectUploadReserved(s.mockUploads)
 	s.mockBuilds.EXPECT().
 		AddImage(mock.Anything, "build-1", mock.MatchedBy(func(img repository.BuildImage) bool {
 			return img.ImageID != ""
@@ -872,9 +876,10 @@ func (s *HandleAddBuildImageSuite) TestSucceeds() {
 		Return(nil)
 	s.mockImages.EXPECT().
 		PresignPutBuildImage(mock.Anything, mock.Anything, "image/png", int64(524288)).
-		Return("https://example.com/upload", nil)
+		Return("https://example.com/upload", nil).
+		NotBefore(reserved)
 
-	handler := handleAddBuildImage(s.mockBuilds, s.mockImages)
+	handler := handleAddBuildImage(s.mockBuilds, s.mockImages, uploadlimit.New(s.mockUploads, 500))
 	_, out, err := handler(callerContext(s.T()), nil, schema.AddBuildImageInput{
 		BuildID:     "build-1",
 		ContentType: "image/png",
@@ -887,7 +892,7 @@ func (s *HandleAddBuildImageSuite) TestSucceeds() {
 }
 
 func (s *HandleAddBuildImageSuite) TestBlankBuildID_ReturnsError() {
-	handler := handleAddBuildImage(s.mockBuilds, s.mockImages)
+	handler := handleAddBuildImage(s.mockBuilds, s.mockImages, uploadlimit.New(s.mockUploads, 500))
 	_, _, err := handler(callerContext(s.T()), nil, schema.AddBuildImageInput{
 		BuildID:     " ",
 		ContentType: "image/png",
@@ -898,6 +903,7 @@ func (s *HandleAddBuildImageSuite) TestBlankBuildID_ReturnsError() {
 }
 
 func (s *HandleAddBuildImageSuite) TestImageLimitReached_ReturnsError() {
+	expectUploadReserved(s.mockUploads)
 	s.mockImages.EXPECT().
 		PresignPutBuildImage(mock.Anything, mock.Anything, "image/png", int64(524288)).
 		Return("https://example.com/upload", nil)
@@ -905,7 +911,7 @@ func (s *HandleAddBuildImageSuite) TestImageLimitReached_ReturnsError() {
 		AddImage(mock.Anything, "build-1", mock.Anything).
 		Return(fmt.Errorf("adding image: %w", repository.ErrImageLimitReached))
 
-	handler := handleAddBuildImage(s.mockBuilds, s.mockImages)
+	handler := handleAddBuildImage(s.mockBuilds, s.mockImages, uploadlimit.New(s.mockUploads, 500))
 	_, _, err := handler(callerContext(s.T()), nil, schema.AddBuildImageInput{
 		BuildID:     "build-1",
 		ContentType: "image/png",
@@ -916,7 +922,7 @@ func (s *HandleAddBuildImageSuite) TestImageLimitReached_ReturnsError() {
 }
 
 func (s *HandleAddBuildImageSuite) TestSizeOverCap_ReturnsError() {
-	handler := handleAddBuildImage(s.mockBuilds, s.mockImages)
+	handler := handleAddBuildImage(s.mockBuilds, s.mockImages, uploadlimit.New(s.mockUploads, 500))
 	_, _, err := handler(callerContext(s.T()), nil, schema.AddBuildImageInput{
 		BuildID:     "build-1",
 		ContentType: "image/png",
@@ -927,7 +933,7 @@ func (s *HandleAddBuildImageSuite) TestSizeOverCap_ReturnsError() {
 }
 
 func (s *HandleAddBuildImageSuite) TestUnapprovedContentType_ReturnsError() {
-	handler := handleAddBuildImage(s.mockBuilds, s.mockImages)
+	handler := handleAddBuildImage(s.mockBuilds, s.mockImages, uploadlimit.New(s.mockUploads, 500))
 	_, _, err := handler(callerContext(s.T()), nil, schema.AddBuildImageInput{
 		BuildID:     "build-1",
 		ContentType: "application/exe",
@@ -938,6 +944,7 @@ func (s *HandleAddBuildImageSuite) TestUnapprovedContentType_ReturnsError() {
 }
 
 func (s *HandleAddBuildImageSuite) TestBuildNotFound_ReturnsNotFound() {
+	expectUploadReserved(s.mockUploads)
 	s.mockImages.EXPECT().
 		PresignPutBuildImage(mock.Anything, mock.Anything, "image/png", int64(524288)).
 		Return("https://example.com/upload", nil)
@@ -945,7 +952,7 @@ func (s *HandleAddBuildImageSuite) TestBuildNotFound_ReturnsNotFound() {
 		AddImage(mock.Anything, "missing", mock.Anything).
 		Return(repository.ErrNotFound)
 
-	handler := handleAddBuildImage(s.mockBuilds, s.mockImages)
+	handler := handleAddBuildImage(s.mockBuilds, s.mockImages, uploadlimit.New(s.mockUploads, 500))
 	_, _, err := handler(callerContext(s.T()), nil, schema.AddBuildImageInput{
 		BuildID:     "missing",
 		ContentType: "image/png",
@@ -956,11 +963,12 @@ func (s *HandleAddBuildImageSuite) TestBuildNotFound_ReturnsNotFound() {
 }
 
 func (s *HandleAddBuildImageSuite) TestPresignError_ReturnsError() {
+	expectUploadReserved(s.mockUploads)
 	s.mockImages.EXPECT().
 		PresignPutBuildImage(mock.Anything, mock.Anything, "image/png", int64(524288)).
 		Return("", errors.New("s3: access denied"))
 
-	handler := handleAddBuildImage(s.mockBuilds, s.mockImages)
+	handler := handleAddBuildImage(s.mockBuilds, s.mockImages, uploadlimit.New(s.mockUploads, 500))
 	_, _, err := handler(callerContext(s.T()), nil, schema.AddBuildImageInput{
 		BuildID:     "build-1",
 		ContentType: "image/png",
@@ -973,6 +981,7 @@ func (s *HandleAddBuildImageSuite) TestPresignError_ReturnsError() {
 }
 
 func (s *HandleAddBuildImageSuite) TestRepositoryError_ReturnsError() {
+	expectUploadReserved(s.mockUploads)
 	s.mockImages.EXPECT().
 		PresignPutBuildImage(mock.Anything, mock.Anything, "image/png", int64(524288)).
 		Return("https://example.com/upload", nil)
@@ -980,7 +989,7 @@ func (s *HandleAddBuildImageSuite) TestRepositoryError_ReturnsError() {
 		AddImage(mock.Anything, "build-1", mock.Anything).
 		Return(errors.New("put item failed"))
 
-	handler := handleAddBuildImage(s.mockBuilds, s.mockImages)
+	handler := handleAddBuildImage(s.mockBuilds, s.mockImages, uploadlimit.New(s.mockUploads, 500))
 	_, _, err := handler(callerContext(s.T()), nil, schema.AddBuildImageInput{
 		BuildID:     "build-1",
 		ContentType: "image/png",
@@ -1187,4 +1196,32 @@ func (s *HandleUpdateBuildSuite) TestPreferencesError_ReturnsErrorBeforeWrite() 
 	_, _, err := handler(callerContext(s.T()), nil, schema.UpdateBuildInput{BuildID: "b-1", BuildInput: validBuildInput()})
 
 	s.Require().EqualError(err, "failed to update build")
+}
+
+func (s *HandleAddBuildImageSuite) TestUploadLimitReached_ReturnsUploadsUnavailable() {
+	s.mockUploads.EXPECT().
+		Increment(mock.Anything, mock.Anything, int64(500), mock.Anything).
+		Return(repository.ErrUploadLimitReached)
+
+	_, _, err := handleAddBuildImage(s.mockBuilds, s.mockImages, uploadlimit.New(s.mockUploads, 500))(callerContext(s.T()), nil, schema.AddBuildImageInput{
+		BuildID:     "build-1",
+		ContentType: "image/png",
+		SizeBytes:   524288,
+	})
+
+	s.Require().ErrorIs(err, errUploadsUnavailable)
+}
+
+func (s *HandleAddBuildImageSuite) TestReserveError_ReturnsFailed() {
+	s.mockUploads.EXPECT().
+		Increment(mock.Anything, mock.Anything, int64(500), mock.Anything).
+		Return(errors.New("dynamo: boom"))
+
+	_, _, err := handleAddBuildImage(s.mockBuilds, s.mockImages, uploadlimit.New(s.mockUploads, 500))(callerContext(s.T()), nil, schema.AddBuildImageInput{
+		BuildID:     "build-1",
+		ContentType: "image/png",
+		SizeBytes:   524288,
+	})
+
+	s.Require().ErrorIs(err, errMutationFailed)
 }

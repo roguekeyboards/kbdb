@@ -12,6 +12,7 @@ import (
 	"github.com/rogueserenity/kbdb/internal/mcp/schema"
 	"github.com/rogueserenity/kbdb/internal/repository"
 	"github.com/rogueserenity/kbdb/internal/repository/mocks"
+	"github.com/rogueserenity/kbdb/internal/uploadlimit"
 )
 
 type HandleListKeycapSetsSuite struct {
@@ -1203,8 +1204,9 @@ func (s *HandleDeleteKeycapKitSuite) TestCascade_Referenced_ReturnsDeletedBuildI
 type HandleSetKeycapKitImageSuite struct {
 	suite.Suite
 
-	mockRepo   *mocks.MockKeycapSetRepository
-	mockImages *mocks.MockKeycapKitImageStore
+	mockRepo    *mocks.MockKeycapSetRepository
+	mockImages  *mocks.MockKeycapKitImageStore
+	mockUploads *mocks.MockUploadCounter
 }
 
 func TestHandleSetKeycapKitImageSuite(t *testing.T) {
@@ -1214,6 +1216,7 @@ func TestHandleSetKeycapKitImageSuite(t *testing.T) {
 func (s *HandleSetKeycapKitImageSuite) SetupTest() {
 	s.mockRepo = mocks.NewMockKeycapSetRepository(s.T())
 	s.mockImages = mocks.NewMockKeycapKitImageStore(s.T())
+	s.mockUploads = mocks.NewMockUploadCounter(s.T())
 }
 
 // previousKitImageKey is kit-1's image key before a replacement.
@@ -1235,7 +1238,7 @@ func setWithKit(imagePath *repository.KeycapKitImageKey) *repository.KeycapSet {
 }
 
 func (s *HandleSetKeycapKitImageSuite) call(kitID string) (schema.SetKeycapKitImageOutput, error) {
-	_, out, err := handleSetKeycapKitImage(s.mockRepo, s.mockImages)(callerContext(s.T()), nil, schema.SetKeycapKitImageInput{
+	_, out, err := handleSetKeycapKitImage(s.mockRepo, s.mockImages, uploadlimit.New(s.mockUploads, 500))(callerContext(s.T()), nil, schema.SetKeycapKitImageInput{
 		KeycapSetID: "ks-1",
 		KitID:       kitID,
 		ContentType: "image/png",
@@ -1245,6 +1248,7 @@ func (s *HandleSetKeycapKitImageSuite) call(kitID string) (schema.SetKeycapKitIm
 }
 
 func (s *HandleSetKeycapKitImageSuite) TestSucceeds() {
+	reserved := expectUploadReserved(s.mockUploads)
 	s.mockRepo.EXPECT().
 		Get(mock.Anything, callerID, "ks-1").
 		Return(setWithKit(nil), nil)
@@ -1252,7 +1256,8 @@ func (s *HandleSetKeycapKitImageSuite) TestSucceeds() {
 	s.mockImages.EXPECT().
 		PresignPut(mock.Anything, newKitImageKey(), "image/png", int64(524288)).
 		Run(func(_ context.Context, key repository.KeycapKitImageKey, _ string, _ int64) { presigned = key }).
-		Return("https://example.com/upload", nil)
+		Return("https://example.com/upload", nil).
+		NotBefore(reserved)
 	s.mockRepo.EXPECT().
 		SetKitImagePath(mock.Anything, "ks-1", "kit-1", newKitImageKey()).
 		Run(func(_ context.Context, _, _ string, key repository.KeycapKitImageKey) { s.Equal(presigned, key) }).
@@ -1265,6 +1270,7 @@ func (s *HandleSetKeycapKitImageSuite) TestSucceeds() {
 }
 
 func (s *HandleSetKeycapKitImageSuite) TestReplacingImage_DeletesPreviousObjectFirst() {
+	expectUploadReserved(s.mockUploads)
 	previous := previousKitImageKey()
 	s.mockRepo.EXPECT().
 		Get(mock.Anything, callerID, "ks-1").
@@ -1287,7 +1293,7 @@ func (s *HandleSetKeycapKitImageSuite) TestReplacingImage_DeletesPreviousObjectF
 }
 
 func (s *HandleSetKeycapKitImageSuite) TestBlankKeycapSetID_ReturnsError() {
-	handler := handleSetKeycapKitImage(s.mockRepo, s.mockImages)
+	handler := handleSetKeycapKitImage(s.mockRepo, s.mockImages, uploadlimit.New(s.mockUploads, 500))
 	_, _, err := handler(callerContext(s.T()), nil, schema.SetKeycapKitImageInput{
 		KeycapSetID: " ",
 		KitID:       "kit-1",
@@ -1299,7 +1305,7 @@ func (s *HandleSetKeycapKitImageSuite) TestBlankKeycapSetID_ReturnsError() {
 }
 
 func (s *HandleSetKeycapKitImageSuite) TestBlankKitID_ReturnsError() {
-	handler := handleSetKeycapKitImage(s.mockRepo, s.mockImages)
+	handler := handleSetKeycapKitImage(s.mockRepo, s.mockImages, uploadlimit.New(s.mockUploads, 500))
 	_, _, err := handler(callerContext(s.T()), nil, schema.SetKeycapKitImageInput{
 		KeycapSetID: "ks-1",
 		KitID:       " ",
@@ -1311,7 +1317,7 @@ func (s *HandleSetKeycapKitImageSuite) TestBlankKitID_ReturnsError() {
 }
 
 func (s *HandleSetKeycapKitImageSuite) TestSizeOverCap_ReturnsError() {
-	handler := handleSetKeycapKitImage(s.mockRepo, s.mockImages)
+	handler := handleSetKeycapKitImage(s.mockRepo, s.mockImages, uploadlimit.New(s.mockUploads, 500))
 	_, _, err := handler(callerContext(s.T()), nil, schema.SetKeycapKitImageInput{
 		KeycapSetID: "ks-1",
 		KitID:       "kit-1",
@@ -1323,7 +1329,7 @@ func (s *HandleSetKeycapKitImageSuite) TestSizeOverCap_ReturnsError() {
 }
 
 func (s *HandleSetKeycapKitImageSuite) TestUnapprovedContentType_ReturnsError() {
-	handler := handleSetKeycapKitImage(s.mockRepo, s.mockImages)
+	handler := handleSetKeycapKitImage(s.mockRepo, s.mockImages, uploadlimit.New(s.mockUploads, 500))
 	_, _, err := handler(callerContext(s.T()), nil, schema.SetKeycapKitImageInput{
 		KeycapSetID: "ks-1",
 		KitID:       "kit-1",
@@ -1355,6 +1361,7 @@ func (s *HandleSetKeycapKitImageSuite) TestKitNotFound_ReturnsNotFound() {
 }
 
 func (s *HandleSetKeycapKitImageSuite) TestPresignError_ReturnsError() {
+	expectUploadReserved(s.mockUploads)
 	previous := previousKitImageKey()
 	s.mockRepo.EXPECT().
 		Get(mock.Anything, callerID, "ks-1").
@@ -1371,6 +1378,7 @@ func (s *HandleSetKeycapKitImageSuite) TestPresignError_ReturnsError() {
 }
 
 func (s *HandleSetKeycapKitImageSuite) TestDeletePreviousError_ReturnsError() {
+	expectUploadReserved(s.mockUploads)
 	previous := previousKitImageKey()
 	s.mockRepo.EXPECT().
 		Get(mock.Anything, callerID, "ks-1").
@@ -1596,4 +1604,28 @@ func (s *HandleUpdateKeycapKitSuite) TestPreferencesError_ReturnsErrorBeforeWrit
 	_, _, err := handler(callerContext(s.T()), nil, schema.UpdateKeycapKitInput{KeycapSetID: "ks-1", KitID: "kit-1", KeycapKitInput: validKeycapKitInput()})
 
 	s.Require().EqualError(err, "failed to update keycap kit")
+}
+
+func (s *HandleSetKeycapKitImageSuite) TestUploadLimitReached_ReturnsUploadsUnavailable() {
+	previous := previousKitImageKey()
+	s.mockRepo.EXPECT().Get(mock.Anything, callerID, "ks-1").Return(setWithKit(&previous), nil)
+	s.mockUploads.EXPECT().
+		Increment(mock.Anything, mock.Anything, int64(500), mock.Anything).
+		Return(repository.ErrUploadLimitReached)
+
+	_, err := s.call("kit-1")
+
+	s.Require().ErrorIs(err, errUploadsUnavailable)
+}
+
+func (s *HandleSetKeycapKitImageSuite) TestReserveError_ReturnsFailed() {
+	previous := previousKitImageKey()
+	s.mockRepo.EXPECT().Get(mock.Anything, callerID, "ks-1").Return(setWithKit(&previous), nil)
+	s.mockUploads.EXPECT().
+		Increment(mock.Anything, mock.Anything, int64(500), mock.Anything).
+		Return(errors.New("dynamo: boom"))
+
+	_, err := s.call("kit-1")
+
+	s.Require().ErrorIs(err, errMutationFailed)
 }

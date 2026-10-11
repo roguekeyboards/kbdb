@@ -20,6 +20,7 @@ import (
 	"github.com/rogueserenity/kbdb/internal/problem"
 	"github.com/rogueserenity/kbdb/internal/repoapi"
 	"github.com/rogueserenity/kbdb/internal/repository"
+	"github.com/rogueserenity/kbdb/internal/uploadlimit"
 )
 
 // New builds the application's http.Handler. verifier authenticates every
@@ -46,6 +47,7 @@ func New(
 	buildImageStore repository.BuildImageStore,
 	profileRepo repository.ProfileRepository,
 	profileImageStore repository.ProfileImageStore,
+	uploads *uploadlimit.Limiter,
 	issuerURL, idpConsentPublicToken, version string,
 	logoutReturnOrigins []string,
 ) http.Handler {
@@ -94,7 +96,7 @@ func New(
 	mux.Handle("DELETE /v1/users/{userId}/switches/{switchId}",
 		middleware.RequireAuthorizerIdentity(validate(handlers.DeleteSwitch(switchRepo, buildRepo, buildImageStore, switchImageStore))))
 	mux.Handle("POST /v1/users/{userId}/switches/{switchId}/image",
-		middleware.RequireAuthorizerIdentity(validate(handlers.SetSwitchImage(switchRepo, switchImageStore))))
+		middleware.RequireAuthorizerIdentity(validate(handlers.SetSwitchImage(switchRepo, switchImageStore, uploads))))
 	mux.Handle("DELETE /v1/users/{userId}/switches/{switchId}/image",
 		middleware.RequireAuthorizerIdentity(validate(handlers.DeleteSwitchImage(switchRepo, switchImageStore))))
 
@@ -123,7 +125,7 @@ func New(
 	mux.Handle("DELETE /v1/users/{userId}/keyboards/{keyboardId}/pcbs/{pcbId}",
 		middleware.RequireAuthorizerIdentity(validate(handlers.DeleteKeyboardPCB(keyboardRepo, buildRepo, buildImageStore))))
 	mux.Handle("POST /v1/users/{userId}/keyboards/{keyboardId}/images",
-		middleware.RequireAuthorizerIdentity(validate(handlers.AddKeyboardImage(keyboardRepo, keyboardImageStore))))
+		middleware.RequireAuthorizerIdentity(validate(handlers.AddKeyboardImage(keyboardRepo, keyboardImageStore, uploads))))
 	mux.Handle("DELETE /v1/users/{userId}/keyboards/{keyboardId}/images/{imageId}",
 		middleware.RequireAuthorizerIdentity(validate(handlers.DeleteKeyboardImage(keyboardRepo, keyboardImageStore))))
 
@@ -146,7 +148,7 @@ func New(
 	mux.Handle("DELETE /v1/users/{userId}/keycap-sets/{keycapSetId}/kits/{kitId}",
 		middleware.RequireAuthorizerIdentity(validate(handlers.DeleteKeycapKit(keycapSetRepo, buildRepo, buildImageStore, imageStore))))
 	mux.Handle("POST /v1/users/{userId}/keycap-sets/{keycapSetId}/kits/{kitId}/image",
-		middleware.RequireAuthorizerIdentity(validate(handlers.SetKeycapKitImage(keycapSetRepo, imageStore))))
+		middleware.RequireAuthorizerIdentity(validate(handlers.SetKeycapKitImage(keycapSetRepo, imageStore, uploads))))
 	mux.Handle("DELETE /v1/users/{userId}/keycap-sets/{keycapSetId}/kits/{kitId}/image",
 		middleware.RequireAuthorizerIdentity(validate(handlers.DeleteKeycapKitImage(keycapSetRepo, imageStore))))
 
@@ -163,7 +165,7 @@ func New(
 	mux.Handle("DELETE /v1/users/{userId}/builds/{buildId}",
 		middleware.RequireAuthorizerIdentity(validate(handlers.DeleteBuild(buildRepo, buildImageStore))))
 	mux.Handle("POST /v1/users/{userId}/builds/{buildId}/images",
-		middleware.RequireAuthorizerIdentity(validate(handlers.AddBuildImage(buildRepo, buildImageStore))))
+		middleware.RequireAuthorizerIdentity(validate(handlers.AddBuildImage(buildRepo, buildImageStore, uploads))))
 	mux.Handle("DELETE /v1/users/{userId}/builds/{buildId}/images/{imageId}",
 		middleware.RequireAuthorizerIdentity(validate(handlers.DeleteBuildImage(buildRepo, buildImageStore))))
 
@@ -196,7 +198,7 @@ func New(
 	// subject (authz.IsOwner), and the response to POST is a presigned S3
 	// PUT URL, not the image bytes.
 	mux.Handle("POST /v1/profile/{identifier}/image",
-		middleware.RequireAuthorizerIdentity(validate(handlers.SetProfileImage(profileRepo, profileImageStore))))
+		middleware.RequireAuthorizerIdentity(validate(handlers.SetProfileImage(profileRepo, profileImageStore, uploads))))
 	mux.Handle("DELETE /v1/profile/{identifier}/image",
 		middleware.RequireAuthorizerIdentity(validate(handlers.DeleteProfileImage(profileRepo, profileImageStore))))
 
@@ -207,7 +209,7 @@ func New(
 	// response can't carry). template.yaml's McpEvent is Authorizer: NONE
 	// accordingly. Not wrapped in validate: api/openapi.yaml only covers
 	// the REST surface.
-	mcpHandlers := mcp.New(switchRepo, switchImageStore, keyboardRepo, keyboardImageStore, keycapSetRepo, imageStore, buildRepo, buildImageStore, profileRepo, profileImageStore, verifier, issuerURL, version)
+	mcpHandlers := mcp.New(switchRepo, switchImageStore, keyboardRepo, keyboardImageStore, keycapSetRepo, imageStore, buildRepo, buildImageStore, profileRepo, profileImageStore, uploads, verifier, issuerURL, version)
 	mux.Handle("/mcp", mcpHandlers.Streamable)
 	mux.Handle(mcpHandlers.MetadataPath, mcpHandlers.Metadata)
 	mux.Handle(mcpHandlers.RootMetadataPath, mcpHandlers.Metadata)

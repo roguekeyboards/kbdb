@@ -19,6 +19,7 @@ import (
 	"github.com/rogueserenity/kbdb/internal/repoapi"
 	"github.com/rogueserenity/kbdb/internal/repository"
 	"github.com/rogueserenity/kbdb/internal/repository/mocks"
+	"github.com/rogueserenity/kbdb/internal/uploadlimit"
 )
 
 type ListSwitchesSuite struct {
@@ -1072,9 +1073,10 @@ func (s *DeleteSwitchSuite) TestDeleteSwitch_ImageDeleteFails_Returns500_DoesNot
 type SetSwitchImageSuite struct {
 	suite.Suite
 
-	mockRepo   *mocks.MockSwitchRepository
-	mockImages *mocks.MockSwitchImageStore
-	handler    http.HandlerFunc
+	mockRepo    *mocks.MockSwitchRepository
+	mockImages  *mocks.MockSwitchImageStore
+	mockUploads *mocks.MockUploadCounter
+	handler     http.HandlerFunc
 }
 
 func TestSetSwitchImageSuite(t *testing.T) {
@@ -1084,7 +1086,8 @@ func TestSetSwitchImageSuite(t *testing.T) {
 func (s *SetSwitchImageSuite) SetupTest() {
 	s.mockRepo = mocks.NewMockSwitchRepository(s.T())
 	s.mockImages = mocks.NewMockSwitchImageStore(s.T())
-	s.handler = SetSwitchImage(s.mockRepo, s.mockImages)
+	s.mockUploads = mocks.NewMockUploadCounter(s.T())
+	s.handler = SetSwitchImage(s.mockRepo, s.mockImages, uploadlimit.New(s.mockUploads, 500))
 }
 
 func (s *SetSwitchImageSuite) newRequest(ctx context.Context, body string) *http.Request {
@@ -1109,6 +1112,7 @@ func newSwitchImageKey() any {
 }
 
 func (s *SetSwitchImageSuite) TestSetSwitchImage_Succeeds() {
+	reserved := expectUploadReserved(s.mockUploads)
 	s.mockRepo.EXPECT().
 		Get(mock.Anything, "alice", "sw1").
 		Return(&repository.Switch{ID: "sw1"}, nil)
@@ -1116,7 +1120,8 @@ func (s *SetSwitchImageSuite) TestSetSwitchImage_Succeeds() {
 	s.mockImages.EXPECT().
 		PresignPut(mock.Anything, newSwitchImageKey(), "image/png", int64(524288)).
 		Run(func(_ context.Context, key repository.SwitchImageKey, _ string, _ int64) { presigned = key }).
-		Return("https://example.com/presigned-put", nil)
+		Return("https://example.com/presigned-put", nil).
+		NotBefore(reserved)
 	s.mockRepo.EXPECT().
 		SetImagePath(mock.Anything, "sw1", newSwitchImageKey()).
 		Run(func(_ context.Context, _ string, key repository.SwitchImageKey) { s.Equal(presigned, key) }).
@@ -1137,6 +1142,7 @@ func (s *SetSwitchImageSuite) TestSetSwitchImage_Succeeds() {
 }
 
 func (s *SetSwitchImageSuite) TestSetSwitchImage_ReplacingImage_DeletesPreviousObjectFirst() {
+	expectUploadReserved(s.mockUploads)
 	previous := previousSwitchImageTestKey
 	s.mockRepo.EXPECT().
 		Get(mock.Anything, "alice", "sw1").
@@ -1219,6 +1225,7 @@ func (s *SetSwitchImageSuite) TestSetSwitchImage_NotFound_Returns404() {
 }
 
 func (s *SetSwitchImageSuite) TestSetSwitchImage_PresignError_Returns500() {
+	expectUploadReserved(s.mockUploads)
 	previous := previousSwitchImageTestKey
 	s.mockRepo.EXPECT().
 		Get(mock.Anything, "alice", "sw1").
@@ -1238,6 +1245,7 @@ func (s *SetSwitchImageSuite) TestSetSwitchImage_PresignError_Returns500() {
 }
 
 func (s *SetSwitchImageSuite) TestSetSwitchImage_DeletePreviousError_Returns500() {
+	expectUploadReserved(s.mockUploads)
 	previous := previousSwitchImageTestKey
 	s.mockRepo.EXPECT().
 		Get(mock.Anything, "alice", "sw1").
@@ -1260,6 +1268,7 @@ func (s *SetSwitchImageSuite) TestSetSwitchImage_DeletePreviousError_Returns500(
 }
 
 func (s *SetSwitchImageSuite) TestSetSwitchImage_RepositoryError_Returns500() {
+	expectUploadReserved(s.mockUploads)
 	s.mockRepo.EXPECT().
 		Get(mock.Anything, "alice", "sw1").
 		Return(&repository.Switch{ID: "sw1"}, nil)
@@ -1450,4 +1459,32 @@ func (s *UpdateSwitchSuite) TestUpdateSwitch_ReturnsOwnersCurrencyWithPrice() {
 	s.Require().NoError(json.Unmarshal(rec.Body.Bytes(), &got))
 	s.Require().NotNil(got.Purchase.Currency)
 	s.Equal("EUR", *got.Purchase.Currency)
+}
+
+func (s *SetSwitchImageSuite) TestSetSwitchImage_UploadLimitReached_Returns429() {
+	previous := previousSwitchImageTestKey
+	s.mockRepo.EXPECT().Get(mock.Anything, "alice", "sw1").Return(&repository.Switch{ID: "sw1", ImagePath: &previous}, nil)
+	s.mockUploads.EXPECT().
+		Increment(mock.Anything, mock.Anything, int64(500), mock.Anything).
+		Return(repository.ErrUploadLimitReached)
+
+	rec := httptest.NewRecorder()
+	s.handler(rec, s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`))
+
+	s.Equal(http.StatusTooManyRequests, rec.Code)
+	s.Equal("application/problem+json", rec.Header().Get("Content-Type"))
+	s.Contains(rec.Body.String(), "image uploads aren't available at the moment")
+}
+
+func (s *SetSwitchImageSuite) TestSetSwitchImage_ReserveError_Returns500() {
+	previous := previousSwitchImageTestKey
+	s.mockRepo.EXPECT().Get(mock.Anything, "alice", "sw1").Return(&repository.Switch{ID: "sw1", ImagePath: &previous}, nil)
+	s.mockUploads.EXPECT().
+		Increment(mock.Anything, mock.Anything, int64(500), mock.Anything).
+		Return(errors.New("dynamo: boom"))
+
+	rec := httptest.NewRecorder()
+	s.handler(rec, s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`))
+
+	s.Equal(http.StatusInternalServerError, rec.Code)
 }

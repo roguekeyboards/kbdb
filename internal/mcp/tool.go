@@ -10,6 +10,7 @@ import (
 	ctxpkg "github.com/rogueserenity/kbdb/internal/ctx"
 	"github.com/rogueserenity/kbdb/internal/log"
 	"github.com/rogueserenity/kbdb/internal/repository"
+	"github.com/rogueserenity/kbdb/internal/uploadlimit"
 )
 
 // REST gets these bounds from api/openapi.yaml's Limit param, applied by
@@ -131,6 +132,26 @@ func handleMutationError(ctx context.Context, err error, logFields ...any) error
 	}
 	if err != nil {
 		log.FromContext(ctx).Error("mutation failed", append([]any{log.Error, err}, logFields...)...)
+		return errMutationFailed
+	}
+	return nil
+}
+
+// errUploadsUnavailable is the tool error for repository.ErrUploadLimitReached.
+var errUploadsUnavailable = errors.New("image uploads aren't available at the moment")
+
+// reserveUpload counts one upload against the daily limit before an upload
+// URL is presigned: repository.ErrUploadLimitReached ->
+// errUploadsUnavailable, any other error -> errMutationFailed (logged as an
+// error). Returns nil if the upload was reserved.
+func reserveUpload(ctx context.Context, uploads *uploadlimit.Limiter, logFields ...any) error {
+	err := uploads.Reserve(ctx)
+	if errors.Is(err, repository.ErrUploadLimitReached) {
+		log.FromContext(ctx).Warn("daily upload limit reached", logFields...)
+		return errUploadsUnavailable
+	}
+	if err != nil {
+		log.FromContext(ctx).Error("reserving upload", append([]any{log.Error, err}, logFields...)...)
 		return errMutationFailed
 	}
 	return nil

@@ -17,6 +17,7 @@ import (
 	"github.com/rogueserenity/kbdb/internal/mcp/schema"
 	"github.com/rogueserenity/kbdb/internal/repomcp"
 	"github.com/rogueserenity/kbdb/internal/repository"
+	"github.com/rogueserenity/kbdb/internal/uploadlimit"
 )
 
 var errKeyboardNotFound = errors.New("keyboard not found")
@@ -55,7 +56,7 @@ var listKeyboardImagesTool = &mcp.Tool{
 
 var addKeyboardImageTool = &mcp.Tool{
 	Name:        "add_keyboard_image",
-	Description: "Adds an image to a keyboard in your own collection. Doesn't upload the image itself - PUT the image bytes to the returned upload_url using the same content_type as the Content-Type header, an If-None-Match: * header, and a body of exactly size_bytes. The upload_url is for one upload: another PUT to it fails with 412 while that image is stored. Images are capped at 5 MB; resize anything larger first. A keyboard may have at most 10 images.",
+	Description: "Adds an image to a keyboard in your own collection. Doesn't upload the image itself - PUT the image bytes to the returned upload_url using the same content_type as the Content-Type header, an If-None-Match: * header, and a body of exactly size_bytes. The upload_url is for one upload: another PUT to it fails with 412 while that image is stored. Images are capped at 5 MB; resize anything larger first. If image uploads aren't available at the moment, this fails without issuing a URL; try again later. A keyboard may have at most 10 images.",
 }
 
 var deleteKeyboardImageTool = &mcp.Tool{
@@ -256,6 +257,7 @@ func handleListKeyboardImages(
 func handleAddKeyboardImage(
 	keyboardRepo repository.KeyboardRepository,
 	images repository.KeyboardImageStore,
+	uploads *uploadlimit.Limiter,
 ) mcp.ToolHandlerFor[schema.AddKeyboardImageInput, schema.AddKeyboardImageOutput] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, in schema.AddKeyboardImageInput) (*mcp.CallToolResult, schema.AddKeyboardImageOutput, error) {
 		if strings.TrimSpace(in.KeyboardID) == "" {
@@ -267,6 +269,10 @@ func handleAddKeyboardImage(
 		}
 
 		if err := validateImageSize(in.SizeBytes); err != nil {
+			return nil, schema.AddKeyboardImageOutput{}, err
+		}
+
+		if err := reserveUpload(ctx, uploads, log.KeyboardID, in.KeyboardID); err != nil {
 			return nil, schema.AddKeyboardImageOutput{}, err
 		}
 

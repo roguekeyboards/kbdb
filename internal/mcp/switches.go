@@ -16,6 +16,7 @@ import (
 	"github.com/rogueserenity/kbdb/internal/mcp/schema"
 	"github.com/rogueserenity/kbdb/internal/repomcp"
 	"github.com/rogueserenity/kbdb/internal/repository"
+	"github.com/rogueserenity/kbdb/internal/uploadlimit"
 )
 
 var errSwitchNotFound = errors.New("switch not found")
@@ -49,7 +50,7 @@ var deleteSwitchTool = &mcp.Tool{
 
 var setSwitchImageTool = &mcp.Tool{
 	Name:        "set_switch_image",
-	Description: "Mints a presigned URL to upload a switch's image to. Doesn't upload the image itself - PUT the image bytes to the returned upload_url using the same content_type as the Content-Type header, an If-None-Match: * header, and a body of exactly size_bytes. The upload_url is for one upload: another PUT to it fails with 412 while that image is stored. Images are capped at 5 MB; resize anything larger first.",
+	Description: "Mints a presigned URL to upload a switch's image to. Doesn't upload the image itself - PUT the image bytes to the returned upload_url using the same content_type as the Content-Type header, an If-None-Match: * header, and a body of exactly size_bytes. The upload_url is for one upload: another PUT to it fails with 412 while that image is stored. Images are capped at 5 MB; resize anything larger first. If image uploads aren't available at the moment, this fails without issuing a URL; try again later.",
 }
 
 var deleteSwitchImageTool = &mcp.Tool{
@@ -230,6 +231,7 @@ func handleDeleteSwitch(
 func handleSetSwitchImage(
 	switchRepo repository.SwitchRepository,
 	images repository.SwitchImageStore,
+	uploads *uploadlimit.Limiter,
 ) mcp.ToolHandlerFor[schema.SetSwitchImageInput, schema.SetSwitchImageOutput] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, in schema.SetSwitchImageInput) (*mcp.CallToolResult, schema.SetSwitchImageOutput, error) {
 		if strings.TrimSpace(in.SwitchID) == "" {
@@ -252,6 +254,10 @@ func handleSetSwitchImage(
 		sw, err := switchRepo.Get(ctx, ownerID, in.SwitchID)
 		if mutErr := handleMutationError(ctx, err, log.SwitchID, in.SwitchID); mutErr != nil {
 			return nil, schema.SetSwitchImageOutput{}, mutErr
+		}
+
+		if err := reserveUpload(ctx, uploads, log.SwitchID, in.SwitchID); err != nil {
+			return nil, schema.SetSwitchImageOutput{}, err
 		}
 
 		key, err := repository.NewSwitchImageKey(ctx, in.SwitchID, uuid.NewString())

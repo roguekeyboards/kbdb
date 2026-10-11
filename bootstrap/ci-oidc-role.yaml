@@ -239,6 +239,8 @@ Resources:
                   - dynamodb:DeleteTable
                   - dynamodb:DescribeTable
                   - dynamodb:TagResource
+                  - dynamodb:DescribeTimeToLive
+                  - dynamodb:UpdateTimeToLive
                   - dynamodb:PutItem
                   - dynamodb:DeleteItem
                 Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/kbdb-pr-*
