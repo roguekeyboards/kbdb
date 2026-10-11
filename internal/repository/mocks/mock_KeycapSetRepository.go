@@ -721,6 +721,108 @@ func (_c *MockKeycapSetRepository_SetKitImagePath_Call) RunAndReturn(run func(ct
 	return _c
 }
 
+// SetKitImageStatus provides a mock function for the type MockKeycapSetRepository
+func (_mock *MockKeycapSetRepository) SetKitImageStatus(ctx context.Context, ownerID string, setID string, kitID string, forPath repository.KeycapKitImageKey, from repository.ImageStatus, to repository.ImageStatus, reason *string) (bool, error) {
+	ret := _mock.Called(ctx, ownerID, setID, kitID, forPath, from, to, reason)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetKitImageStatus")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string, repository.KeycapKitImageKey, repository.ImageStatus, repository.ImageStatus, *string) (bool, error)); ok {
+		return returnFunc(ctx, ownerID, setID, kitID, forPath, from, to, reason)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string, repository.KeycapKitImageKey, repository.ImageStatus, repository.ImageStatus, *string) bool); ok {
+		r0 = returnFunc(ctx, ownerID, setID, kitID, forPath, from, to, reason)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, string, repository.KeycapKitImageKey, repository.ImageStatus, repository.ImageStatus, *string) error); ok {
+		r1 = returnFunc(ctx, ownerID, setID, kitID, forPath, from, to, reason)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockKeycapSetRepository_SetKitImageStatus_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetKitImageStatus'
+type MockKeycapSetRepository_SetKitImageStatus_Call struct {
+	*mock.Call
+}
+
+// SetKitImageStatus is a helper method to define mock.On call
+//   - ctx context.Context
+//   - ownerID string
+//   - setID string
+//   - kitID string
+//   - forPath repository.KeycapKitImageKey
+//   - from repository.ImageStatus
+//   - to repository.ImageStatus
+//   - reason *string
+func (_e *MockKeycapSetRepository_Expecter) SetKitImageStatus(ctx any, ownerID any, setID any, kitID any, forPath any, from any, to any, reason any) *MockKeycapSetRepository_SetKitImageStatus_Call {
+	return &MockKeycapSetRepository_SetKitImageStatus_Call{Call: _e.mock.On("SetKitImageStatus", ctx, ownerID, setID, kitID, forPath, from, to, reason)}
+}
+
+func (_c *MockKeycapSetRepository_SetKitImageStatus_Call) Run(run func(ctx context.Context, ownerID string, setID string, kitID string, forPath repository.KeycapKitImageKey, from repository.ImageStatus, to repository.ImageStatus, reason *string)) *MockKeycapSetRepository_SetKitImageStatus_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		var arg4 repository.KeycapKitImageKey
+		if args[4] != nil {
+			arg4 = args[4].(repository.KeycapKitImageKey)
+		}
+		var arg5 repository.ImageStatus
+		if args[5] != nil {
+			arg5 = args[5].(repository.ImageStatus)
+		}
+		var arg6 repository.ImageStatus
+		if args[6] != nil {
+			arg6 = args[6].(repository.ImageStatus)
+		}
+		var arg7 *string
+		if args[7] != nil {
+			arg7 = args[7].(*string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+			arg6,
+			arg7,
+		)
+	})
+	return _c
+}
+
+func (_c *MockKeycapSetRepository_SetKitImageStatus_Call) Return(ok bool, err error) *MockKeycapSetRepository_SetKitImageStatus_Call {
+	_c.Call.Return(ok, err)
+	return _c
+}
+
+func (_c *MockKeycapSetRepository_SetKitImageStatus_Call) RunAndReturn(run func(ctx context.Context, ownerID string, setID string, kitID string, forPath repository.KeycapKitImageKey, from repository.ImageStatus, to repository.ImageStatus, reason *string) (bool, error)) *MockKeycapSetRepository_SetKitImageStatus_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Update provides a mock function for the type MockKeycapSetRepository
 func (_mock *MockKeycapSetRepository) Update(ctx context.Context, ks repository.KeycapSet) (*repository.KeycapSet, error) {
 	ret := _mock.Called(ctx, ks)

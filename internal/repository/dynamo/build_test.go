@@ -645,6 +645,7 @@ func (s *BuildRepositorySuite) TestAddImage_Succeeds_PlainUpdateItemNoTransactio
 	s.Require().NoError(convErr)
 	s.GreaterOrEqual(seq, before)
 	s.LessOrEqual(seq, time.Now().UnixNano())
+	s.Equal("pending", entry.Value["status"].(*types.AttributeValueMemberS).Value)
 }
 
 func (s *BuildRepositorySuite) TestAddImage_ParentBuildNotFound_ReturnsErrNotFound() {
@@ -825,6 +826,72 @@ func (s *BuildRepositorySuite) TestSetImageGetCache_UpdateItemError_Propagates()
 		Return(nil, errors.New("dynamodb: throttled"))
 
 	ok, err := s.repo.SetImageGetCache(s.T().Context(), "alice", "b1", "img1", "builds/alice/b1/img1", "https://example.com/presigned", time.Now().Add(24*time.Hour))
+
+	s.Require().Error(err)
+	s.False(ok)
+}
+
+func (s *BuildRepositorySuite) TestSetImageStatus_ConditionedOnPathAndStatus() {
+	var captured *dynamodb.UpdateItemInput
+	s.mockClient.EXPECT().
+		UpdateItem(mock.Anything, mock.MatchedBy(func(in *dynamodb.UpdateItemInput) bool {
+			captured = in
+			return true
+		})).
+		Return(&dynamodb.UpdateItemOutput{}, nil)
+
+	reason := "unprocessable"
+	ok, err := s.repo.SetImageStatus(s.T().Context(), "alice", "b1", "img1", "builds/alice/b1/images/img1", repository.ImageStatusPending, repository.ImageStatusRejected, &reason)
+
+	s.Require().NoError(err)
+	s.True(ok)
+	s.Equal("alice", captured.Key["user_id"].(*types.AttributeValueMemberS).Value)
+	s.Equal("b1", captured.Key["id"].(*types.AttributeValueMemberS).Value)
+	s.True(names(captured.ExpressionAttributeNames, "images", "img1", "path", "status"))
+	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "builds/alice/b1/images/img1"))
+	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "pending"))
+	s.NotContains(*captured.ConditionExpression, "attribute_not_exists", "only approved may match a missing status")
+	s.True(setsAttr(captured, "status"))
+	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "rejected"))
+	s.True(setsAttr(captured, "rejection_reason"))
+	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "unprocessable"))
+	s.True(removesAttr(captured, "get_url"), "a cached URL must not outlive a status change")
+	s.True(removesAttr(captured, "get_url_expires_at"))
+}
+
+func (s *BuildRepositorySuite) TestSetImageStatus_NoReason_RemovesRejectionReason() {
+	var captured *dynamodb.UpdateItemInput
+	s.mockClient.EXPECT().
+		UpdateItem(mock.Anything, mock.MatchedBy(func(in *dynamodb.UpdateItemInput) bool {
+			captured = in
+			return true
+		})).
+		Return(&dynamodb.UpdateItemOutput{}, nil)
+
+	ok, err := s.repo.SetImageStatus(s.T().Context(), "alice", "b1", "img1", "builds/alice/b1/images/img1", repository.ImageStatusRejected, repository.ImageStatusApproved, nil)
+
+	s.Require().NoError(err)
+	s.True(ok)
+	s.True(removesAttr(captured, "rejection_reason"))
+}
+
+func (s *BuildRepositorySuite) TestSetImageStatus_ConditionFails_ReturnsFalseWithoutError() {
+	s.mockClient.EXPECT().
+		UpdateItem(mock.Anything, mock.Anything).
+		Return(nil, &types.ConditionalCheckFailedException{})
+
+	ok, err := s.repo.SetImageStatus(s.T().Context(), "alice", "b1", "img1", "builds/alice/b1/images/img1", repository.ImageStatusPending, repository.ImageStatusApproved, nil)
+
+	s.Require().NoError(err)
+	s.False(ok)
+}
+
+func (s *BuildRepositorySuite) TestSetImageStatus_UpdateItemError_Propagates() {
+	s.mockClient.EXPECT().
+		UpdateItem(mock.Anything, mock.Anything).
+		Return(nil, errors.New("dynamodb: throttled"))
+
+	ok, err := s.repo.SetImageStatus(s.T().Context(), "alice", "b1", "img1", "builds/alice/b1/images/img1", repository.ImageStatusPending, repository.ImageStatusApproved, nil)
 
 	s.Require().Error(err)
 	s.False(ok)

@@ -76,6 +76,12 @@ type Profile struct {
 	// it forward from the stored item rather than touching it.
 	AvatarPath *ProfileImageKey `dynamodbav:"avatar_path,omitempty" json:"-"`
 
+	// AvatarStatus is AvatarPath's moderation status, empty on images
+	// stored before moderation (see ImageStatus.Effective).
+	// AvatarRejectionReason is set only when rejected.
+	AvatarStatus          ImageStatus `dynamodbav:"avatar_status,omitempty" json:"-"`
+	AvatarRejectionReason *string     `dynamodbav:"avatar_rejection_reason,omitempty" json:"-"`
+
 	// GetURL/GetURLExpiresAt cache the last presigned GET URL for
 	// AvatarPath. SetAvatarPath clears both when AvatarPath changes.
 	GetURL          *string    `dynamodbav:"get_url,omitempty" json:"-"`
@@ -139,13 +145,15 @@ type ProfileRepository interface {
 	// enforces this), each a begins_with filter on its directory index.
 	ListPublic(ctx context.Context, usernamePrefix, discordPrefix string, limit int, cursor string) ([]Profile, string, error)
 
-	// SetAvatarPath sets the caller's profile's AvatarPath to key. Returns
-	// ErrNotFound if the caller has no profile.
+	// SetAvatarPath sets the caller's profile's AvatarPath to key, with
+	// AvatarStatus pending. Returns ErrNotFound if the caller has no
+	// profile.
 	SetAvatarPath(ctx context.Context, key ProfileImageKey) error
 
-	// ClearAvatarPath clears the caller's profile's AvatarPath and returns
-	// the key that was cleared, or nil if it was already unset (idempotent,
-	// not an error). Returns ErrNotFound if the caller has no profile.
+	// ClearAvatarPath clears the caller's profile's AvatarPath (and its
+	// moderation status) and returns the key that was cleared, or nil if it
+	// was already unset (idempotent, not an error). Returns ErrNotFound if the
+	// caller has no profile.
 	ClearAvatarPath(ctx context.Context) (*ProfileImageKey, error)
 
 	// SetImageGetCache stores url/expiresAt as ownerID's cached avatar GET
@@ -155,6 +163,15 @@ type ProfileRepository interface {
 	// profile, not just self-writes. Returns ok=false (not an error) if
 	// that condition fails or ownerID has no profile.
 	SetImageGetCache(ctx context.Context, ownerID string, forPath ProfileImageKey, url string, expiresAt time.Time) (ok bool, err error)
+
+	// SetAvatarStatus sets ownerID's avatar's moderation status to `to` and
+	// its rejection reason to reason (cleared when nil), conditioned on
+	// AvatarPath still equalling forPath and the status still being from (a
+	// missing status counts as approved). Also drops any cached GET URL. Takes
+	// an explicit ownerID: the moderation Lambda and operator CLI act on any
+	// owner's images. Returns ok=false (not an error) if that condition fails
+	// or the item doesn't exist.
+	SetAvatarStatus(ctx context.Context, ownerID string, forPath ProfileImageKey, from, to ImageStatus, reason *string) (ok bool, err error)
 }
 
 // ProfileImageKey is the object key a profile's avatar is stored under.

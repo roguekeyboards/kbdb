@@ -1060,3 +1060,86 @@ func namesPrimaryKitID(m map[string]string) bool {
 	}
 	return false
 }
+
+func (s *KeycapSetRepositorySuite) TestSetKitImagePath_MarksPending() {
+	var captured *dynamodb.UpdateItemInput
+	s.mockClient.EXPECT().
+		UpdateItem(mock.Anything, mock.MatchedBy(func(in *dynamodb.UpdateItemInput) bool {
+			captured = in
+			return true
+		})).
+		Return(&dynamodb.UpdateItemOutput{}, nil)
+
+	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	s.Require().NoError(s.repo.SetKitImagePath(ctx, "set1", "kit1", "keycap-sets/alice/set1/kits/kit1/image/up1"))
+
+	s.True(setsAttr(captured, "image_status"))
+	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "pending"))
+	s.True(removesAttr(captured, "image_rejection_reason"))
+}
+
+func (s *KeycapSetRepositorySuite) TestClearKitImagePath_ClearsStatus() {
+	var captured *dynamodb.UpdateItemInput
+	s.mockClient.EXPECT().
+		UpdateItem(mock.Anything, mock.MatchedBy(func(in *dynamodb.UpdateItemInput) bool {
+			captured = in
+			return true
+		})).
+		Return(&dynamodb.UpdateItemOutput{}, nil)
+
+	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	_, err := s.repo.ClearKitImagePath(ctx, "set1", "kit1")
+	s.Require().NoError(err)
+
+	s.True(removesAttr(captured, "image_status"))
+	s.True(removesAttr(captured, "image_rejection_reason"))
+}
+
+func (s *KeycapSetRepositorySuite) TestSetKitImageStatus_ConditionedOnPathAndStatus() {
+	var captured *dynamodb.UpdateItemInput
+	s.mockClient.EXPECT().
+		UpdateItem(mock.Anything, mock.MatchedBy(func(in *dynamodb.UpdateItemInput) bool {
+			captured = in
+			return true
+		})).
+		Return(&dynamodb.UpdateItemOutput{}, nil)
+
+	reason := "unprocessable"
+	ok, err := s.repo.SetKitImageStatus(s.T().Context(), "alice", "set1", "kit1", "keycap-sets/alice/set1/kits/kit1/image/up1", repository.ImageStatusPending, repository.ImageStatusRejected, &reason)
+
+	s.Require().NoError(err)
+	s.True(ok)
+	s.Equal("alice", captured.Key["user_id"].(*types.AttributeValueMemberS).Value)
+	s.Equal("set1", captured.Key["id"].(*types.AttributeValueMemberS).Value)
+	s.True(names(captured.ExpressionAttributeNames, "kits", "kit1", "image_path", "image_status"))
+	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "keycap-sets/alice/set1/kits/kit1/image/up1"))
+	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "pending"))
+	s.True(setsAttr(captured, "image_status"))
+	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "rejected"))
+	s.True(setsAttr(captured, "image_rejection_reason"))
+	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "unprocessable"))
+	s.True(removesAttr(captured, "get_url"), "a cached URL must not outlive a status change")
+	s.True(removesAttr(captured, "get_url_expires_at"))
+}
+
+func (s *KeycapSetRepositorySuite) TestSetKitImageStatus_ConditionFails_ReturnsFalseWithoutError() {
+	s.mockClient.EXPECT().
+		UpdateItem(mock.Anything, mock.Anything).
+		Return(nil, &types.ConditionalCheckFailedException{})
+
+	ok, err := s.repo.SetKitImageStatus(s.T().Context(), "alice", "set1", "kit1", "keycap-sets/alice/set1/kits/kit1/image/up1", repository.ImageStatusPending, repository.ImageStatusApproved, nil)
+
+	s.Require().NoError(err)
+	s.False(ok)
+}
+
+func (s *KeycapSetRepositorySuite) TestSetKitImageStatus_UpdateItemError_Propagates() {
+	s.mockClient.EXPECT().
+		UpdateItem(mock.Anything, mock.Anything).
+		Return(nil, errors.New("dynamodb: throttled"))
+
+	ok, err := s.repo.SetKitImageStatus(s.T().Context(), "alice", "set1", "kit1", "keycap-sets/alice/set1/kits/kit1/image/up1", repository.ImageStatusPending, repository.ImageStatusApproved, nil)
+
+	s.Require().Error(err)
+	s.False(ok)
+}

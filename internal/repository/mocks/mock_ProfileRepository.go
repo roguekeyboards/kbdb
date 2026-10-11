@@ -578,6 +578,96 @@ func (_c *MockProfileRepository_SetAvatarPath_Call) RunAndReturn(run func(ctx co
 	return _c
 }
 
+// SetAvatarStatus provides a mock function for the type MockProfileRepository
+func (_mock *MockProfileRepository) SetAvatarStatus(ctx context.Context, ownerID string, forPath repository.ProfileImageKey, from repository.ImageStatus, to repository.ImageStatus, reason *string) (bool, error) {
+	ret := _mock.Called(ctx, ownerID, forPath, from, to, reason)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetAvatarStatus")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, repository.ProfileImageKey, repository.ImageStatus, repository.ImageStatus, *string) (bool, error)); ok {
+		return returnFunc(ctx, ownerID, forPath, from, to, reason)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, repository.ProfileImageKey, repository.ImageStatus, repository.ImageStatus, *string) bool); ok {
+		r0 = returnFunc(ctx, ownerID, forPath, from, to, reason)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, repository.ProfileImageKey, repository.ImageStatus, repository.ImageStatus, *string) error); ok {
+		r1 = returnFunc(ctx, ownerID, forPath, from, to, reason)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockProfileRepository_SetAvatarStatus_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetAvatarStatus'
+type MockProfileRepository_SetAvatarStatus_Call struct {
+	*mock.Call
+}
+
+// SetAvatarStatus is a helper method to define mock.On call
+//   - ctx context.Context
+//   - ownerID string
+//   - forPath repository.ProfileImageKey
+//   - from repository.ImageStatus
+//   - to repository.ImageStatus
+//   - reason *string
+func (_e *MockProfileRepository_Expecter) SetAvatarStatus(ctx any, ownerID any, forPath any, from any, to any, reason any) *MockProfileRepository_SetAvatarStatus_Call {
+	return &MockProfileRepository_SetAvatarStatus_Call{Call: _e.mock.On("SetAvatarStatus", ctx, ownerID, forPath, from, to, reason)}
+}
+
+func (_c *MockProfileRepository_SetAvatarStatus_Call) Run(run func(ctx context.Context, ownerID string, forPath repository.ProfileImageKey, from repository.ImageStatus, to repository.ImageStatus, reason *string)) *MockProfileRepository_SetAvatarStatus_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 repository.ProfileImageKey
+		if args[2] != nil {
+			arg2 = args[2].(repository.ProfileImageKey)
+		}
+		var arg3 repository.ImageStatus
+		if args[3] != nil {
+			arg3 = args[3].(repository.ImageStatus)
+		}
+		var arg4 repository.ImageStatus
+		if args[4] != nil {
+			arg4 = args[4].(repository.ImageStatus)
+		}
+		var arg5 *string
+		if args[5] != nil {
+			arg5 = args[5].(*string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+		)
+	})
+	return _c
+}
+
+func (_c *MockProfileRepository_SetAvatarStatus_Call) Return(ok bool, err error) *MockProfileRepository_SetAvatarStatus_Call {
+	_c.Call.Return(ok, err)
+	return _c
+}
+
+func (_c *MockProfileRepository_SetAvatarStatus_Call) RunAndReturn(run func(ctx context.Context, ownerID string, forPath repository.ProfileImageKey, from repository.ImageStatus, to repository.ImageStatus, reason *string) (bool, error)) *MockProfileRepository_SetAvatarStatus_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetImageGetCache provides a mock function for the type MockProfileRepository
 func (_mock *MockProfileRepository) SetImageGetCache(ctx context.Context, ownerID string, forPath repository.ProfileImageKey, url string, expiresAt time.Time) (bool, error) {
 	ret := _mock.Called(ctx, ownerID, forPath, url, expiresAt)

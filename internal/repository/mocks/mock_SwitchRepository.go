@@ -560,6 +560,102 @@ func (_c *MockSwitchRepository_SetImagePath_Call) RunAndReturn(run func(ctx cont
 	return _c
 }
 
+// SetImageStatus provides a mock function for the type MockSwitchRepository
+func (_mock *MockSwitchRepository) SetImageStatus(ctx context.Context, ownerID string, id string, forPath repository.SwitchImageKey, from repository.ImageStatus, to repository.ImageStatus, reason *string) (bool, error) {
+	ret := _mock.Called(ctx, ownerID, id, forPath, from, to, reason)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetImageStatus")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, repository.SwitchImageKey, repository.ImageStatus, repository.ImageStatus, *string) (bool, error)); ok {
+		return returnFunc(ctx, ownerID, id, forPath, from, to, reason)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, repository.SwitchImageKey, repository.ImageStatus, repository.ImageStatus, *string) bool); ok {
+		r0 = returnFunc(ctx, ownerID, id, forPath, from, to, reason)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, repository.SwitchImageKey, repository.ImageStatus, repository.ImageStatus, *string) error); ok {
+		r1 = returnFunc(ctx, ownerID, id, forPath, from, to, reason)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockSwitchRepository_SetImageStatus_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetImageStatus'
+type MockSwitchRepository_SetImageStatus_Call struct {
+	*mock.Call
+}
+
+// SetImageStatus is a helper method to define mock.On call
+//   - ctx context.Context
+//   - ownerID string
+//   - id string
+//   - forPath repository.SwitchImageKey
+//   - from repository.ImageStatus
+//   - to repository.ImageStatus
+//   - reason *string
+func (_e *MockSwitchRepository_Expecter) SetImageStatus(ctx any, ownerID any, id any, forPath any, from any, to any, reason any) *MockSwitchRepository_SetImageStatus_Call {
+	return &MockSwitchRepository_SetImageStatus_Call{Call: _e.mock.On("SetImageStatus", ctx, ownerID, id, forPath, from, to, reason)}
+}
+
+func (_c *MockSwitchRepository_SetImageStatus_Call) Run(run func(ctx context.Context, ownerID string, id string, forPath repository.SwitchImageKey, from repository.ImageStatus, to repository.ImageStatus, reason *string)) *MockSwitchRepository_SetImageStatus_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 repository.SwitchImageKey
+		if args[3] != nil {
+			arg3 = args[3].(repository.SwitchImageKey)
+		}
+		var arg4 repository.ImageStatus
+		if args[4] != nil {
+			arg4 = args[4].(repository.ImageStatus)
+		}
+		var arg5 repository.ImageStatus
+		if args[5] != nil {
+			arg5 = args[5].(repository.ImageStatus)
+		}
+		var arg6 *string
+		if args[6] != nil {
+			arg6 = args[6].(*string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+			arg6,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSwitchRepository_SetImageStatus_Call) Return(ok bool, err error) *MockSwitchRepository_SetImageStatus_Call {
+	_c.Call.Return(ok, err)
+	return _c
+}
+
+func (_c *MockSwitchRepository_SetImageStatus_Call) RunAndReturn(run func(ctx context.Context, ownerID string, id string, forPath repository.SwitchImageKey, from repository.ImageStatus, to repository.ImageStatus, reason *string) (bool, error)) *MockSwitchRepository_SetImageStatus_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Update provides a mock function for the type MockSwitchRepository
 func (_mock *MockSwitchRepository) Update(ctx context.Context, sw repository.Switch) (*repository.Switch, error) {
 	ret := _mock.Called(ctx, sw)

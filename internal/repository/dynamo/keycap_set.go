@@ -438,6 +438,8 @@ func (r *KeycapSetRepository) SetKitImagePath(ctx context.Context, setID, kitID 
 		return repository.ErrNotFound
 	}
 	update := expression.Set(field(kitPath, "image_path"), expression.Value(key)).
+		Set(field(kitPath, "image_status"), expression.Value(repository.ImageStatusPending)).
+		Remove(field(kitPath, "image_rejection_reason")).
 		Remove(field(kitPath, "get_url")).
 		Remove(field(kitPath, "get_url_expires_at"))
 	expr, err := expression.NewBuilder().
@@ -480,6 +482,8 @@ func (r *KeycapSetRepository) ClearKitImagePath(ctx context.Context, setID, kitI
 		return nil, repository.ErrNotFound
 	}
 	update := expression.Remove(field(kitPath, "image_path")).
+		Remove(field(kitPath, "image_status")).
+		Remove(field(kitPath, "image_rejection_reason")).
 		Remove(field(kitPath, "get_url")).
 		Remove(field(kitPath, "get_url_expires_at"))
 	expr, err := expression.NewBuilder().
@@ -549,6 +553,43 @@ func (r *KeycapSetRepository) SetKitImageGetCache(ctx context.Context, ownerID, 
 			return false, nil
 		}
 		return false, fmt.Errorf("setting kit %q image get-cache in keycap set %q owner %q: %w", kitID, setID, ownerID, err)
+	}
+
+	return true, nil
+}
+
+// SetKitImageStatus implements repository.KeycapSetRepository. Also clears any
+// cached GET URL, so a rejected image's URL isn't served from the cache.
+func (r *KeycapSetRepository) SetKitImageStatus(ctx context.Context, ownerID, setID, kitID string, forPath repository.KeycapKitImageKey, from, to repository.ImageStatus, reason *string) (bool, error) {
+	kitPath, ok := mapKey("kits", kitID)
+	if !ok {
+		return false, nil
+	}
+	update := statusUpdate(field(kitPath, "image_status"), field(kitPath, "image_rejection_reason"), to, reason).
+		Remove(field(kitPath, "get_url")).
+		Remove(field(kitPath, "get_url_expires_at"))
+	cond := expression.AttributeExists(kitPath).
+		And(field(kitPath, "image_path").Equal(expression.Value(forPath))).
+		And(statusIs(field(kitPath, "image_status"), from))
+
+	expr, err := expression.NewBuilder().WithUpdate(update).WithCondition(cond).Build()
+	if err != nil {
+		return false, fmt.Errorf("building kit image status update for keycap set %q: %w", setID, err)
+	}
+
+	_, err = r.client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+		TableName:                 &r.tableName,
+		Key:                       keycapSetKey(ownerID, setID),
+		UpdateExpression:          expr.Update(),
+		ConditionExpression:       expr.Condition(),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+	})
+	if err != nil {
+		if _, ok := errors.AsType[*types.ConditionalCheckFailedException](err); ok {
+			return false, nil
+		}
+		return false, fmt.Errorf("setting kit %q image status in keycap set %q owner %q: %w", kitID, setID, ownerID, err)
 	}
 
 	return true, nil

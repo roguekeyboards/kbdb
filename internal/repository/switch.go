@@ -64,6 +64,12 @@ type Switch struct {
 	Visibility   Visibility      `dynamodbav:"visibility" json:"visibility"`
 	ImagePath    *SwitchImageKey `dynamodbav:"image_path,omitempty" json:"-"`
 
+	// ImageStatus is ImagePath's moderation status, empty on images stored
+	// before moderation (see ImageStatus.Effective).
+	// ImageRejectionReason is set only when rejected.
+	ImageStatus          ImageStatus `dynamodbav:"image_status,omitempty" json:"-"`
+	ImageRejectionReason *string     `dynamodbav:"image_rejection_reason,omitempty" json:"-"`
+
 	// GetURL/GetURLExpiresAt cache the last presigned GET URL for
 	// ImagePath. SetImagePath clears both when ImagePath changes.
 	GetURL          *string    `dynamodbav:"get_url,omitempty" json:"-"`
@@ -103,14 +109,14 @@ type SwitchRepository interface {
 	// Delete. Idempotent: a nonexistent id is not an error.
 	Delete(ctx context.Context, id string) error
 
-	// SetImagePath sets the caller's switch's ImagePath. Returns ErrNotFound
-	// if id doesn't exist.
+	// SetImagePath sets the caller's switch's ImagePath, with ImageStatus
+	// pending. Returns ErrNotFound if id doesn't exist.
 	SetImagePath(ctx context.Context, id string, key SwitchImageKey) error
 
-	// ClearImagePath clears the caller's switch's ImagePath and returns the
-	// key that was cleared, or nil if it was already unset. Idempotent: a
-	// switch with no ImagePath already set is not an error. Returns
-	// ErrNotFound if id doesn't exist.
+	// ClearImagePath clears the caller's switch's ImagePath (and its
+	// moderation status) and returns the key that was cleared, or nil if it
+	// was already unset. Idempotent: a switch with no ImagePath already set is
+	// not an error. Returns ErrNotFound if id doesn't exist.
 	ClearImagePath(ctx context.Context, id string) (*SwitchImageKey, error)
 
 	// SetImageGetCache stores url/expiresAt as the switch's cached
@@ -120,6 +126,15 @@ type SwitchRepository interface {
 	// Returns ok=false (not an error) if that condition fails or the
 	// switch doesn't exist.
 	SetImageGetCache(ctx context.Context, ownerID, id string, forPath SwitchImageKey, url string, expiresAt time.Time) (ok bool, err error)
+
+	// SetImageStatus sets the switch's image's moderation status to `to` and
+	// its rejection reason to reason (cleared when nil), conditioned on
+	// ImagePath still equalling forPath and the status still being from (a
+	// missing status counts as approved). Also drops any cached GET URL. Takes
+	// an explicit ownerID: the moderation Lambda and operator CLI act on any
+	// owner's images. Returns ok=false (not an error) if that condition fails
+	// or the item doesn't exist.
+	SetImageStatus(ctx context.Context, ownerID, id string, forPath SwitchImageKey, from, to ImageStatus, reason *string) (ok bool, err error)
 }
 
 // SwitchImageKey is the object key a switch's image is stored under in a
