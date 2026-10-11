@@ -73,7 +73,7 @@ func (s *ProfileMapperSuite) TestProfileToAPI_ExposesSubjectAsUserID() {
 func (s *ProfileMapperSuite) TestProfileToAPI_PresignsAvatar() {
 	images := mocks.NewMockProfileImageStore(s.T())
 	images.EXPECT().
-		PresignGet(mock.Anything, repository.ProfileImageKey("profiles/user-alice/avatar")).
+		PresignGet(mock.Anything, repository.ProfileImageKey("profiles/user-alice/avatar/up1")).
 		Return("https://example.com/avatar", presignExpiry(), nil)
 	repo := mocks.NewMockProfileRepository(s.T())
 	repo.EXPECT().
@@ -82,7 +82,7 @@ func (s *ProfileMapperSuite) TestProfileToAPI_PresignsAvatar() {
 
 	p := repository.Profile{
 		Username:   "alice",
-		AvatarPath: profileImageKeyPtr("profiles/user-alice/avatar"),
+		AvatarPath: profileImageKeyPtr("profiles/user-alice/avatar/up1"),
 	}
 
 	pr := Profile{Images: images, Repo: repo}
@@ -100,7 +100,7 @@ func (s *ProfileMapperSuite) TestProfileToAPI_PresignError_Propagates() {
 	pr := Profile{Images: images}
 	_, err := pr.ToAPI(s.T().Context(), repository.Profile{
 		Username:   "alice",
-		AvatarPath: profileImageKeyPtr("profiles/user-alice/avatar"),
+		AvatarPath: profileImageKeyPtr("profiles/user-alice/avatar/up1"),
 	}, true)
 
 	s.Require().Error(err)

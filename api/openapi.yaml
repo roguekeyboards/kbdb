@@ -427,8 +427,10 @@ paths:
           description: >
             An image slot has been allocated; upload the image bytes to
             upload_url (HTTP PUT, with a Content-Type header matching the
-            content_type and a body of exactly size_bytes given in the
-            request) to complete it.
+            content_type, an If-None-Match: * header, and a body of exactly
+            size_bytes given in the request) to complete it. upload_url is
+            for one upload: another PUT to it fails with 412 Precondition
+            Failed while that image is stored.
           content:
             application/json:
               schema:
@@ -640,8 +642,10 @@ paths:
           description: >
             An image slot has been allocated; upload the image bytes to
             upload_url (HTTP PUT, with a Content-Type header matching the
-            content_type and a body of exactly size_bytes given in the
-            request) to complete it.
+            content_type, an If-None-Match: * header, and a body of exactly
+            size_bytes given in the request) to complete it. upload_url is
+            for one upload: another PUT to it fails with 412 Precondition
+            Failed while that image is stored.
           content:
             application/json:
               schema:
@@ -886,8 +890,10 @@ paths:
           description: >
             An avatar slot has been allocated; upload the image bytes to
             upload_url (HTTP PUT, with a Content-Type header matching the
-            content_type and a body of exactly size_bytes given in the
-            request) to complete it.
+            content_type, an If-None-Match: * header, and a body of exactly
+            size_bytes given in the request) to complete it. upload_url is
+            for one upload: another PUT to it fails with 412 Precondition
+            Failed while that image is stored.
           content:
             application/json:
               schema:
@@ -1203,8 +1209,10 @@ paths:
           description: >
             An image slot has been allocated; upload the image bytes to
             upload_url (HTTP PUT, with a Content-Type header matching the
-            content_type and a body of exactly size_bytes given in the
-            request) to complete it.
+            content_type, an If-None-Match: * header, and a body of exactly
+            size_bytes given in the request) to complete it. upload_url is
+            for one upload: another PUT to it fails with 412 Precondition
+            Failed while that image is stored.
           content:
             application/json:
               schema:
@@ -1382,8 +1390,10 @@ paths:
           description: >
             An image slot has been allocated; upload the image bytes to
             upload_url (HTTP PUT, with a Content-Type header matching the
-            content_type and a body of exactly size_bytes given in the
-            request) to complete it.
+            content_type, an If-None-Match: * header, and a body of exactly
+            size_bytes given in the request) to complete it. upload_url is
+            for one upload: another PUT to it fails with 412 Precondition
+            Failed while that image is stored.
           content:
             application/json:
               schema:

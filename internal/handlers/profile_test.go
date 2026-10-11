@@ -505,7 +505,7 @@ func (s *DeleteProfileSuite) TestNoProfile_204_Idempotent() {
 }
 
 func (s *DeleteProfileSuite) TestAvatarDeletedBeforeDBDelete() {
-	key := repository.ProfileImageKey("profiles/user-alice/avatar")
+	key := repository.ProfileImageKey("profiles/user-alice/avatar/up1")
 	s.mockRepo.EXPECT().Get(mock.Anything, "user-alice").
 		Return(&repository.Profile{OwnerID: "user-alice", Username: "alice", AvatarPath: &key}, nil)
 
@@ -524,7 +524,7 @@ func (s *DeleteProfileSuite) TestAvatarDeletedBeforeDBDelete() {
 }
 
 func (s *DeleteProfileSuite) TestAvatarDeleteFails_500_NoDBDelete() {
-	key := repository.ProfileImageKey("profiles/user-alice/avatar")
+	key := repository.ProfileImageKey("profiles/user-alice/avatar/up1")
 	s.mockRepo.EXPECT().Get(mock.Anything, "user-alice").
 		Return(&repository.Profile{OwnerID: "user-alice", Username: "alice", AvatarPath: &key}, nil)
 	s.mockImages.EXPECT().Delete(mock.Anything, key).Return(errors.New("s3 down"))
@@ -690,7 +690,7 @@ func (s *ListProfilesSuite) TestReturnsNextCursor_WhenPresent() {
 }
 
 func (s *ListProfilesSuite) TestAvatarPresigned_WhenSet() {
-	key := repository.ProfileImageKey("profiles/user-alice/avatar")
+	key := repository.ProfileImageKey("profiles/user-alice/avatar/up1")
 	s.mockRepo.EXPECT().
 		ListPublic(mock.Anything, "", "", 20, "").
 		Return([]repository.Profile{
@@ -762,12 +762,25 @@ func (s *SetProfileImageSuite) ownerCtx() context.Context {
 	return kbdbctx.WithUserID(s.T().Context(), "user-alice")
 }
 
-const setProfileImageTestKey = repository.ProfileImageKey("profiles/user-alice/avatar")
+const previousProfileImageTestKey = repository.ProfileImageKey("profiles/user-alice/avatar/old-upload")
+
+// newProfileImageKey matches a freshly minted per-upload avatar key, which
+// must never be the previous avatar's key.
+func newProfileImageKey() any {
+	return mock.MatchedBy(func(k repository.ProfileImageKey) bool {
+		return strings.HasPrefix(string(k), "profiles/user-alice/avatar/") && k != previousProfileImageTestKey
+	})
+}
 
 func (s *SetProfileImageSuite) TestSucceeds() {
-	s.mockRepo.EXPECT().SetAvatarPath(mock.Anything, setProfileImageTestKey).Return(nil)
-	s.mockImages.EXPECT().PresignPut(mock.Anything, setProfileImageTestKey, "image/png", int64(524288)).
+	s.mockRepo.EXPECT().Get(mock.Anything, "user-alice").Return(&repository.Profile{}, nil)
+	var presigned repository.ProfileImageKey
+	s.mockImages.EXPECT().PresignPut(mock.Anything, newProfileImageKey(), "image/png", int64(524288)).
+		Run(func(_ context.Context, key repository.ProfileImageKey, _ string, _ int64) { presigned = key }).
 		Return("https://example.com/presigned-put", nil)
+	s.mockRepo.EXPECT().SetAvatarPath(mock.Anything, newProfileImageKey()).
+		Run(func(_ context.Context, key repository.ProfileImageKey) { s.Equal(presigned, key) }).
+		Return(nil)
 
 	rec := httptest.NewRecorder()
 	s.handler(rec, s.newRequest(s.ownerCtx(), "user-alice", `{"content_type":"image/png","size_bytes":524288}`))
@@ -779,6 +792,21 @@ func (s *SetProfileImageSuite) TestSucceeds() {
 	}
 	s.Require().NoError(json.Unmarshal(rec.Body.Bytes(), &got))
 	s.Equal("https://example.com/presigned-put", got.UploadURL)
+}
+
+func (s *SetProfileImageSuite) TestReplacingAvatar_DeletesPreviousObjectFirst() {
+	previous := previousProfileImageTestKey
+	s.mockRepo.EXPECT().Get(mock.Anything, "user-alice").
+		Return(&repository.Profile{AvatarPath: &previous}, nil)
+	s.mockImages.EXPECT().PresignPut(mock.Anything, newProfileImageKey(), "image/png", int64(524288)).
+		Return("https://example.com/presigned-put", nil)
+	deleted := s.mockImages.EXPECT().Delete(mock.Anything, previousProfileImageTestKey).Return(nil).Call
+	s.mockRepo.EXPECT().SetAvatarPath(mock.Anything, newProfileImageKey()).Return(nil).NotBefore(deleted)
+
+	rec := httptest.NewRecorder()
+	s.handler(rec, s.newRequest(s.ownerCtx(), "user-alice", `{"content_type":"image/png","size_bytes":524288}`))
+
+	s.Equal(http.StatusCreated, rec.Code)
 }
 
 func (s *SetProfileImageSuite) TestNotOwner_404() {
@@ -829,9 +857,7 @@ func (s *SetProfileImageSuite) TestUnapprovedContentType_400() {
 }
 
 func (s *SetProfileImageSuite) TestNoProfile_404() {
-	s.mockImages.EXPECT().PresignPut(mock.Anything, setProfileImageTestKey, "image/png", int64(524288)).
-		Return("https://example.com/presigned-put", nil)
-	s.mockRepo.EXPECT().SetAvatarPath(mock.Anything, setProfileImageTestKey).Return(repository.ErrNotFound)
+	s.mockRepo.EXPECT().Get(mock.Anything, "user-alice").Return(nil, repository.ErrNotFound)
 
 	rec := httptest.NewRecorder()
 	s.handler(rec, s.newRequest(s.ownerCtx(), "user-alice", `{"content_type":"image/png","size_bytes":524288}`))
@@ -841,15 +867,34 @@ func (s *SetProfileImageSuite) TestNoProfile_404() {
 }
 
 func (s *SetProfileImageSuite) TestPresignError_500() {
-	s.mockImages.EXPECT().PresignPut(mock.Anything, setProfileImageTestKey, "image/png", int64(524288)).
+	previous := previousProfileImageTestKey
+	s.mockRepo.EXPECT().Get(mock.Anything, "user-alice").
+		Return(&repository.Profile{AvatarPath: &previous}, nil)
+	s.mockImages.EXPECT().PresignPut(mock.Anything, newProfileImageKey(), "image/png", int64(524288)).
 		Return("", errors.New("s3: access denied"))
 
 	rec := httptest.NewRecorder()
 	s.handler(rec, s.newRequest(s.ownerCtx(), "user-alice", `{"content_type":"image/png","size_bytes":524288}`))
 
 	s.Equal(http.StatusInternalServerError, rec.Code)
-	// mockRepo has no .EXPECT() for SetAvatarPath - verifies the DB was
-	// never touched when presigning fails.
+	// No .EXPECT() for Delete or SetAvatarPath - verifies neither the
+	// previous object nor the DB was touched when presigning fails.
+}
+
+func (s *SetProfileImageSuite) TestDeletePreviousError_500() {
+	previous := previousProfileImageTestKey
+	s.mockRepo.EXPECT().Get(mock.Anything, "user-alice").
+		Return(&repository.Profile{AvatarPath: &previous}, nil)
+	s.mockImages.EXPECT().PresignPut(mock.Anything, newProfileImageKey(), "image/png", int64(524288)).
+		Return("https://example.com/presigned-put", nil)
+	s.mockImages.EXPECT().Delete(mock.Anything, previousProfileImageTestKey).Return(errors.New("s3: access denied"))
+
+	rec := httptest.NewRecorder()
+	s.handler(rec, s.newRequest(s.ownerCtx(), "user-alice", `{"content_type":"image/png","size_bytes":524288}`))
+
+	s.Equal(http.StatusInternalServerError, rec.Code)
+	// No .EXPECT() for SetAvatarPath - the pointer stays on the previous
+	// avatar, which still exists.
 }
 
 type DeleteProfileImageSuite struct {
@@ -880,7 +925,7 @@ func (s *DeleteProfileImageSuite) ownerCtx() context.Context {
 	return kbdbctx.WithUserID(s.T().Context(), "user-alice")
 }
 
-var deleteProfileImageTestKey = repository.ProfileImageKey("profiles/user-alice/avatar")
+var deleteProfileImageTestKey = repository.ProfileImageKey("profiles/user-alice/avatar/up1")
 
 func (s *DeleteProfileImageSuite) TestSucceeds() {
 	s.mockRepo.EXPECT().Get(mock.Anything, "user-alice").

@@ -64,7 +64,7 @@ var deleteKeycapKitTool = &mcp.Tool{
 
 var setKeycapKitImageTool = &mcp.Tool{
 	Name:        "set_keycap_kit_image",
-	Description: "Mints a presigned URL to upload a kit's image to. Doesn't upload the image itself - PUT the image bytes to the returned upload_url using the same content_type as the Content-Type header and a body of exactly size_bytes. Images are capped at 5 MB; resize anything larger first.",
+	Description: "Mints a presigned URL to upload a kit's image to. Doesn't upload the image itself - PUT the image bytes to the returned upload_url using the same content_type as the Content-Type header, an If-None-Match: * header, and a body of exactly size_bytes. The upload_url is for one upload: another PUT to it fails with 412 while that image is stored. Images are capped at 5 MB; resize anything larger first.",
 }
 
 var deleteKeycapKitImageTool = &mcp.Tool{
@@ -395,7 +395,22 @@ func handleSetKeycapKitImage(
 			return nil, schema.SetKeycapKitImageOutput{}, err
 		}
 
-		key, err := repository.NewKeycapKitImageKey(ctx, in.KeycapSetID, in.KitID)
+		ownerID, err := resolveOwnerID(ctx, "")
+		if err != nil {
+			return nil, schema.SetKeycapKitImageOutput{}, err
+		}
+
+		ks, err := keycapSetRepo.Get(ctx, ownerID, in.KeycapSetID)
+		if mutErr := handleMutationError(ctx, err, log.KeycapSetID, in.KeycapSetID, log.KeycapKitID, in.KitID); mutErr != nil {
+			return nil, schema.SetKeycapKitImageOutput{}, mutErr
+		}
+
+		kit, ok := ks.Kits[in.KitID]
+		if !ok {
+			return nil, schema.SetKeycapKitImageOutput{}, errMutationNotFound
+		}
+
+		key, err := repository.NewKeycapKitImageKey(ctx, in.KeycapSetID, in.KitID, uuid.NewString())
 		if err != nil {
 			log.FromContext(ctx).Error("building keycap kit image key", log.KeycapSetID, in.KeycapSetID, log.KeycapKitID, in.KitID, log.Error, err)
 			return nil, schema.SetKeycapKitImageOutput{}, errors.New("failed to set kit image")
@@ -405,6 +420,13 @@ func handleSetKeycapKitImage(
 		if err != nil {
 			log.FromContext(ctx).Error("presigning keycap kit image upload", log.KeycapSetID, in.KeycapSetID, log.KeycapKitID, in.KitID, log.Error, err)
 			return nil, schema.SetKeycapKitImageOutput{}, errors.New("failed to set kit image")
+		}
+
+		if kit.ImagePath != nil {
+			if err := images.Delete(ctx, *kit.ImagePath); err != nil {
+				log.FromContext(ctx).Error("deleting previous keycap kit image object", log.KeycapSetID, in.KeycapSetID, log.KeycapKitID, in.KitID, log.Error, err)
+				return nil, schema.SetKeycapKitImageOutput{}, errors.New("failed to set kit image")
+			}
 		}
 
 		err = keycapSetRepo.SetKitImagePath(ctx, in.KeycapSetID, in.KitID, key)

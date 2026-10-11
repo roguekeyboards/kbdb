@@ -154,7 +154,7 @@ func (s *SwitchToMCPSuite) TestNoImagePath_HasImageFalse() {
 }
 
 func (s *SwitchToMCPSuite) TestImagePathSet_HasImageTrue() {
-	key := repository.SwitchImageKey("switches/u/sw-1/image")
+	key := repository.SwitchImageKey("switches/u/sw-1/image/up1")
 
 	out := Switch{}.ToMCP(repository.Switch{ImagePath: &key}, true, repository.ProfilePreferences{})
 
@@ -241,7 +241,7 @@ func (s *SwitchToMCPSummarySuite) TestMapsSummaryFields() {
 }
 
 func (s *SwitchToMCPSummarySuite) TestImagePathSet_HasImageTrue() {
-	key := repository.SwitchImageKey("switches/u/sw-1/image")
+	key := repository.SwitchImageKey("switches/u/sw-1/image/up1")
 
 	out := Switch{}.ToMCPSummary(repository.Switch{ImagePath: &key}, true, repository.ProfilePreferences{})
 

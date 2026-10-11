@@ -58,7 +58,7 @@ func (s *DeleteSwitchSuite) TestBlock_SwitchHadImage_DeletesFromS3BeforeDB() {
 	s.mockBuilds.EXPECT().
 		FindBuildsReferencingSwitch(s.ctx, "alice", "sw1").
 		Return(nil, nil)
-	key := repository.SwitchImageKey("switches/alice/sw1/image")
+	key := repository.SwitchImageKey("switches/alice/sw1/image/up1")
 	s.mockSwitches.EXPECT().
 		Get(s.ctx, "alice", "sw1").
 		Return(&repository.Switch{ID: "sw1", ImagePath: &key}, nil)
@@ -81,7 +81,7 @@ func (s *DeleteSwitchSuite) TestBlock_ImageDeleteFails_ReturnsErrorWithoutDeleti
 	s.mockBuilds.EXPECT().
 		FindBuildsReferencingSwitch(s.ctx, "alice", "sw1").
 		Return(nil, nil)
-	key := repository.SwitchImageKey("switches/alice/sw1/image")
+	key := repository.SwitchImageKey("switches/alice/sw1/image/up1")
 	s.mockSwitches.EXPECT().
 		Get(s.ctx, "alice", "sw1").
 		Return(&repository.Switch{ID: "sw1", ImagePath: &key}, nil)

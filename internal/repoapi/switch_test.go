@@ -215,7 +215,7 @@ func (s *SwitchToAPISuite) TestOwner_AlwaysIncludesPriceRegardlessOfShowPriceToM
 
 func (s *SwitchToAPISuite) TestImagePresent_ReturnsPresignedURL() {
 	sw := fullRepoSwitch()
-	switchImageKey := repository.SwitchImageKey("switches/alice/sw1/image")
+	switchImageKey := repository.SwitchImageKey("switches/alice/sw1/image/up1")
 	sw.ImagePath = &switchImageKey
 	images := mocks.NewMockSwitchImageStore(s.T())
 	images.EXPECT().PresignGet(mock.Anything, *sw.ImagePath).Return("https://example.com/img", presignExpiry(), nil)
@@ -244,7 +244,7 @@ func (s *SwitchToAPISuite) TestNoImage_ImageFieldNil() {
 
 func (s *SwitchToAPISuite) TestImagePresignError_Propagates() {
 	sw := fullRepoSwitch()
-	switchImageKey := repository.SwitchImageKey("switches/alice/sw1/image")
+	switchImageKey := repository.SwitchImageKey("switches/alice/sw1/image/up1")
 	sw.ImagePath = &switchImageKey
 	images := mocks.NewMockSwitchImageStore(s.T())
 	images.EXPECT().PresignGet(mock.Anything, *sw.ImagePath).Return("", time.Time{}, errors.New("s3: access denied"))

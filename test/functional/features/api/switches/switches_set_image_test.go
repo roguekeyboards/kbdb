@@ -68,6 +68,11 @@ var _ = Describe("Setting a switch's image", func() {
 						Expect(err).NotTo(HaveOccurred())
 						Expect(putResp.StatusCode).To(Equal(http.StatusOK))
 
+						By("rejecting a second PUT to the same upload URL")
+						putResp, err = api.DoPresigned(ctx, http.MethodPut, created.UploadURL, approvedImageContentType, bytes.NewReader(imageBytes))
+						Expect(err).NotTo(HaveOccurred())
+						Expect(putResp.StatusCode).To(Equal(http.StatusPreconditionFailed))
+
 						By("showing the image, as a presigned GET URL, embedded in a follow-up GetSwitch")
 						getResp, err := client.Get(ctx, ownerID, switchID, ownerToken)
 						Expect(err).NotTo(HaveOccurred())
@@ -123,11 +128,24 @@ var _ = Describe("Setting a switch's image", func() {
 				})
 			})
 
-			Context("given the switch already has an image set", func() {
+			Context("given the switch already has an uploaded image", func() {
+				var previousImageURL string
+
 				BeforeEach(func(ctx SpecContext) {
 					firstResp, err := client.SetImage(ctx, ownerID, switchID, ownerToken, api.ImageUploadBody(approvedImageContentType))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(firstResp.StatusCode).To(Equal(http.StatusCreated))
+
+					var first struct {
+						UploadURL string `json:"upload_url"`
+					}
+					Expect(json.NewDecoder(firstResp.Body).Decode(&first)).To(Succeed())
+
+					putResp, err := api.DoPresigned(ctx, http.MethodPut, first.UploadURL, approvedImageContentType, bytes.NewReader(api.TestImageBytes))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(putResp.StatusCode).To(Equal(http.StatusOK))
+
+					previousImageURL = getImageURL(ctx, client, ownerID, switchID, ownerToken)
 				})
 
 				When("setting the switch's image again", func() {
@@ -137,8 +155,36 @@ var _ = Describe("Setting a switch's image", func() {
 						Expect(err).NotTo(HaveOccurred())
 					})
 
-					It("replaces it, no need to delete first", func() {
+					It("replaces it with a fresh upload and removes the previous image, no need to delete first", func(ctx SpecContext) {
+						By("returning 201 with a new upload_url")
 						Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+
+						var created struct {
+							UploadURL string `json:"upload_url"`
+						}
+						Expect(json.NewDecoder(resp.Body).Decode(&created)).To(Succeed())
+
+						By("accepting the replacement bytes at the new upload URL")
+						replacement := bytes.Clone(api.TestImageBytes)
+						replacement[0] = 'F'
+						putResp, err := api.DoPresigned(ctx, http.MethodPut, created.UploadURL, approvedImageContentType, bytes.NewReader(replacement))
+						Expect(err).NotTo(HaveOccurred())
+						Expect(putResp.StatusCode).To(Equal(http.StatusOK))
+
+						By("serving the replacement bytes from a follow-up GetSwitch")
+						getImageResp, err := api.DoPresigned(ctx, http.MethodGet, getImageURL(ctx, client, ownerID, switchID, ownerToken), "", nil)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(getImageResp.StatusCode).To(Equal(http.StatusOK))
+						gotBytes, err := io.ReadAll(getImageResp.Body)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(gotBytes).To(Equal(replacement))
+
+						By("no longer serving the previous image's object")
+						previousResp, err := api.DoPresigned(ctx, http.MethodGet, previousImageURL, "", nil)
+						Expect(err).NotTo(HaveOccurred())
+						// Real S3 returns 403 (not 404) for GetObject against a
+						// missing key when the caller lacks s3:ListBucket.
+						Expect(previousResp.StatusCode).To(BeElementOf(http.StatusNotFound, http.StatusForbidden))
 					})
 				})
 			})

@@ -496,7 +496,7 @@ func (s *ProfileRepositorySuite) TestUpdate_DoesNotNameAvatarPath_SoItCarriesFor
 			return true
 		})).
 		Return(&dynamodb.UpdateItemOutput{Attributes: updatedProfileAttrs(map[string]types.AttributeValue{
-			"avatar_path": &types.AttributeValueMemberS{Value: "profiles/user-alice/avatar"},
+			"avatar_path": &types.AttributeValueMemberS{Value: "profiles/user-alice/avatar/up1"},
 		})}, nil)
 
 	got, err := s.repo.Update(s.updateCtx(), repository.Profile{Username: "alice", Discoverable: true})
@@ -506,7 +506,7 @@ func (s *ProfileRepositorySuite) TestUpdate_DoesNotNameAvatarPath_SoItCarriesFor
 	s.False(removesAttr(captured, "avatar_path"), "avatar_path must not be REMOVEd")
 	// ALL_NEW response still carries the stored avatar_path.
 	s.Require().NotNil(got.AvatarPath)
-	s.Equal(repository.ProfileImageKey("profiles/user-alice/avatar"), *got.AvatarPath)
+	s.Equal(repository.ProfileImageKey("profiles/user-alice/avatar/up1"), *got.AvatarPath)
 }
 
 func (s *ProfileRepositorySuite) TestUpdate_FlipDiscoverableFalse_RemovesAllGSIKeys() {
@@ -724,7 +724,7 @@ func (s *ProfileRepositorySuite) TestUpdate_RenameConflictExhaustsRetries_Return
 }
 
 func (s *ProfileRepositorySuite) TestSetAvatarPath_NoUserID_ReturnsErrNoUserID() {
-	err := s.repo.SetAvatarPath(s.T().Context(), "profiles/user-alice/avatar")
+	err := s.repo.SetAvatarPath(s.T().Context(), "profiles/user-alice/avatar/up1")
 
 	s.Require().ErrorIs(err, repository.ErrNoUserID)
 }
@@ -740,7 +740,7 @@ func (s *ProfileRepositorySuite) TestSetAvatarPath_OneUpdateItem_NoRead() {
 		})).
 		Return(&dynamodb.UpdateItemOutput{}, nil)
 
-	err := s.repo.SetAvatarPath(s.updateCtx(), "profiles/user-alice/avatar")
+	err := s.repo.SetAvatarPath(s.updateCtx(), "profiles/user-alice/avatar/up1")
 	s.Require().NoError(err)
 
 	s.Equal("profile-table", *captured.TableName)
@@ -753,7 +753,7 @@ func (s *ProfileRepositorySuite) TestSetAvatarPath_NoProfile_ReturnsErrNotFound(
 	s.mockClient.EXPECT().UpdateItem(mock.Anything, mock.Anything).
 		Return(nil, &types.ConditionalCheckFailedException{})
 
-	err := s.repo.SetAvatarPath(s.updateCtx(), "profiles/user-alice/avatar")
+	err := s.repo.SetAvatarPath(s.updateCtx(), "profiles/user-alice/avatar/up1")
 
 	s.Require().ErrorIs(err, repository.ErrNotFound)
 }
@@ -769,7 +769,7 @@ func (s *ProfileRepositorySuite) TestSetAvatarPath_AlsoClearsCachedGetURL() {
 		})).
 		Return(&dynamodb.UpdateItemOutput{}, nil)
 
-	err := s.repo.SetAvatarPath(s.updateCtx(), "profiles/user-alice/avatar")
+	err := s.repo.SetAvatarPath(s.updateCtx(), "profiles/user-alice/avatar/up1")
 	s.Require().NoError(err)
 
 	s.True(removesAttr(captured, "get_url"), "get_url should be REMOVEd")
@@ -790,13 +790,13 @@ func (s *ProfileRepositorySuite) TestClearAvatarPath_RemovesAndReturnsClearedKey
 			return true
 		})).
 		Return(&dynamodb.UpdateItemOutput{Attributes: map[string]types.AttributeValue{
-			"avatar_path": &types.AttributeValueMemberS{Value: "profiles/user-alice/avatar"},
+			"avatar_path": &types.AttributeValueMemberS{Value: "profiles/user-alice/avatar/up1"},
 		}}, nil)
 
 	cleared, err := s.repo.ClearAvatarPath(s.updateCtx())
 	s.Require().NoError(err)
 	s.Require().NotNil(cleared)
-	s.Equal(repository.ProfileImageKey("profiles/user-alice/avatar"), *cleared)
+	s.Equal(repository.ProfileImageKey("profiles/user-alice/avatar/up1"), *cleared)
 
 	s.True(removesAttr(captured, "avatar_path"))
 	s.Equal(types.ReturnValueAllOld, captured.ReturnValues)
@@ -853,7 +853,7 @@ func (s *ProfileRepositorySuite) TestSetImageGetCache_PathMatches_WritesURLAndRe
 		Return(&dynamodb.UpdateItemOutput{}, nil)
 
 	expiresAt := time.Now().Add(24 * time.Hour)
-	ok, err := s.repo.SetImageGetCache(s.T().Context(), "user-alice", "profiles/user-alice/avatar", "https://example.com/presigned", expiresAt)
+	ok, err := s.repo.SetImageGetCache(s.T().Context(), "user-alice", "profiles/user-alice/avatar/up1", "https://example.com/presigned", expiresAt)
 
 	s.Require().NoError(err)
 	s.True(ok)
@@ -870,7 +870,7 @@ func (s *ProfileRepositorySuite) TestSetImageGetCache_PathChanged_ReturnsFalseWi
 		UpdateItem(mock.Anything, mock.Anything).
 		Return(nil, &types.ConditionalCheckFailedException{})
 
-	ok, err := s.repo.SetImageGetCache(s.T().Context(), "user-alice", "profiles/user-alice/avatar", "https://example.com/presigned", time.Now().Add(24*time.Hour))
+	ok, err := s.repo.SetImageGetCache(s.T().Context(), "user-alice", "profiles/user-alice/avatar/up1", "https://example.com/presigned", time.Now().Add(24*time.Hour))
 
 	s.Require().NoError(err)
 	s.False(ok)
@@ -881,7 +881,7 @@ func (s *ProfileRepositorySuite) TestSetImageGetCache_UpdateItemError_Propagates
 		UpdateItem(mock.Anything, mock.Anything).
 		Return(nil, errors.New("dynamodb: throttled"))
 
-	ok, err := s.repo.SetImageGetCache(s.T().Context(), "user-alice", "profiles/user-alice/avatar", "https://example.com/presigned", time.Now().Add(24*time.Hour))
+	ok, err := s.repo.SetImageGetCache(s.T().Context(), "user-alice", "profiles/user-alice/avatar/up1", "https://example.com/presigned", time.Now().Add(24*time.Hour))
 
 	s.Require().Error(err)
 	s.False(ok)

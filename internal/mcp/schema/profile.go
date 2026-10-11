@@ -98,7 +98,7 @@ type SetProfileImageInput struct {
 // is a presigned S3 PUT URL - the caller uploads the image bytes directly
 // to it; the tool call itself never carries image bytes.
 type SetProfileImageOutput struct {
-	UploadURL string `json:"upload_url" jsonschema:"a freshly-minted, short-lived presigned URL to PUT the avatar bytes to directly, using the requested content_type as the Content-Type header and a body of exactly size_bytes; do not cache or persist it, it expires within minutes"`
+	UploadURL string `json:"upload_url" jsonschema:"a freshly-minted, short-lived presigned URL to PUT the avatar bytes to directly, using the requested content_type as the Content-Type header, an If-None-Match: * header, and a body of exactly size_bytes; single-use, so do not cache or persist it, and it expires within minutes"`
 }
 
 // DeleteProfileImageInput is the delete_profile_image tool's input. It

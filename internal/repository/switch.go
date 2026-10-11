@@ -126,18 +126,18 @@ type SwitchRepository interface {
 // SwitchImageStore.
 type SwitchImageKey string
 
-// NewSwitchImageKey builds the deterministic object key for switchID's
+// NewSwitchImageKey builds the object key for one upload of switchID's
 // image. ownerID comes from ctx, not a parameter, so a caller can't build a
-// key addressing anyone else's prefix. Fixed, no extension - a re-upload
-// overwrites the same object, so there's no orphan accumulation from
-// repeated uploads.
-func NewSwitchImageKey(ctx context.Context, switchID string) (SwitchImageKey, error) {
+// key addressing anyone else's prefix. Each upload gets its own key because
+// upload URLs are single-use: a replacement can't be written over the
+// previous object.
+func NewSwitchImageKey(ctx context.Context, switchID, uploadID string) (SwitchImageKey, error) {
 	ownerID, ok := kbdbctx.UserID(ctx)
 	if !ok {
 		return "", ErrNoUserID
 	}
 
-	return SwitchImageKey(fmt.Sprintf("switches/%s/%s/image", ownerID, switchID)), nil
+	return SwitchImageKey(fmt.Sprintf("switches/%s/%s/image/%s", ownerID, switchID, uploadID)), nil
 }
 
 // SwitchImageStore stores a switch's image object in a private object
@@ -151,6 +151,8 @@ type SwitchImageStore interface {
 	// PresignPut returns a short-lived presigned PUT URL for key, locked to
 	// contentType and size via the Content-Type and Content-Length the upload
 	// must match.
+	// Single-use: the upload must also send If-None-Match: *, so once an
+	// object exists at key the URL can't write it again.
 	PresignPut(ctx context.Context, key SwitchImageKey, contentType string, size int64) (url string, err error)
 
 	// Delete removes the object at key. Idempotent: a nonexistent key is

@@ -240,7 +240,7 @@ func (s *ListKeycapSetsSuite) TestListKeycapSets_ReturnsNextCursor_WhenPresent()
 }
 
 func (s *ListKeycapSetsSuite) TestListKeycapSets_PrimaryKitWithImage_ReturnsPrimaryKitIDAndKitImage() {
-	imagePath := repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit1/image")
+	imagePath := repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit1/image/up1")
 	kitID := "kit1"
 
 	s.mockRepo.EXPECT().
@@ -352,7 +352,7 @@ func (s *GetKeycapSetSuite) TestGetKeycapSet_Owner_Succeeds() {
 func (s *GetKeycapSetSuite) TestGetKeycapSet_KitWithImagePath_IncludesPresignedURL() {
 	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
 	s.prefs = repository.DefaultProfilePreferences()
-	imagePath := repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit1/image")
+	imagePath := repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit1/image/up1")
 
 	s.mockRepo.EXPECT().
 		Get(mock.Anything, "alice", "ks1").
@@ -953,8 +953,8 @@ func (s *DeleteKeycapSetSuite) TestDeleteKeycapSet_Owner_Succeeds() {
 }
 
 func (s *DeleteKeycapSetSuite) TestDeleteKeycapSet_KitsWithImages_DeletesEachFromS3BeforeDB() {
-	key1 := repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit1/image")
-	key2 := repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit2/image")
+	key1 := repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit1/image/up1")
+	key2 := repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit2/image/up1")
 	s.mockBuilds.EXPECT().
 		FindBuildsReferencingKeycapSet(mock.Anything, "alice", "ks1").
 		Return(nil, nil)
@@ -979,7 +979,7 @@ func (s *DeleteKeycapSetSuite) TestDeleteKeycapSet_KitsWithImages_DeletesEachFro
 }
 
 func (s *DeleteKeycapSetSuite) TestDeleteKeycapSet_KitImageDeleteFails_Returns500_DoesNotDeleteSet() {
-	key1 := repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit1/image")
+	key1 := repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit1/image/up1")
 	s.mockBuilds.EXPECT().
 		FindBuildsReferencingKeycapSet(mock.Anything, "alice", "ks1").
 		Return(nil, nil)
@@ -1495,7 +1495,7 @@ func (s *DeleteKeycapKitSuite) TestDeleteKeycapKit_Succeeds() {
 }
 
 func (s *DeleteKeycapKitSuite) TestDeleteKeycapKit_KitHadImage_DeletesFromS3BeforeDB() {
-	key := repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit1/image")
+	key := repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit1/image/up1")
 	s.mockBuilds.EXPECT().
 		FindBuildsReferencingKeycapKit(mock.Anything, "alice", "ks1", "kit1").
 		Return(nil, nil)
@@ -1517,7 +1517,7 @@ func (s *DeleteKeycapKitSuite) TestDeleteKeycapKit_KitHadImage_DeletesFromS3Befo
 }
 
 func (s *DeleteKeycapKitSuite) TestDeleteKeycapKit_ImageDeleteFails_Returns500_DoesNotDeleteKit() {
-	key := repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit1/image")
+	key := repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit1/image/up1")
 	s.mockBuilds.EXPECT().
 		FindBuildsReferencingKeycapKit(mock.Anything, "alice", "ks1", "kit1").
 		Return(nil, nil)
@@ -1681,15 +1681,34 @@ func (s *SetKeycapKitImageSuite) ownerCtx() context.Context {
 	return kbdbctx.WithUserID(s.T().Context(), "alice")
 }
 
-const setKeycapKitImageTestKey = repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit1/image")
+const previousKeycapKitImageTestKey = repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit1/image/old-upload")
+
+// newKeycapKitImageKey matches a freshly minted per-upload key for kit1,
+// which must never be the previous image's key.
+func newKeycapKitImageKey() any {
+	return mock.MatchedBy(func(k repository.KeycapKitImageKey) bool {
+		return strings.HasPrefix(string(k), "keycap-sets/alice/ks1/kits/kit1/image/") && k != previousKeycapKitImageTestKey
+	})
+}
+
+// setWithKit1 returns set ks1 holding kit1, with imagePath as kit1's image.
+func setWithKit1(imagePath *repository.KeycapKitImageKey) *repository.KeycapSet {
+	return &repository.KeycapSet{ID: "ks1", Kits: map[string]repository.KeycapKit{"kit1": {ImagePath: imagePath}}}
+}
 
 func (s *SetKeycapKitImageSuite) TestSetKeycapKitImage_Succeeds() {
 	s.mockRepo.EXPECT().
-		SetKitImagePath(mock.Anything, "ks1", "kit1", setKeycapKitImageTestKey).
-		Return(nil)
+		Get(mock.Anything, "alice", "ks1").
+		Return(setWithKit1(nil), nil)
+	var presigned repository.KeycapKitImageKey
 	s.mockImages.EXPECT().
-		PresignPut(mock.Anything, setKeycapKitImageTestKey, "image/png", int64(524288)).
+		PresignPut(mock.Anything, newKeycapKitImageKey(), "image/png", int64(524288)).
+		Run(func(_ context.Context, key repository.KeycapKitImageKey, _ string, _ int64) { presigned = key }).
 		Return("https://example.com/presigned-put", nil)
+	s.mockRepo.EXPECT().
+		SetKitImagePath(mock.Anything, "ks1", "kit1", newKeycapKitImageKey()).
+		Run(func(_ context.Context, _, _ string, key repository.KeycapKitImageKey) { s.Equal(presigned, key) }).
+		Return(nil)
 
 	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
@@ -1703,6 +1722,30 @@ func (s *SetKeycapKitImageSuite) TestSetKeycapKitImage_Succeeds() {
 	}
 	s.Require().NoError(json.Unmarshal(rec.Body.Bytes(), &got))
 	s.Equal("https://example.com/presigned-put", got.UploadURL)
+}
+
+func (s *SetKeycapKitImageSuite) TestSetKeycapKitImage_ReplacingImage_DeletesPreviousObjectFirst() {
+	previous := previousKeycapKitImageTestKey
+	s.mockRepo.EXPECT().
+		Get(mock.Anything, "alice", "ks1").
+		Return(setWithKit1(&previous), nil)
+	s.mockImages.EXPECT().
+		PresignPut(mock.Anything, newKeycapKitImageKey(), "image/png", int64(524288)).
+		Return("https://example.com/presigned-put", nil)
+	deleted := s.mockImages.EXPECT().
+		Delete(mock.Anything, previousKeycapKitImageTestKey).
+		Return(nil).
+		Call
+	s.mockRepo.EXPECT().
+		SetKitImagePath(mock.Anything, "ks1", "kit1", newKeycapKitImageKey()).
+		Return(nil).
+		NotBefore(deleted)
+
+	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
+	rec := httptest.NewRecorder()
+	s.handler(rec, req)
+
+	s.Equal(http.StatusCreated, rec.Code)
 }
 
 func (s *SetKeycapKitImageSuite) TestSetKeycapKitImage_NotOwner_Returns404() {
@@ -1750,13 +1793,23 @@ func (s *SetKeycapKitImageSuite) TestSetKeycapKitImage_UnapprovedContentType_Ret
 	s.Equal("content_type", got.InvalidParams[0].Name)
 }
 
-func (s *SetKeycapKitImageSuite) TestSetKeycapKitImage_NotFound_Returns404() {
-	s.mockImages.EXPECT().
-		PresignPut(mock.Anything, setKeycapKitImageTestKey, "image/png", int64(524288)).
-		Return("https://example.com/presigned-put", nil)
+func (s *SetKeycapKitImageSuite) TestSetKeycapKitImage_SetNotFound_Returns404() {
 	s.mockRepo.EXPECT().
-		SetKitImagePath(mock.Anything, "ks1", "kit1", setKeycapKitImageTestKey).
-		Return(repository.ErrNotFound)
+		Get(mock.Anything, "alice", "ks1").
+		Return(nil, repository.ErrNotFound)
+
+	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
+	rec := httptest.NewRecorder()
+	s.handler(rec, req)
+
+	s.Equal(http.StatusNotFound, rec.Code)
+	s.Equal("application/problem+json", rec.Header().Get("Content-Type"))
+}
+
+func (s *SetKeycapKitImageSuite) TestSetKeycapKitImage_KitNotFound_Returns404() {
+	s.mockRepo.EXPECT().
+		Get(mock.Anything, "alice", "ks1").
+		Return(&repository.KeycapSet{ID: "ks1"}, nil)
 
 	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
@@ -1767,8 +1820,12 @@ func (s *SetKeycapKitImageSuite) TestSetKeycapKitImage_NotFound_Returns404() {
 }
 
 func (s *SetKeycapKitImageSuite) TestSetKeycapKitImage_PresignError_Returns500() {
+	previous := previousKeycapKitImageTestKey
+	s.mockRepo.EXPECT().
+		Get(mock.Anything, "alice", "ks1").
+		Return(setWithKit1(&previous), nil)
 	s.mockImages.EXPECT().
-		PresignPut(mock.Anything, setKeycapKitImageTestKey, "image/png", int64(524288)).
+		PresignPut(mock.Anything, newKeycapKitImageKey(), "image/png", int64(524288)).
 		Return("", errors.New("s3: access denied"))
 
 	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
@@ -1777,16 +1834,41 @@ func (s *SetKeycapKitImageSuite) TestSetKeycapKitImage_PresignError_Returns500()
 
 	s.Equal(http.StatusInternalServerError, rec.Code)
 	s.Equal("application/problem+json", rec.Header().Get("Content-Type"))
-	// mockRepo has no .EXPECT() for SetKitImagePath - verifies the DB was
-	// never touched when presigning fails.
+	// No .EXPECT() for Delete or SetKitImagePath - verifies neither the
+	// previous object nor the DB was touched when presigning fails.
+}
+
+func (s *SetKeycapKitImageSuite) TestSetKeycapKitImage_DeletePreviousError_Returns500() {
+	previous := previousKeycapKitImageTestKey
+	s.mockRepo.EXPECT().
+		Get(mock.Anything, "alice", "ks1").
+		Return(setWithKit1(&previous), nil)
+	s.mockImages.EXPECT().
+		PresignPut(mock.Anything, newKeycapKitImageKey(), "image/png", int64(524288)).
+		Return("https://example.com/presigned-put", nil)
+	s.mockImages.EXPECT().
+		Delete(mock.Anything, previousKeycapKitImageTestKey).
+		Return(errors.New("s3: access denied"))
+
+	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
+	rec := httptest.NewRecorder()
+	s.handler(rec, req)
+
+	s.Equal(http.StatusInternalServerError, rec.Code)
+	s.Equal("application/problem+json", rec.Header().Get("Content-Type"))
+	// No .EXPECT() for SetKitImagePath - the pointer stays on the previous
+	// image, which still exists.
 }
 
 func (s *SetKeycapKitImageSuite) TestSetKeycapKitImage_RepositoryError_Returns500() {
+	s.mockRepo.EXPECT().
+		Get(mock.Anything, "alice", "ks1").
+		Return(setWithKit1(nil), nil)
 	s.mockImages.EXPECT().
-		PresignPut(mock.Anything, setKeycapKitImageTestKey, "image/png", int64(524288)).
+		PresignPut(mock.Anything, newKeycapKitImageKey(), "image/png", int64(524288)).
 		Return("https://example.com/presigned-put", nil)
 	s.mockRepo.EXPECT().
-		SetKitImagePath(mock.Anything, "ks1", "kit1", setKeycapKitImageTestKey).
+		SetKitImagePath(mock.Anything, "ks1", "kit1", newKeycapKitImageKey()).
 		Return(errors.New("put item failed"))
 
 	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
@@ -1827,7 +1909,7 @@ func (s *DeleteKeycapKitImageSuite) ownerCtx() context.Context {
 	return kbdbctx.WithUserID(s.T().Context(), "alice")
 }
 
-var deleteKeycapKitImageTestKey = repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit1/image")
+var deleteKeycapKitImageTestKey = repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit1/image/up1")
 
 func (s *DeleteKeycapKitImageSuite) TestDeleteKeycapKitImage_Succeeds() {
 	s.mockRepo.EXPECT().

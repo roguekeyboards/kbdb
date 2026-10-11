@@ -58,7 +58,7 @@ var deleteBuildTool = &mcp.Tool{
 
 var addBuildImageTool = &mcp.Tool{
 	Name:        "add_build_image",
-	Description: "Mints a presigned URL to upload a new image to one of your own builds. Doesn't upload the image itself - PUT the image bytes to the returned upload_url using the same content_type as the Content-Type header and a body of exactly size_bytes. Images are capped at 5 MB; resize anything larger first. A build may have at most 10 images; this always adds a new one rather than replacing an existing image.",
+	Description: "Mints a presigned URL to upload a new image to one of your own builds. Doesn't upload the image itself - PUT the image bytes to the returned upload_url using the same content_type as the Content-Type header, an If-None-Match: * header, and a body of exactly size_bytes. The upload_url is for one upload: another PUT to it fails with 412 while that image is stored. Images are capped at 5 MB; resize anything larger first. A build may have at most 10 images; this always adds a new one rather than replacing an existing image.",
 }
 
 var deleteBuildImageTool = &mcp.Tool{

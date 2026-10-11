@@ -350,7 +350,9 @@ func DeleteSwitch(
 // Doesn't upload the image itself - the response is a presigned S3 PUT
 // URL the client uploads directly to. Presigning runs before the
 // repository mutation, so a presign failure never leaves the DB
-// pointing at an object that was never uploaded.
+// pointing at an object that was never uploaded. Each upload gets a new
+// key, so a previous image's object is deleted before the pointer moves,
+// S3-first like [DeleteSwitchImage].
 func SetSwitchImage(switchRepo repository.SwitchRepository, images repository.SwitchImageStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ownerID := r.PathValue("userId")
@@ -374,7 +376,12 @@ func SetSwitchImage(switchRepo repository.SwitchRepository, images repository.Sw
 			return
 		}
 
-		key, err := repository.NewSwitchImageKey(r.Context(), id)
+		sw, err := switchRepo.Get(r.Context(), ownerID, id)
+		if handleMutationError(w, r, err, log.SwitchID, id) {
+			return
+		}
+
+		key, err := repository.NewSwitchImageKey(r.Context(), id, uuid.NewString())
 		if err != nil {
 			log.FromContext(r.Context()).Error("building switch image key", log.Error, err, log.SwitchID, id)
 			problem.Internal(w, "failed to set switch image")
@@ -386,6 +393,14 @@ func SetSwitchImage(switchRepo repository.SwitchRepository, images repository.Sw
 			log.FromContext(r.Context()).Error("presigning switch image upload", log.Error, err, log.SwitchID, id)
 			problem.Internal(w, "failed to set switch image")
 			return
+		}
+
+		if sw.ImagePath != nil {
+			if err := images.Delete(r.Context(), *sw.ImagePath); err != nil {
+				log.FromContext(r.Context()).Error("deleting previous switch image object", log.Error, err, log.SwitchID, id)
+				problem.Internal(w, "failed to set switch image")
+				return
+			}
 		}
 
 		err = switchRepo.SetImagePath(r.Context(), id, key)

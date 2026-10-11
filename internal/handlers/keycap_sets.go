@@ -522,7 +522,9 @@ func DeleteKeycapKit(
 // itself - the response is a presigned S3 PUT URL the client uploads
 // directly to. Presigning runs before the repository mutation, so a
 // presign failure never leaves the DB pointing at an object that was
-// never uploaded.
+// never uploaded. Each upload gets a new key, so a previous image's
+// object is deleted before the pointer moves, S3-first like
+// [DeleteKeycapKitImage].
 func SetKeycapKitImage(keycapSetRepo repository.KeycapSetRepository, images repository.KeycapKitImageStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ownerID := r.PathValue("userId")
@@ -547,7 +549,18 @@ func SetKeycapKitImage(keycapSetRepo repository.KeycapSetRepository, images repo
 			return
 		}
 
-		key, err := repository.NewKeycapKitImageKey(r.Context(), setID, kitID)
+		ks, err := keycapSetRepo.Get(r.Context(), ownerID, setID)
+		if handleMutationError(w, r, err, log.KeycapSetID, setID, log.KeycapKitID, kitID) {
+			return
+		}
+
+		kit, ok := ks.Kits[kitID]
+		if !ok {
+			problem.NotFound(w, "resource not found")
+			return
+		}
+
+		key, err := repository.NewKeycapKitImageKey(r.Context(), setID, kitID, uuid.NewString())
 		if err != nil {
 			log.FromContext(r.Context()).Error("building keycap kit image key", log.Error, err, log.KeycapSetID, setID, log.KeycapKitID, kitID)
 			problem.Internal(w, "failed to set kit image")
@@ -559,6 +572,14 @@ func SetKeycapKitImage(keycapSetRepo repository.KeycapSetRepository, images repo
 			log.FromContext(r.Context()).Error("presigning keycap kit image upload", log.Error, err, log.KeycapSetID, setID, log.KeycapKitID, kitID)
 			problem.Internal(w, "failed to set kit image")
 			return
+		}
+
+		if kit.ImagePath != nil {
+			if err := images.Delete(r.Context(), *kit.ImagePath); err != nil {
+				log.FromContext(r.Context()).Error("deleting previous keycap kit image object", log.Error, err, log.KeycapSetID, setID, log.KeycapKitID, kitID)
+				problem.Internal(w, "failed to set kit image")
+				return
+			}
 		}
 
 		err = keycapSetRepo.SetKitImagePath(r.Context(), setID, kitID, key)

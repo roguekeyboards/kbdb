@@ -66,7 +66,8 @@ const presignedURLHostRewrite = "localstack:4566"
 
 // DoPresigned rewrites a LocalStack-internal host to its host-published
 // equivalent first - see presignedURLHostRewrite. body and contentType are
-// only meaningful for a PUT. Package-level, not a Client method: unlike Do,
+// only meaningful for a PUT, which also sends the If-None-Match: * every
+// presigned PUT requires. Package-level, not a Client method: unlike Do,
 // it doesn't target support.BaseURL(), so it needs no client state.
 func DoPresigned(ctx context.Context, method, presignedURL, contentType string, body io.Reader) (*http.Response, error) {
 	presignedURL = strings.Replace(presignedURL, presignedURLHostRewrite, "localhost:4566", 1)
@@ -77,6 +78,9 @@ func DoPresigned(ctx context.Context, method, presignedURL, contentType string, 
 	}
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
+	}
+	if method == http.MethodPut {
+		req.Header.Set("If-None-Match", "*")
 	}
 
 	resp, err := http.DefaultClient.Do(req)

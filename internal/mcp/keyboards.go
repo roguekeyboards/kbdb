@@ -55,7 +55,7 @@ var listKeyboardImagesTool = &mcp.Tool{
 
 var addKeyboardImageTool = &mcp.Tool{
 	Name:        "add_keyboard_image",
-	Description: "Adds an image to a keyboard in your own collection. Doesn't upload the image itself - PUT the image bytes to the returned upload_url using the same content_type as the Content-Type header and a body of exactly size_bytes. Images are capped at 5 MB; resize anything larger first. A keyboard may have at most 10 images.",
+	Description: "Adds an image to a keyboard in your own collection. Doesn't upload the image itself - PUT the image bytes to the returned upload_url using the same content_type as the Content-Type header, an If-None-Match: * header, and a body of exactly size_bytes. The upload_url is for one upload: another PUT to it fails with 412 while that image is stored. Images are capped at 5 MB; resize anything larger first. A keyboard may have at most 10 images.",
 }
 
 var deleteKeyboardImageTool = &mcp.Tool{

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/rogueserenity/kbdb/internal/authz"
@@ -49,7 +50,7 @@ var listProfilesTool = &mcp.Tool{
 
 var setProfileImageTool = &mcp.Tool{
 	Name:        "set_profile_image",
-	Description: "Mints a presigned URL to upload your profile's avatar to. Doesn't upload the image itself - PUT the image bytes to the returned upload_url using the same content_type as the Content-Type header and a body of exactly size_bytes. Images are capped at 5 MB; resize anything larger first. Your profile has at most one avatar; calling this again replaces it. Fails if you have no profile yet.",
+	Description: "Mints a presigned URL to upload your profile's avatar to. Doesn't upload the image itself - PUT the image bytes to the returned upload_url using the same content_type as the Content-Type header, an If-None-Match: * header, and a body of exactly size_bytes. The upload_url is for one upload: another PUT to it fails with 412 while that image is stored. Images are capped at 5 MB; resize anything larger first. Your profile has at most one avatar; calling this again replaces it. Fails if you have no profile yet.",
 }
 
 var deleteProfileImageTool = &mcp.Tool{
@@ -192,7 +193,12 @@ func handleSetProfileImage(
 			return nil, schema.SetProfileImageOutput{}, err
 		}
 
-		key, err := repository.NewProfileImageKey(ctx)
+		p, err := repo.Get(ctx, ownerID)
+		if mutErr := handleMutationError(ctx, err, log.ProfileID, ownerID); mutErr != nil {
+			return nil, schema.SetProfileImageOutput{}, mutErr
+		}
+
+		key, err := repository.NewProfileImageKey(ctx, uuid.NewString())
 		if err != nil {
 			log.FromContext(ctx).Error("building profile image key", log.Error, err, log.ProfileID, ownerID)
 			return nil, schema.SetProfileImageOutput{}, errors.New("failed to set profile image")
@@ -202,6 +208,13 @@ func handleSetProfileImage(
 		if err != nil {
 			log.FromContext(ctx).Error("presigning profile image upload", log.Error, err, log.ProfileID, ownerID)
 			return nil, schema.SetProfileImageOutput{}, errors.New("failed to set profile image")
+		}
+
+		if p.AvatarPath != nil {
+			if err := images.Delete(ctx, *p.AvatarPath); err != nil {
+				log.FromContext(ctx).Error("deleting previous profile avatar object", log.Error, err, log.ProfileID, ownerID)
+				return nil, schema.SetProfileImageOutput{}, errors.New("failed to set profile image")
+			}
 		}
 
 		if mutErr := handleMutationError(ctx, repo.SetAvatarPath(ctx, key)); mutErr != nil {

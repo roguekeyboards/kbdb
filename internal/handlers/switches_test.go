@@ -1052,7 +1052,7 @@ func (s *DeleteSwitchSuite) TestDeleteSwitch_ImageDeleteFails_Returns500_DoesNot
 	s.mockBuilds.EXPECT().
 		FindBuildsReferencingSwitch(mock.Anything, "alice", "sw1").
 		Return(nil, nil)
-	key := repository.SwitchImageKey("switches/alice/sw1/image")
+	key := repository.SwitchImageKey("switches/alice/sw1/image/up1")
 	s.mockSwitches.EXPECT().
 		Get(mock.Anything, "alice", "sw1").
 		Return(&repository.Switch{ID: "sw1", ImagePath: &key}, nil)
@@ -1098,15 +1098,29 @@ func (s *SetSwitchImageSuite) ownerCtx() context.Context {
 	return kbdbctx.WithUserID(s.T().Context(), "alice")
 }
 
-const setSwitchImageTestKey = repository.SwitchImageKey("switches/alice/sw1/image")
+const previousSwitchImageTestKey = repository.SwitchImageKey("switches/alice/sw1/image/old-upload")
+
+// newSwitchImageKey matches a freshly minted per-upload key for sw1, which
+// must never be the previous image's key.
+func newSwitchImageKey() any {
+	return mock.MatchedBy(func(k repository.SwitchImageKey) bool {
+		return strings.HasPrefix(string(k), "switches/alice/sw1/image/") && k != previousSwitchImageTestKey
+	})
+}
 
 func (s *SetSwitchImageSuite) TestSetSwitchImage_Succeeds() {
 	s.mockRepo.EXPECT().
-		SetImagePath(mock.Anything, "sw1", setSwitchImageTestKey).
-		Return(nil)
+		Get(mock.Anything, "alice", "sw1").
+		Return(&repository.Switch{ID: "sw1"}, nil)
+	var presigned repository.SwitchImageKey
 	s.mockImages.EXPECT().
-		PresignPut(mock.Anything, setSwitchImageTestKey, "image/png", int64(524288)).
+		PresignPut(mock.Anything, newSwitchImageKey(), "image/png", int64(524288)).
+		Run(func(_ context.Context, key repository.SwitchImageKey, _ string, _ int64) { presigned = key }).
 		Return("https://example.com/presigned-put", nil)
+	s.mockRepo.EXPECT().
+		SetImagePath(mock.Anything, "sw1", newSwitchImageKey()).
+		Run(func(_ context.Context, _ string, key repository.SwitchImageKey) { s.Equal(presigned, key) }).
+		Return(nil)
 
 	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
@@ -1120,6 +1134,30 @@ func (s *SetSwitchImageSuite) TestSetSwitchImage_Succeeds() {
 	}
 	s.Require().NoError(json.Unmarshal(rec.Body.Bytes(), &got))
 	s.Equal("https://example.com/presigned-put", got.UploadURL)
+}
+
+func (s *SetSwitchImageSuite) TestSetSwitchImage_ReplacingImage_DeletesPreviousObjectFirst() {
+	previous := previousSwitchImageTestKey
+	s.mockRepo.EXPECT().
+		Get(mock.Anything, "alice", "sw1").
+		Return(&repository.Switch{ID: "sw1", ImagePath: &previous}, nil)
+	s.mockImages.EXPECT().
+		PresignPut(mock.Anything, newSwitchImageKey(), "image/png", int64(524288)).
+		Return("https://example.com/presigned-put", nil)
+	deleted := s.mockImages.EXPECT().
+		Delete(mock.Anything, previousSwitchImageTestKey).
+		Return(nil).
+		Call
+	s.mockRepo.EXPECT().
+		SetImagePath(mock.Anything, "sw1", newSwitchImageKey()).
+		Return(nil).
+		NotBefore(deleted)
+
+	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
+	rec := httptest.NewRecorder()
+	s.handler(rec, req)
+
+	s.Equal(http.StatusCreated, rec.Code)
 }
 
 func (s *SetSwitchImageSuite) TestSetSwitchImage_NotOwner_Returns404() {
@@ -1168,12 +1206,9 @@ func (s *SetSwitchImageSuite) TestSetSwitchImage_UnapprovedContentType_Returns40
 }
 
 func (s *SetSwitchImageSuite) TestSetSwitchImage_NotFound_Returns404() {
-	s.mockImages.EXPECT().
-		PresignPut(mock.Anything, setSwitchImageTestKey, "image/png", int64(524288)).
-		Return("https://example.com/presigned-put", nil)
 	s.mockRepo.EXPECT().
-		SetImagePath(mock.Anything, "sw1", setSwitchImageTestKey).
-		Return(repository.ErrNotFound)
+		Get(mock.Anything, "alice", "sw1").
+		Return(nil, repository.ErrNotFound)
 
 	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
@@ -1184,8 +1219,12 @@ func (s *SetSwitchImageSuite) TestSetSwitchImage_NotFound_Returns404() {
 }
 
 func (s *SetSwitchImageSuite) TestSetSwitchImage_PresignError_Returns500() {
+	previous := previousSwitchImageTestKey
+	s.mockRepo.EXPECT().
+		Get(mock.Anything, "alice", "sw1").
+		Return(&repository.Switch{ID: "sw1", ImagePath: &previous}, nil)
 	s.mockImages.EXPECT().
-		PresignPut(mock.Anything, setSwitchImageTestKey, "image/png", int64(524288)).
+		PresignPut(mock.Anything, newSwitchImageKey(), "image/png", int64(524288)).
 		Return("", errors.New("s3: access denied"))
 
 	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
@@ -1194,16 +1233,41 @@ func (s *SetSwitchImageSuite) TestSetSwitchImage_PresignError_Returns500() {
 
 	s.Equal(http.StatusInternalServerError, rec.Code)
 	s.Equal("application/problem+json", rec.Header().Get("Content-Type"))
-	// mockRepo has no .EXPECT() for SetImagePath - verifies the DB was
-	// never touched when presigning fails.
+	// No .EXPECT() for Delete or SetImagePath - verifies neither the
+	// previous object nor the DB was touched when presigning fails.
+}
+
+func (s *SetSwitchImageSuite) TestSetSwitchImage_DeletePreviousError_Returns500() {
+	previous := previousSwitchImageTestKey
+	s.mockRepo.EXPECT().
+		Get(mock.Anything, "alice", "sw1").
+		Return(&repository.Switch{ID: "sw1", ImagePath: &previous}, nil)
+	s.mockImages.EXPECT().
+		PresignPut(mock.Anything, newSwitchImageKey(), "image/png", int64(524288)).
+		Return("https://example.com/presigned-put", nil)
+	s.mockImages.EXPECT().
+		Delete(mock.Anything, previousSwitchImageTestKey).
+		Return(errors.New("s3: access denied"))
+
+	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
+	rec := httptest.NewRecorder()
+	s.handler(rec, req)
+
+	s.Equal(http.StatusInternalServerError, rec.Code)
+	s.Equal("application/problem+json", rec.Header().Get("Content-Type"))
+	// No .EXPECT() for SetImagePath - the pointer stays on the previous
+	// image, which still exists.
 }
 
 func (s *SetSwitchImageSuite) TestSetSwitchImage_RepositoryError_Returns500() {
+	s.mockRepo.EXPECT().
+		Get(mock.Anything, "alice", "sw1").
+		Return(&repository.Switch{ID: "sw1"}, nil)
 	s.mockImages.EXPECT().
-		PresignPut(mock.Anything, setSwitchImageTestKey, "image/png", int64(524288)).
+		PresignPut(mock.Anything, newSwitchImageKey(), "image/png", int64(524288)).
 		Return("https://example.com/presigned-put", nil)
 	s.mockRepo.EXPECT().
-		SetImagePath(mock.Anything, "sw1", setSwitchImageTestKey).
+		SetImagePath(mock.Anything, "sw1", newSwitchImageKey()).
 		Return(errors.New("put item failed"))
 
 	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
@@ -1243,7 +1307,7 @@ func (s *DeleteSwitchImageSuite) ownerCtx() context.Context {
 	return kbdbctx.WithUserID(s.T().Context(), "alice")
 }
 
-var deleteSwitchImageTestKey = repository.SwitchImageKey("switches/alice/sw1/image")
+var deleteSwitchImageTestKey = repository.SwitchImageKey("switches/alice/sw1/image/up1")
 
 func (s *DeleteSwitchImageSuite) TestDeleteSwitchImage_Succeeds() {
 	s.mockRepo.EXPECT().
