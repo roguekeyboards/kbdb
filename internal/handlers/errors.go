@@ -8,6 +8,7 @@ import (
 	"github.com/rogueserenity/kbdb/internal/log"
 	"github.com/rogueserenity/kbdb/internal/problem"
 	"github.com/rogueserenity/kbdb/internal/repository"
+	"github.com/rogueserenity/kbdb/internal/uploadlimit"
 )
 
 // handleMutationError is the standard error tail for a mutating repository
@@ -59,3 +60,24 @@ func handleClearImageError(w http.ResponseWriter, r *http.Request, err error, lo
 	}
 	return handleMutationError(w, r, err, logFields...)
 }
+
+// reserveUpload counts one upload against the daily limit before an upload
+// URL is presigned: repository.ErrUploadLimitReached -> 429, any other
+// error -> 500. Returns true if a response was written - callers should
+// return immediately when true.
+func reserveUpload(w http.ResponseWriter, r *http.Request, uploads *uploadlimit.Limiter, logFields ...any) bool {
+	err := uploads.Reserve(r.Context())
+	if errors.Is(err, repository.ErrUploadLimitReached) {
+		log.FromContext(r.Context()).Warn("daily upload limit reached", logFields...)
+		problem.TooManyRequests(w, uploadsUnavailable)
+		return true
+	}
+	if err != nil {
+		log.FromContext(r.Context()).Error("reserving upload", append([]any{log.Error, err}, logFields...)...)
+		problem.Internal(w, "an internal error occurred")
+		return true
+	}
+	return false
+}
+
+const uploadsUnavailable = "image uploads aren't available at the moment"

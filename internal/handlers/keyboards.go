@@ -19,6 +19,7 @@ import (
 	"github.com/rogueserenity/kbdb/internal/problem"
 	"github.com/rogueserenity/kbdb/internal/repoapi"
 	"github.com/rogueserenity/kbdb/internal/repository"
+	"github.com/rogueserenity/kbdb/internal/uploadlimit"
 )
 
 // ListKeyboards reads the {userId} path value and lists that owner's
@@ -354,7 +355,9 @@ func DeleteKeyboard(
 // response is a presigned S3 PUT URL the client uploads directly to.
 // Presigning runs before the repository mutation, so a presign failure
 // never leaves the DB pointing at an object that was never uploaded.
-func AddKeyboardImage(keyboardRepo repository.KeyboardRepository, images repository.KeyboardImageStore) http.HandlerFunc {
+// Each issued URL counts against the daily upload limit; once it's
+// reached the request gets 429 and no URL is issued.
+func AddKeyboardImage(keyboardRepo repository.KeyboardRepository, images repository.KeyboardImageStore, uploads *uploadlimit.Limiter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ownerID := r.PathValue("userId")
 		keyboardID := r.PathValue("keyboardId")
@@ -374,6 +377,10 @@ func AddKeyboardImage(keyboardRepo repository.KeyboardRepository, images reposit
 			problem.ValidationFailed(w, "one or more fields are not approved lookup values", []problem.InvalidParam{
 				{Name: "content_type", Reason: fmt.Sprintf("%q is not an approved %s value", in.ContentType, lookup.CategoryImageContentType)},
 			})
+			return
+		}
+
+		if reserveUpload(w, r, uploads, log.KeyboardID, keyboardID) {
 			return
 		}
 

@@ -18,6 +18,7 @@ import (
 	"github.com/rogueserenity/kbdb/internal/profilevalidate"
 	"github.com/rogueserenity/kbdb/internal/repoapi"
 	"github.com/rogueserenity/kbdb/internal/repository"
+	"github.com/rogueserenity/kbdb/internal/uploadlimit"
 )
 
 // validateProfileInput writes a 400 listing every field-level violation and
@@ -287,7 +288,9 @@ func DeleteProfile(repo repository.ProfileRepository, images repository.ProfileI
 // object that was never uploaded. Each upload gets a new key, so a
 // previous avatar's object is deleted before the pointer moves, S3-first
 // like [DeleteProfileImage].
-func SetProfileImage(repo repository.ProfileRepository, images repository.ProfileImageStore) http.HandlerFunc {
+// Each issued URL counts against the daily upload limit; once it's
+// reached the request gets 429 and no URL is issued.
+func SetProfileImage(repo repository.ProfileRepository, images repository.ProfileImageStore, uploads *uploadlimit.Limiter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := r.PathValue("identifier")
 
@@ -311,6 +314,10 @@ func SetProfileImage(repo repository.ProfileRepository, images repository.Profil
 
 		p, err := repo.Get(r.Context(), userID)
 		if handleMutationError(w, r, err, log.ProfileID, userID) {
+			return
+		}
+
+		if reserveUpload(w, r, uploads, log.ProfileID, userID) {
 			return
 		}
 

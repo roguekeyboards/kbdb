@@ -20,6 +20,7 @@ import (
 	"github.com/rogueserenity/kbdb/internal/problem"
 	"github.com/rogueserenity/kbdb/internal/repoapi"
 	"github.com/rogueserenity/kbdb/internal/repository"
+	"github.com/rogueserenity/kbdb/internal/uploadlimit"
 )
 
 // parseListLimit reads the limit query param. The OpenAPI request validator
@@ -353,7 +354,9 @@ func DeleteSwitch(
 // pointing at an object that was never uploaded. Each upload gets a new
 // key, so a previous image's object is deleted before the pointer moves,
 // S3-first like [DeleteSwitchImage].
-func SetSwitchImage(switchRepo repository.SwitchRepository, images repository.SwitchImageStore) http.HandlerFunc {
+// Each issued URL counts against the daily upload limit; once it's
+// reached the request gets 429 and no URL is issued.
+func SetSwitchImage(switchRepo repository.SwitchRepository, images repository.SwitchImageStore, uploads *uploadlimit.Limiter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ownerID := r.PathValue("userId")
 		id := r.PathValue("switchId")
@@ -378,6 +381,10 @@ func SetSwitchImage(switchRepo repository.SwitchRepository, images repository.Sw
 
 		sw, err := switchRepo.Get(r.Context(), ownerID, id)
 		if handleMutationError(w, r, err, log.SwitchID, id) {
+			return
+		}
+
+		if reserveUpload(w, r, uploads, log.SwitchID, id) {
 			return
 		}
 

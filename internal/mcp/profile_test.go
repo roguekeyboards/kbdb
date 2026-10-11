@@ -13,6 +13,7 @@ import (
 	"github.com/rogueserenity/kbdb/internal/mcp/schema"
 	"github.com/rogueserenity/kbdb/internal/repository"
 	"github.com/rogueserenity/kbdb/internal/repository/mocks"
+	"github.com/rogueserenity/kbdb/internal/uploadlimit"
 )
 
 type HandleGetProfileSuite struct {
@@ -450,8 +451,9 @@ func (s *HandleListProfilesSuite) TestInvalidCursor_Error() {
 type HandleSetProfileImageSuite struct {
 	suite.Suite
 
-	mockRepo   *mocks.MockProfileRepository
-	mockImages *mocks.MockProfileImageStore
+	mockRepo    *mocks.MockProfileRepository
+	mockImages  *mocks.MockProfileImageStore
+	mockUploads *mocks.MockUploadCounter
 }
 
 func TestHandleSetProfileImageSuite(t *testing.T) {
@@ -461,10 +463,11 @@ func TestHandleSetProfileImageSuite(t *testing.T) {
 func (s *HandleSetProfileImageSuite) SetupTest() {
 	s.mockRepo = mocks.NewMockProfileRepository(s.T())
 	s.mockImages = mocks.NewMockProfileImageStore(s.T())
+	s.mockUploads = mocks.NewMockUploadCounter(s.T())
 }
 
 func (s *HandleSetProfileImageSuite) call(in schema.SetProfileImageInput) (schema.SetProfileImageOutput, error) {
-	_, out, err := handleSetProfileImage(s.mockRepo, s.mockImages)(callerContext(s.T()), nil, in)
+	_, out, err := handleSetProfileImage(s.mockRepo, s.mockImages, uploadlimit.New(s.mockUploads, 500))(callerContext(s.T()), nil, in)
 	return out, err
 }
 
@@ -482,11 +485,13 @@ func newAvatarKey() any {
 }
 
 func (s *HandleSetProfileImageSuite) TestValid_ReturnsUploadURL() {
+	reserved := expectUploadReserved(s.mockUploads)
 	s.mockRepo.EXPECT().Get(mock.Anything, callerID).Return(&repository.Profile{}, nil)
 	var presigned repository.ProfileImageKey
 	s.mockImages.EXPECT().PresignPut(mock.Anything, newAvatarKey(), "image/png", int64(524288)).
 		Run(func(_ context.Context, key repository.ProfileImageKey, _ string, _ int64) { presigned = key }).
-		Return("https://example.com/put", nil)
+		Return("https://example.com/put", nil).
+		NotBefore(reserved)
 	s.mockRepo.EXPECT().SetAvatarPath(mock.Anything, newAvatarKey()).
 		Run(func(_ context.Context, key repository.ProfileImageKey) { s.Equal(presigned, key) }).
 		Return(nil)
@@ -498,6 +503,7 @@ func (s *HandleSetProfileImageSuite) TestValid_ReturnsUploadURL() {
 }
 
 func (s *HandleSetProfileImageSuite) TestReplacingAvatar_DeletesPreviousObjectFirst() {
+	expectUploadReserved(s.mockUploads)
 	previous := previousAvatarKey()
 	s.mockRepo.EXPECT().Get(mock.Anything, callerID).Return(&repository.Profile{AvatarPath: &previous}, nil)
 	s.mockImages.EXPECT().PresignPut(mock.Anything, newAvatarKey(), "image/png", int64(524288)).
@@ -533,6 +539,7 @@ func (s *HandleSetProfileImageSuite) TestNoProfile_NotFoundError() {
 }
 
 func (s *HandleSetProfileImageSuite) TestMutationConflict_RetryableError() {
+	expectUploadReserved(s.mockUploads)
 	s.mockRepo.EXPECT().Get(mock.Anything, callerID).Return(&repository.Profile{}, nil)
 	s.mockImages.EXPECT().PresignPut(mock.Anything, newAvatarKey(), "image/png", int64(524288)).
 		Return("https://example.com/put", nil)
@@ -544,6 +551,7 @@ func (s *HandleSetProfileImageSuite) TestMutationConflict_RetryableError() {
 }
 
 func (s *HandleSetProfileImageSuite) TestPresignError_GenericError() {
+	expectUploadReserved(s.mockUploads)
 	previous := previousAvatarKey()
 	s.mockRepo.EXPECT().Get(mock.Anything, callerID).Return(&repository.Profile{AvatarPath: &previous}, nil)
 	s.mockImages.EXPECT().PresignPut(mock.Anything, newAvatarKey(), "image/png", int64(524288)).
@@ -557,6 +565,7 @@ func (s *HandleSetProfileImageSuite) TestPresignError_GenericError() {
 }
 
 func (s *HandleSetProfileImageSuite) TestDeletePreviousError_GenericError() {
+	expectUploadReserved(s.mockUploads)
 	previous := previousAvatarKey()
 	s.mockRepo.EXPECT().Get(mock.Anything, callerID).Return(&repository.Profile{AvatarPath: &previous}, nil)
 	s.mockImages.EXPECT().PresignPut(mock.Anything, newAvatarKey(), "image/png", int64(524288)).
@@ -650,4 +659,28 @@ func (s *HandleDeleteProfileImageSuite) TestGetError_GenericError() {
 	s.mockRepo.EXPECT().Get(mock.Anything, callerID).Return(nil, errors.New("dynamo down"))
 
 	s.Require().Error(s.call())
+}
+
+func (s *HandleSetProfileImageSuite) TestUploadLimitReached_ReturnsUploadsUnavailable() {
+	previous := previousAvatarKey()
+	s.mockRepo.EXPECT().Get(mock.Anything, callerID).Return(&repository.Profile{AvatarPath: &previous}, nil)
+	s.mockUploads.EXPECT().
+		Increment(mock.Anything, mock.Anything, int64(500), mock.Anything).
+		Return(repository.ErrUploadLimitReached)
+
+	_, err := s.call(schema.SetProfileImageInput{ContentType: "image/png", SizeBytes: 524288})
+
+	s.Require().ErrorIs(err, errUploadsUnavailable)
+}
+
+func (s *HandleSetProfileImageSuite) TestReserveError_ReturnsFailed() {
+	previous := previousAvatarKey()
+	s.mockRepo.EXPECT().Get(mock.Anything, callerID).Return(&repository.Profile{AvatarPath: &previous}, nil)
+	s.mockUploads.EXPECT().
+		Increment(mock.Anything, mock.Anything, int64(500), mock.Anything).
+		Return(errors.New("dynamo: boom"))
+
+	_, err := s.call(schema.SetProfileImageInput{ContentType: "image/png", SizeBytes: 524288})
+
+	s.Require().ErrorIs(err, errMutationFailed)
 }

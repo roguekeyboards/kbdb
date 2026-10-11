@@ -141,12 +141,15 @@ Resources:
               - dynamodb:DeleteTable
               - dynamodb:DescribeTable
               - dynamodb:TagResource
+              - dynamodb:DescribeTimeToLive
+              - dynamodb:UpdateTimeToLive
               - dynamodb:PutItem
               - dynamodb:DeleteItem
             # Every AWS::DynamoDB::Table in template.yaml (SwitchTable,
             # KeyboardTable, KeycapSetTable, BuildTable, ProfileTable,
-            # ProfileUsernameTable). Mirrors bootstrap/ci-oidc-role.yaml's
-            # equivalent statement; the kbdb-dev-* wildcard covers all of them.
+            # ProfileUsernameTable, UploadCounterTable). Mirrors
+            # bootstrap/ci-oidc-role.yaml's equivalent statement; the
+            # kbdb-dev-* wildcard covers all of them.
             Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/kbdb-dev-*
           - Sid: LogsScoped
             Effect: Allow

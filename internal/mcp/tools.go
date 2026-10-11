@@ -4,6 +4,7 @@ import (
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/rogueserenity/kbdb/internal/repository"
+	"github.com/rogueserenity/kbdb/internal/uploadlimit"
 )
 
 // registerTools is the single list of every tool this server exposes -
@@ -20,6 +21,7 @@ func registerTools(
 	buildImageStore repository.BuildImageStore,
 	profileRepo repository.ProfileRepository,
 	profileImageStore repository.ProfileImageStore,
+	uploads *uploadlimit.Limiter,
 ) {
 	sdkmcp.AddTool(s, listLookupsTool, handleListLookups())
 	sdkmcp.AddTool(s, getLookupTool, handleGetLookup())
@@ -28,14 +30,14 @@ func registerTools(
 	sdkmcp.AddTool(s, updateProfileTool, handleUpdateProfile(profileRepo))
 	sdkmcp.AddTool(s, deleteProfileTool, handleDeleteProfile(profileRepo, profileImageStore))
 	sdkmcp.AddTool(s, listProfilesTool, handleListProfiles(profileRepo))
-	sdkmcp.AddTool(s, setProfileImageTool, handleSetProfileImage(profileRepo, profileImageStore))
+	sdkmcp.AddTool(s, setProfileImageTool, handleSetProfileImage(profileRepo, profileImageStore, uploads))
 	sdkmcp.AddTool(s, deleteProfileImageTool, handleDeleteProfileImage(profileRepo, profileImageStore))
 	sdkmcp.AddTool(s, listSwitchesTool, handleListSwitches(switchRepo, profileRepo))
 	sdkmcp.AddTool(s, getSwitchTool, handleGetSwitch(switchRepo, profileRepo))
 	sdkmcp.AddTool(s, createSwitchTool, handleCreateSwitch(switchRepo, profileRepo))
 	sdkmcp.AddTool(s, updateSwitchTool, handleUpdateSwitch(switchRepo, profileRepo))
 	sdkmcp.AddTool(s, deleteSwitchTool, handleDeleteSwitch(switchRepo, buildRepo, buildImageStore, switchImageStore))
-	sdkmcp.AddTool(s, setSwitchImageTool, handleSetSwitchImage(switchRepo, switchImageStore))
+	sdkmcp.AddTool(s, setSwitchImageTool, handleSetSwitchImage(switchRepo, switchImageStore, uploads))
 	sdkmcp.AddTool(s, deleteSwitchImageTool, handleDeleteSwitchImage(switchRepo, switchImageStore))
 	sdkmcp.AddTool(s, listKeyboardsTool, handleListKeyboards(keyboardRepo, profileRepo))
 	sdkmcp.AddTool(s, getKeyboardTool, handleGetKeyboard(keyboardRepo, profileRepo))
@@ -49,7 +51,7 @@ func registerTools(
 	sdkmcp.AddTool(s, createKeyboardPCBTool, handleCreateKeyboardPCB(keyboardRepo, profileRepo))
 	sdkmcp.AddTool(s, updateKeyboardPCBTool, handleUpdateKeyboardPCB(keyboardRepo, profileRepo))
 	sdkmcp.AddTool(s, deleteKeyboardPCBTool, handleDeleteKeyboardPCB(keyboardRepo, buildRepo, buildImageStore))
-	sdkmcp.AddTool(s, addKeyboardImageTool, handleAddKeyboardImage(keyboardRepo, keyboardImageStore))
+	sdkmcp.AddTool(s, addKeyboardImageTool, handleAddKeyboardImage(keyboardRepo, keyboardImageStore, uploads))
 	sdkmcp.AddTool(s, deleteKeyboardImageTool, handleDeleteKeyboardImage(keyboardRepo, keyboardImageStore))
 	sdkmcp.AddTool(s, listKeycapSetsTool, handleListKeycapSets(keycapSetRepo, profileRepo))
 	sdkmcp.AddTool(s, getKeycapSetTool, handleGetKeycapSet(keycapSetRepo, profileRepo))
@@ -59,14 +61,14 @@ func registerTools(
 	sdkmcp.AddTool(s, createKeycapKitTool, handleCreateKeycapKit(keycapSetRepo, profileRepo))
 	sdkmcp.AddTool(s, updateKeycapKitTool, handleUpdateKeycapKit(keycapSetRepo, profileRepo))
 	sdkmcp.AddTool(s, deleteKeycapKitTool, handleDeleteKeycapKit(keycapSetRepo, buildRepo, buildImageStore, imageStore))
-	sdkmcp.AddTool(s, setKeycapKitImageTool, handleSetKeycapKitImage(keycapSetRepo, imageStore))
+	sdkmcp.AddTool(s, setKeycapKitImageTool, handleSetKeycapKitImage(keycapSetRepo, imageStore, uploads))
 	sdkmcp.AddTool(s, deleteKeycapKitImageTool, handleDeleteKeycapKitImage(keycapSetRepo, imageStore))
 	sdkmcp.AddTool(s, createBuildTool, handleCreateBuild(buildRepo, keyboardRepo, switchRepo, keycapSetRepo, profileRepo))
 	sdkmcp.AddTool(s, getBuildTool, handleGetBuild(buildRepo, keyboardRepo, profileRepo))
 	sdkmcp.AddTool(s, listBuildsTool, handleListBuilds(buildRepo, keyboardRepo, switchRepo, keycapSetRepo, profileRepo))
 	sdkmcp.AddTool(s, updateBuildTool, handleUpdateBuild(buildRepo, keyboardRepo, switchRepo, keycapSetRepo, profileRepo))
 	sdkmcp.AddTool(s, deleteBuildTool, handleDeleteBuild(buildRepo, buildImageStore))
-	sdkmcp.AddTool(s, addBuildImageTool, handleAddBuildImage(buildRepo, buildImageStore))
+	sdkmcp.AddTool(s, addBuildImageTool, handleAddBuildImage(buildRepo, buildImageStore, uploads))
 	sdkmcp.AddTool(s, deleteBuildImageTool, handleDeleteBuildImage(buildRepo, buildImageStore))
 	sdkmcp.AddTool(s, listBuildImagesTool, handleListBuildImages(buildRepo))
 }

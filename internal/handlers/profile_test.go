@@ -19,6 +19,7 @@ import (
 	"github.com/rogueserenity/kbdb/internal/repoapi"
 	"github.com/rogueserenity/kbdb/internal/repository"
 	"github.com/rogueserenity/kbdb/internal/repository/mocks"
+	"github.com/rogueserenity/kbdb/internal/uploadlimit"
 )
 
 type GetProfileSuite struct {
@@ -737,9 +738,10 @@ func (s *ListProfilesSuite) TestInvalidCursor_400() {
 type SetProfileImageSuite struct {
 	suite.Suite
 
-	mockRepo   *mocks.MockProfileRepository
-	mockImages *mocks.MockProfileImageStore
-	handler    http.HandlerFunc
+	mockRepo    *mocks.MockProfileRepository
+	mockImages  *mocks.MockProfileImageStore
+	mockUploads *mocks.MockUploadCounter
+	handler     http.HandlerFunc
 }
 
 func TestSetProfileImageSuite(t *testing.T) {
@@ -749,7 +751,8 @@ func TestSetProfileImageSuite(t *testing.T) {
 func (s *SetProfileImageSuite) SetupTest() {
 	s.mockRepo = mocks.NewMockProfileRepository(s.T())
 	s.mockImages = mocks.NewMockProfileImageStore(s.T())
-	s.handler = SetProfileImage(s.mockRepo, s.mockImages)
+	s.mockUploads = mocks.NewMockUploadCounter(s.T())
+	s.handler = SetProfileImage(s.mockRepo, s.mockImages, uploadlimit.New(s.mockUploads, 500))
 }
 
 func (s *SetProfileImageSuite) newRequest(ctx context.Context, identifier, body string) *http.Request {
@@ -773,11 +776,13 @@ func newProfileImageKey() any {
 }
 
 func (s *SetProfileImageSuite) TestSucceeds() {
+	reserved := expectUploadReserved(s.mockUploads)
 	s.mockRepo.EXPECT().Get(mock.Anything, "user-alice").Return(&repository.Profile{}, nil)
 	var presigned repository.ProfileImageKey
 	s.mockImages.EXPECT().PresignPut(mock.Anything, newProfileImageKey(), "image/png", int64(524288)).
 		Run(func(_ context.Context, key repository.ProfileImageKey, _ string, _ int64) { presigned = key }).
-		Return("https://example.com/presigned-put", nil)
+		Return("https://example.com/presigned-put", nil).
+		NotBefore(reserved)
 	s.mockRepo.EXPECT().SetAvatarPath(mock.Anything, newProfileImageKey()).
 		Run(func(_ context.Context, key repository.ProfileImageKey) { s.Equal(presigned, key) }).
 		Return(nil)
@@ -795,6 +800,7 @@ func (s *SetProfileImageSuite) TestSucceeds() {
 }
 
 func (s *SetProfileImageSuite) TestReplacingAvatar_DeletesPreviousObjectFirst() {
+	expectUploadReserved(s.mockUploads)
 	previous := previousProfileImageTestKey
 	s.mockRepo.EXPECT().Get(mock.Anything, "user-alice").
 		Return(&repository.Profile{AvatarPath: &previous}, nil)
@@ -867,6 +873,7 @@ func (s *SetProfileImageSuite) TestNoProfile_404() {
 }
 
 func (s *SetProfileImageSuite) TestPresignError_500() {
+	expectUploadReserved(s.mockUploads)
 	previous := previousProfileImageTestKey
 	s.mockRepo.EXPECT().Get(mock.Anything, "user-alice").
 		Return(&repository.Profile{AvatarPath: &previous}, nil)
@@ -882,6 +889,7 @@ func (s *SetProfileImageSuite) TestPresignError_500() {
 }
 
 func (s *SetProfileImageSuite) TestDeletePreviousError_500() {
+	expectUploadReserved(s.mockUploads)
 	previous := previousProfileImageTestKey
 	s.mockRepo.EXPECT().Get(mock.Anything, "user-alice").
 		Return(&repository.Profile{AvatarPath: &previous}, nil)
@@ -1000,4 +1008,32 @@ func (s *DeleteProfileImageSuite) TestS3DeleteError_500_DoesNotClearDBRecord() {
 	s.Equal(http.StatusInternalServerError, rec.Code)
 	// No .EXPECT() for ClearAvatarPath - the DB record must survive so a
 	// retry can re-attempt the S3 delete.
+}
+
+func (s *SetProfileImageSuite) TestUploadLimitReached_Returns429() {
+	previous := previousProfileImageTestKey
+	s.mockRepo.EXPECT().Get(mock.Anything, "user-alice").Return(&repository.Profile{AvatarPath: &previous}, nil)
+	s.mockUploads.EXPECT().
+		Increment(mock.Anything, mock.Anything, int64(500), mock.Anything).
+		Return(repository.ErrUploadLimitReached)
+
+	rec := httptest.NewRecorder()
+	s.handler(rec, s.newRequest(s.ownerCtx(), "user-alice", `{"content_type":"image/png","size_bytes":524288}`))
+
+	s.Equal(http.StatusTooManyRequests, rec.Code)
+	s.Equal("application/problem+json", rec.Header().Get("Content-Type"))
+	s.Contains(rec.Body.String(), "image uploads aren't available at the moment")
+}
+
+func (s *SetProfileImageSuite) TestReserveError_Returns500() {
+	previous := previousProfileImageTestKey
+	s.mockRepo.EXPECT().Get(mock.Anything, "user-alice").Return(&repository.Profile{AvatarPath: &previous}, nil)
+	s.mockUploads.EXPECT().
+		Increment(mock.Anything, mock.Anything, int64(500), mock.Anything).
+		Return(errors.New("dynamo: boom"))
+
+	rec := httptest.NewRecorder()
+	s.handler(rec, s.newRequest(s.ownerCtx(), "user-alice", `{"content_type":"image/png","size_bytes":524288}`))
+
+	s.Equal(http.StatusInternalServerError, rec.Code)
 }

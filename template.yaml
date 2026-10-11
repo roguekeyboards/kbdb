@@ -67,6 +67,15 @@ Parameters:
       HttpApi cross-origin - typically a local frontend dev server and/or
       its deployed counterpart.
 
+  DailyUploadLimit:
+    Type: Number
+    Default: 500
+    MinValue: 0
+    Description: >-
+      Image upload URLs issued per UTC day across every user. Each upload can
+      trigger a paid moderation call, so this bounds that cost. Once reached,
+      upload-URL requests get 429 until the next UTC day.
+
 Conditions:
   HasCustomDomain: !Not [!Equals [!Ref CustomDomainName, '']]
 
@@ -322,6 +331,22 @@ Resources:
         - AttributeName: username
           KeyType: HASH
 
+  # One item per UTC day counting issued image upload URLs - see
+  # internal/uploadlimit. The TTL drops each day's item once it's over.
+  UploadCounterTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: day
+          AttributeType: S
+      KeySchema:
+        - AttributeName: day
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: expires_at
+        Enabled: true
+
   # Matches ApiFunction's explicit FunctionName below so Lambda writes here
   # instead of auto-creating an unmanaged, never-expiring log group.
   ApiFunctionLogGroup:
@@ -363,6 +388,8 @@ Resources:
           BUILD_TABLE_NAME: !Ref BuildTable
           PROFILE_TABLE_NAME: !Ref ProfileTable
           PROFILE_USERNAME_TABLE_NAME: !Ref ProfileUsernameTable
+          UPLOAD_COUNTER_TABLE_NAME: !Ref UploadCounterTable
+          DAILY_UPLOAD_LIMIT: !Ref DailyUploadLimit
           # Empty in real deployments; sam local's --env-vars override
           # (env.local.json) can only override a var declared here.
           DYNAMODB_ENDPOINT_URL: ""
@@ -441,6 +468,10 @@ Resources:
                 - dynamodb:DeleteItem
                 - dynamodb:TransactWriteItems
               Resource: !GetAtt ProfileUsernameTable.Arn
+            - Effect: Allow
+              Action:
+                - dynamodb:UpdateItem
+              Resource: !GetAtt UploadCounterTable.Arn
             - Effect: Allow
               Action:
                 - dynamodb:Query
@@ -1017,3 +1048,6 @@ Outputs:
   ProfileUsernameTableName:
     Description: DynamoDB table enforcing Profile.username uniqueness
     Value: !Ref ProfileUsernameTable
+  UploadCounterTableName:
+    Description: DynamoDB table counting image upload URLs issued per UTC day
+    Value: !Ref UploadCounterTable

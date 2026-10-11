@@ -199,6 +199,36 @@ var _ = Describe("Adding an image to a keyboard", func() {
 				})
 			})
 
+			Context("given today's upload limit has been reached", Serial, func() {
+				BeforeEach(func(ctx SpecContext) {
+					Expect(db.FillDailyUploads(ctx)).To(Succeed())
+				})
+
+				AfterEach(func(ctx SpecContext) {
+					Expect(db.ClearDailyUploads(ctx)).To(Succeed())
+				})
+
+				When("adding an image to the keyboard", func() {
+					BeforeEach(func(ctx SpecContext) {
+						var err error
+						resp, err = client.AddImage(ctx, ownerID, keyboardID, ownerToken, api.ImageUploadBody(approvedImageContentType))
+						Expect(err).NotTo(HaveOccurred())
+					})
+
+					It("returns 429 saying uploads aren't available, and adds no image", func(ctx SpecContext) {
+						Expect(resp.StatusCode).To(Equal(http.StatusTooManyRequests))
+						Expect(resp.Header.Get("Content-Type")).To(Equal("application/problem+json"))
+						var problem struct {
+							Detail string `json:"detail"`
+						}
+						Expect(json.NewDecoder(resp.Body).Decode(&problem)).To(Succeed())
+						Expect(problem.Detail).To(Equal("image uploads aren't available at the moment"))
+
+						Expect(imageIDs(ctx, client, ownerID, keyboardID, ownerToken)).To(BeEmpty())
+					})
+				})
+			})
+
 			Context("given the keyboard already has 10 images", func() {
 				BeforeEach(func(ctx SpecContext) {
 					for range 10 {

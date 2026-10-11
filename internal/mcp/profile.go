@@ -17,6 +17,7 @@ import (
 	"github.com/rogueserenity/kbdb/internal/profilevalidate"
 	"github.com/rogueserenity/kbdb/internal/repomcp"
 	"github.com/rogueserenity/kbdb/internal/repository"
+	"github.com/rogueserenity/kbdb/internal/uploadlimit"
 )
 
 var errProfileNotFound = errors.New("profile not found")
@@ -50,7 +51,7 @@ var listProfilesTool = &mcp.Tool{
 
 var setProfileImageTool = &mcp.Tool{
 	Name:        "set_profile_image",
-	Description: "Mints a presigned URL to upload your profile's avatar to. Doesn't upload the image itself - PUT the image bytes to the returned upload_url using the same content_type as the Content-Type header, an If-None-Match: * header, and a body of exactly size_bytes. The upload_url is for one upload: another PUT to it fails with 412 while that image is stored. Images are capped at 5 MB; resize anything larger first. Your profile has at most one avatar; calling this again replaces it. Fails if you have no profile yet.",
+	Description: "Mints a presigned URL to upload your profile's avatar to. Doesn't upload the image itself - PUT the image bytes to the returned upload_url using the same content_type as the Content-Type header, an If-None-Match: * header, and a body of exactly size_bytes. The upload_url is for one upload: another PUT to it fails with 412 while that image is stored. Images are capped at 5 MB; resize anything larger first. If image uploads aren't available at the moment, this fails without issuing a URL; try again later. Your profile has at most one avatar; calling this again replaces it. Fails if you have no profile yet.",
 }
 
 var deleteProfileImageTool = &mcp.Tool{
@@ -178,6 +179,7 @@ func handleListProfiles(repo repository.ProfileRepository) mcp.ToolHandlerFor[sc
 func handleSetProfileImage(
 	repo repository.ProfileRepository,
 	images repository.ProfileImageStore,
+	uploads *uploadlimit.Limiter,
 ) mcp.ToolHandlerFor[schema.SetProfileImageInput, schema.SetProfileImageOutput] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, in schema.SetProfileImageInput) (*mcp.CallToolResult, schema.SetProfileImageOutput, error) {
 		if fieldErr := lookup.ValidateImageContentType(ctx, in.ContentType); fieldErr != nil {
@@ -196,6 +198,10 @@ func handleSetProfileImage(
 		p, err := repo.Get(ctx, ownerID)
 		if mutErr := handleMutationError(ctx, err, log.ProfileID, ownerID); mutErr != nil {
 			return nil, schema.SetProfileImageOutput{}, mutErr
+		}
+
+		if err := reserveUpload(ctx, uploads, log.ProfileID, ownerID); err != nil {
+			return nil, schema.SetProfileImageOutput{}, err
 		}
 
 		key, err := repository.NewProfileImageKey(ctx, uuid.NewString())

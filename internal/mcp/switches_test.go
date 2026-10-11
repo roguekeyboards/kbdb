@@ -12,6 +12,7 @@ import (
 	"github.com/rogueserenity/kbdb/internal/mcp/schema"
 	"github.com/rogueserenity/kbdb/internal/repository"
 	"github.com/rogueserenity/kbdb/internal/repository/mocks"
+	"github.com/rogueserenity/kbdb/internal/uploadlimit"
 )
 
 type HandleListSwitchesSuite struct {
@@ -742,6 +743,7 @@ type HandleSetSwitchImageSuite struct {
 
 	mockSwitches *mocks.MockSwitchRepository
 	mockImages   *mocks.MockSwitchImageStore
+	mockUploads  *mocks.MockUploadCounter
 }
 
 func TestHandleSetSwitchImageSuite(t *testing.T) {
@@ -751,6 +753,7 @@ func TestHandleSetSwitchImageSuite(t *testing.T) {
 func (s *HandleSetSwitchImageSuite) SetupTest() {
 	s.mockSwitches = mocks.NewMockSwitchRepository(s.T())
 	s.mockImages = mocks.NewMockSwitchImageStore(s.T())
+	s.mockUploads = mocks.NewMockUploadCounter(s.T())
 }
 
 // previousSwitchImageKey is sw-1's image key before a replacement.
@@ -767,7 +770,7 @@ func newSwitchImageKey() any {
 }
 
 func (s *HandleSetSwitchImageSuite) call() (schema.SetSwitchImageOutput, error) {
-	_, out, err := handleSetSwitchImage(s.mockSwitches, s.mockImages)(callerContext(s.T()), nil, schema.SetSwitchImageInput{
+	_, out, err := handleSetSwitchImage(s.mockSwitches, s.mockImages, uploadlimit.New(s.mockUploads, 500))(callerContext(s.T()), nil, schema.SetSwitchImageInput{
 		SwitchID:    "sw-1",
 		ContentType: "image/png",
 		SizeBytes:   524288,
@@ -776,6 +779,7 @@ func (s *HandleSetSwitchImageSuite) call() (schema.SetSwitchImageOutput, error) 
 }
 
 func (s *HandleSetSwitchImageSuite) TestSucceeds() {
+	reserved := expectUploadReserved(s.mockUploads)
 	s.mockSwitches.EXPECT().
 		Get(mock.Anything, callerID, "sw-1").
 		Return(&repository.Switch{ID: "sw-1"}, nil)
@@ -783,7 +787,8 @@ func (s *HandleSetSwitchImageSuite) TestSucceeds() {
 	s.mockImages.EXPECT().
 		PresignPut(mock.Anything, newSwitchImageKey(), "image/png", int64(524288)).
 		Run(func(_ context.Context, key repository.SwitchImageKey, _ string, _ int64) { presigned = key }).
-		Return("https://example.com/upload", nil)
+		Return("https://example.com/upload", nil).
+		NotBefore(reserved)
 	s.mockSwitches.EXPECT().
 		SetImagePath(mock.Anything, "sw-1", newSwitchImageKey()).
 		Run(func(_ context.Context, _ string, key repository.SwitchImageKey) { s.Equal(presigned, key) }).
@@ -796,6 +801,7 @@ func (s *HandleSetSwitchImageSuite) TestSucceeds() {
 }
 
 func (s *HandleSetSwitchImageSuite) TestReplacingImage_DeletesPreviousObjectFirst() {
+	expectUploadReserved(s.mockUploads)
 	previous := previousSwitchImageKey()
 	s.mockSwitches.EXPECT().
 		Get(mock.Anything, callerID, "sw-1").
@@ -818,7 +824,7 @@ func (s *HandleSetSwitchImageSuite) TestReplacingImage_DeletesPreviousObjectFirs
 }
 
 func (s *HandleSetSwitchImageSuite) TestBlankSwitchID_ReturnsError() {
-	handler := handleSetSwitchImage(s.mockSwitches, s.mockImages)
+	handler := handleSetSwitchImage(s.mockSwitches, s.mockImages, uploadlimit.New(s.mockUploads, 500))
 	_, _, err := handler(callerContext(s.T()), nil, schema.SetSwitchImageInput{
 		SwitchID:    " ",
 		ContentType: "image/png",
@@ -829,7 +835,7 @@ func (s *HandleSetSwitchImageSuite) TestBlankSwitchID_ReturnsError() {
 }
 
 func (s *HandleSetSwitchImageSuite) TestSizeOverCap_ReturnsError() {
-	handler := handleSetSwitchImage(s.mockSwitches, s.mockImages)
+	handler := handleSetSwitchImage(s.mockSwitches, s.mockImages, uploadlimit.New(s.mockUploads, 500))
 	_, _, err := handler(callerContext(s.T()), nil, schema.SetSwitchImageInput{
 		SwitchID:    "sw-1",
 		ContentType: "image/png",
@@ -840,7 +846,7 @@ func (s *HandleSetSwitchImageSuite) TestSizeOverCap_ReturnsError() {
 }
 
 func (s *HandleSetSwitchImageSuite) TestUnapprovedContentType_ReturnsError() {
-	handler := handleSetSwitchImage(s.mockSwitches, s.mockImages)
+	handler := handleSetSwitchImage(s.mockSwitches, s.mockImages, uploadlimit.New(s.mockUploads, 500))
 	_, _, err := handler(callerContext(s.T()), nil, schema.SetSwitchImageInput{
 		SwitchID:    "sw-1",
 		ContentType: "application/x-not-an-image",
@@ -860,6 +866,7 @@ func (s *HandleSetSwitchImageSuite) TestNotFound_ReturnsError() {
 }
 
 func (s *HandleSetSwitchImageSuite) TestPresignError_ReturnsError() {
+	expectUploadReserved(s.mockUploads)
 	previous := previousSwitchImageKey()
 	s.mockSwitches.EXPECT().
 		Get(mock.Anything, callerID, "sw-1").
@@ -876,6 +883,7 @@ func (s *HandleSetSwitchImageSuite) TestPresignError_ReturnsError() {
 }
 
 func (s *HandleSetSwitchImageSuite) TestDeletePreviousError_ReturnsError() {
+	expectUploadReserved(s.mockUploads)
 	previous := previousSwitchImageKey()
 	s.mockSwitches.EXPECT().
 		Get(mock.Anything, callerID, "sw-1").
@@ -1037,4 +1045,28 @@ func (s *HandleUpdateSwitchSuite) TestPreferencesError_ReturnsErrorBeforeWrite()
 	_, _, err := handler(callerContext(s.T()), nil, schema.UpdateSwitchInput{SwitchID: "sw-1", SwitchInput: validInput()})
 
 	s.Require().EqualError(err, "failed to update switch")
+}
+
+func (s *HandleSetSwitchImageSuite) TestUploadLimitReached_ReturnsUploadsUnavailable() {
+	previous := previousSwitchImageKey()
+	s.mockSwitches.EXPECT().Get(mock.Anything, callerID, "sw-1").Return(&repository.Switch{ID: "sw-1", ImagePath: &previous}, nil)
+	s.mockUploads.EXPECT().
+		Increment(mock.Anything, mock.Anything, int64(500), mock.Anything).
+		Return(repository.ErrUploadLimitReached)
+
+	_, err := s.call()
+
+	s.Require().ErrorIs(err, errUploadsUnavailable)
+}
+
+func (s *HandleSetSwitchImageSuite) TestReserveError_ReturnsFailed() {
+	previous := previousSwitchImageKey()
+	s.mockSwitches.EXPECT().Get(mock.Anything, callerID, "sw-1").Return(&repository.Switch{ID: "sw-1", ImagePath: &previous}, nil)
+	s.mockUploads.EXPECT().
+		Increment(mock.Anything, mock.Anything, int64(500), mock.Anything).
+		Return(errors.New("dynamo: boom"))
+
+	_, err := s.call()
+
+	s.Require().ErrorIs(err, errMutationFailed)
 }

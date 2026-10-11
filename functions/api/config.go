@@ -35,6 +35,10 @@ type Config struct {
 	BuildTableName           string        `env:"BUILD_TABLE_NAME" required:""`
 	ProfileTableName         string        `env:"PROFILE_TABLE_NAME" required:""`
 	ProfileUsernameTableName string        `env:"PROFILE_USERNAME_TABLE_NAME" required:""`
+	UploadCounterTableName   string        `env:"UPLOAD_COUNTER_TABLE_NAME" required:""`
+	// Upload URLs issued per UTC day across every user - see
+	// internal/uploadlimit.
+	DailyUploadLimit int64 `env:"DAILY_UPLOAD_LIMIT" required:""`
 
 	// Empty in real deployments; set locally to point at LocalStack.
 	DynamoDBEndpointURL string `env:"DYNAMODB_ENDPOINT_URL"`

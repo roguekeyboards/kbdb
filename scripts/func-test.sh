@@ -17,6 +17,7 @@ fi
 : "${KBDB_BUILD_TABLE_NAME:?run scripts/func-setup.sh first}"
 : "${KBDB_PROFILE_TABLE_NAME:?run scripts/func-setup.sh first}"
 : "${KBDB_PROFILE_USERNAME_TABLE_NAME:?run scripts/func-setup.sh first}"
+: "${KBDB_UPLOAD_COUNTER_TABLE_NAME:?run scripts/func-setup.sh first}"
 : "${KBDB_API_BASE_URL:?run scripts/func-setup.sh first}"
 : "${KBDB_OIDC_ISSUER:?run scripts/func-setup.sh first}"
 : "${KBDB_OIDC_AUDIENCE:?run scripts/func-setup.sh first}"

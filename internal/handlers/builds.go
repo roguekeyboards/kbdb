@@ -19,6 +19,7 @@ import (
 	"github.com/rogueserenity/kbdb/internal/problem"
 	"github.com/rogueserenity/kbdb/internal/repoapi"
 	"github.com/rogueserenity/kbdb/internal/repository"
+	"github.com/rogueserenity/kbdb/internal/uploadlimit"
 )
 
 // An unset (nil) field is skipped, not treated as invalid.
@@ -343,7 +344,9 @@ func UpdateBuild(
 // URL the client uploads directly to. Presigning runs before the
 // repository mutation, so a presign failure never leaves the DB pointing
 // at an object that was never uploaded.
-func AddBuildImage(buildRepo repository.BuildRepository, images repository.BuildImageStore) http.HandlerFunc {
+// Each issued URL counts against the daily upload limit; once it's
+// reached the request gets 429 and no URL is issued.
+func AddBuildImage(buildRepo repository.BuildRepository, images repository.BuildImageStore, uploads *uploadlimit.Limiter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ownerID := r.PathValue("userId")
 		buildID := r.PathValue("buildId")
@@ -363,6 +366,10 @@ func AddBuildImage(buildRepo repository.BuildRepository, images repository.Build
 			problem.ValidationFailed(w, "one or more fields are not approved lookup values", []problem.InvalidParam{
 				{Name: "content_type", Reason: fmt.Sprintf("%q is not an approved %s value", in.ContentType, lookup.CategoryImageContentType)},
 			})
+			return
+		}
+
+		if reserveUpload(w, r, uploads, log.BuildID, buildID) {
 			return
 		}
 
