@@ -85,3 +85,22 @@ func (t *DynamoTable) DeleteItem(ctx context.Context, key map[string]string) err
 	})
 	return err
 }
+
+// GetItem reads the item at key into out (see DeleteItem for key's shape).
+// found is false when there's no such item.
+func (t *DynamoTable) GetItem(ctx context.Context, key map[string]string, out any) (found bool, err error) {
+	avKey := make(map[string]types.AttributeValue, len(key))
+	for k, v := range key {
+		avKey[k] = &types.AttributeValueMemberS{Value: v}
+	}
+
+	res, err := t.client.GetItem(ctx, &dynamodb.GetItemInput{
+		TableName:      &t.tableName,
+		Key:            avKey,
+		ConsistentRead: aws.Bool(true),
+	})
+	if err != nil || res.Item == nil {
+		return false, err
+	}
+	return true, attributevalue.UnmarshalMap(res.Item, out)
+}

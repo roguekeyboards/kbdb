@@ -12,7 +12,12 @@ region = "us-east-2"
 [dev-jay.deploy.parameters]
 stack_name = "kbdb-dev-jay"
 s3_bucket = "kbdb-sam-artifacts-992234857260"
-image_repositories = ["ApiFunction=992234857260.dkr.ecr.us-east-2.amazonaws.com/kbdb-api-kbdb-dev-jay"]
+# Both functions push to the one repo; SAM tags each image with its
+# function's name, so they don't collide.
+image_repositories = [
+  "ApiFunction=992234857260.dkr.ecr.us-east-2.amazonaws.com/kbdb-api-kbdb-dev-jay",
+  "ModerateFunction=992234857260.dkr.ecr.us-east-2.amazonaws.com/kbdb-api-kbdb-dev-jay",
+]
 region = "us-east-2"
 capabilities = "CAPABILITY_IAM"
 confirm_changeset = false

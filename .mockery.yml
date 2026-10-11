@@ -70,3 +70,15 @@ packages:
       s3PresignAPI:
         config:
           structname: 'MockS3PresignAPI'
+  github.com/rogueserenity/kbdb/internal/moderation:
+    config:
+      dir: '{{.InterfaceDir}}/mocks'
+      filename: 'mock_{{.InterfaceName}}.go'
+      pkgname: 'mocks'
+    interfaces:
+      s3API:
+        config:
+          structname: 'MockS3API'
+      rekognitionAPI:
+        config:
+          structname: 'MockRekognitionAPI'

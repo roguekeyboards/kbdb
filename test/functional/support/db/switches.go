@@ -59,3 +59,19 @@ func DeleteSwitch(ctx context.Context, ownerID, id string) error {
 	table := NewDynamoTable(ctx, support.SwitchTableName())
 	return table.DeleteItem(ctx, map[string]string{"user_id": ownerID, "id": id})
 }
+
+// SwitchImage is a switch's stored image slot and its moderation status.
+type SwitchImage struct {
+	Path            string `dynamodbav:"image_path"`
+	Status          string `dynamodbav:"image_status"`
+	RejectionReason string `dynamodbav:"image_rejection_reason"`
+}
+
+// GetSwitchImage reads a switch's image slot straight from DynamoDB: the
+// API doesn't return moderation status yet.
+func GetSwitchImage(ctx context.Context, ownerID, id string) (SwitchImage, error) {
+	var img SwitchImage
+	_, err := NewDynamoTable(ctx, support.SwitchTableName()).
+		GetItem(ctx, map[string]string{"user_id": ownerID, "id": id}, &img)
+	return img, err
+}

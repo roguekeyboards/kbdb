@@ -121,6 +121,7 @@ jobs:
             --config-env ci \
             --stack-name "${{ steps.pr-stack.outputs.stack-name }}" \
             --image-repositories "ApiFunction=${ECR_REPOSITORY_URI}" \
+            --image-repositories "ModerateFunction=${ECR_REPOSITORY_URI}" \
             --parameter-overrides \
               "OidcIssuerBaseUrl=${{ steps.oidc.outputs.issuer }}" \
               "OidcAudience=${{ steps.oidc.outputs.audience }}" \

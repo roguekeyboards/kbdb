@@ -72,6 +72,24 @@ func UploadCounterTableName() string {
 	return os.Getenv("KBDB_UPLOAD_COUNTER_TABLE_NAME")
 }
 
+// ImagesBucketName returns the bucket uploaded images are stored in.
+func ImagesBucketName() string {
+	return os.Getenv("KBDB_IMAGES_BUCKET_NAME")
+}
+
+// AIMockConfigPath returns the host path of the file floci reads canned
+// Rekognition responses from, or "" against real AWS, which has no such
+// file.
+func AIMockConfigPath() string {
+	return os.Getenv("KBDB_AI_MOCK_CONFIG")
+}
+
+// S3EndpointURL returns the S3 endpoint specs should talk to. Empty uses
+// default AWS endpoint resolution.
+func S3EndpointURL() string {
+	return os.Getenv("KBDB_S3_ENDPOINT_URL")
+}
+
 // DynamoDBEndpointURL returns the DynamoDB endpoint specs should talk to.
 // Empty uses default AWS endpoint resolution.
 func DynamoDBEndpointURL() string {

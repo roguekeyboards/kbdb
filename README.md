@@ -8,6 +8,8 @@ It exposes two first-class APIs — REST and an MCP server, so you can manage yo
 
 **A single Lambda function serves everything** — every REST route and the MCP endpoint, across every entity. REST and MCP share one service/repository layer, one auth path, one logging setup: a fix or a new capability lands in both interfaces at once, with nothing to keep in sync by hand.
 
+**Uploaded images are moderated by a second, event-driven Lambda function.** Each upload to the images bucket invokes it; it sends the image to Amazon Rekognition and marks it approved or rejected. It shares the repository layer with the API function but nothing else: it serves no routes and runs only when an image arrives.
+
 **The Lambda ships as a container image running a plain `net/http` server**, via [`aws-lambda-web-adapter`](https://github.com/awslabs/aws-lambda-web-adapter). The Go application itself has zero AWS/Lambda SDK imports — the entrypoint just calls `http.ListenAndServe`. The same binary runs unmodified behind any other HTTP-speaking host, not just Lambda.
 
 **Auth is defense-in-depth.** API Gateway's native JWT authorizer rejects invalid tokens before the Lambda even runs. The application then independently verifies every token itself rather than trusting injected claims implicitly — the same verification path both REST and MCP tool calls go through, since MCP clients don't all reach the server via API Gateway's authorizer the same way.

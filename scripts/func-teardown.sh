@@ -22,3 +22,4 @@ VOLUMES=$(docker volume ls -q --filter label=floci=true)
 [[ -n "$VOLUMES" ]] && docker volume rm $VOLUMES >/dev/null
 docker compose -f docker-compose.floci.yml down
 rm -f "$ENV_FILE"
+rm -rf "$ROOT/.floci-ai-mock"
