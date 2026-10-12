@@ -51,7 +51,7 @@ var listProfilesTool = &mcp.Tool{
 
 var setProfileImageTool = &mcp.Tool{
 	Name:        "set_profile_image",
-	Description: "Mints a presigned URL to upload your profile's avatar to. Doesn't upload the image itself - PUT the image bytes to the returned upload_url using the same content_type as the Content-Type header, an If-None-Match: * header, and a body of exactly size_bytes. The upload_url is for one upload: another PUT to it fails with 412 while that image is stored. Images are capped at 5 MB; resize anything larger first. If image uploads aren't available at the moment, this fails without issuing a URL; try again later. Your profile has at most one avatar; calling this again replaces it. Fails if you have no profile yet.",
+	Description: "Mints a presigned URL to upload your profile's avatar to. Doesn't upload the image itself - PUT the image bytes to the returned upload_url using the same content_type as the Content-Type header, an If-None-Match: * header, and a body of exactly size_bytes. The upload_url is for one upload: another PUT to it fails with 412 while that image is stored. Images are capped at 5 MB; resize anything larger first. If image uploads aren't available at the moment, this fails without issuing a URL; try again later. A new avatar starts pending until it's checked, and only you can see it until it's approved. A rejected avatar is shown only to you, with the reason, until you replace or delete it. Your profile has at most one avatar; calling this again replaces it. Fails if you have no profile yet.",
 }
 
 var deleteProfileImageTool = &mcp.Tool{
@@ -169,7 +169,7 @@ func handleListProfiles(repo repository.ProfileRepository) mcp.ToolHandlerFor[sc
 
 		items := make([]schema.ProfileSummary, len(profiles))
 		for i, p := range profiles {
-			items[i] = repomcp.Profile{}.ToMCPSummary(p)
+			items[i] = repomcp.Profile{}.ToMCPSummary(p, authz.IsOwner(ctx, p.OwnerID))
 		}
 
 		return nil, schema.ListProfilesOutput{Profiles: items, NextCursor: nextCursor}, nil

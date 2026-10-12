@@ -20,7 +20,7 @@ type KeycapSetSummary struct {
 	Name               string   `json:"name" jsonschema:"the keycap set's name"`
 	Profile            *string  `json:"profile,omitempty" jsonschema:"the keycap set's profile, e.g. Cherry or OEM"`
 	PrimaryKitID       *string  `json:"primary_kit_id,omitempty" jsonschema:"the id of the kit whose image represents this set, if one is designated and it still exists"`
-	PrimaryKitHasImage bool     `json:"primary_kit_has_image" jsonschema:"whether the primary kit has an image on file"`
+	PrimaryKitHasImage bool     `json:"primary_kit_has_image" jsonschema:"whether the primary kit has an image you can see (its owner sees it whatever its moderation status, anyone else only once approved)"`
 	OrderStatus        *string  `json:"order_status,omitempty" jsonschema:"derived from every kit's purchase.order_status: the least-progressed status wins (Planned < Ordered < Shipped < Delivered), so the set isn't Delivered while a kit is still en route; a Cancelled kit is ignored unless every kit is Cancelled; omitted if no kit has a status set"`
 	TotalCost          *float64 `json:"total_cost,omitempty" jsonschema:"total cost of the set's kits with a known purchase price; kits with no known price are excluded rather than treated as zero, so this may undercount; present for the owner only if their show_price_to_me preference is set, and for any other caller only if the owner's show_price_to_others is"`
 	Currency           *string  `json:"currency,omitempty" jsonschema:"the owner's display currency (an ISO 4217 code) for total_cost; present exactly when total_cost is"`
@@ -62,8 +62,11 @@ type KeycapSet struct {
 type KeycapKit struct {
 	KitID    string             `json:"kit_id" jsonschema:"the kit's unique id, scoped to its parent keycap set"`
 	Name     string             `json:"name" jsonschema:"the kit's name, e.g. Base or Novelties"`
-	HasImage bool               `json:"has_image" jsonschema:"whether an image is on file for this kit"`
+	HasImage bool               `json:"has_image" jsonschema:"whether this kit has an image you can see (its owner sees it whatever its moderation status, anyone else only once approved)"`
 	Purchase *KeycapKitPurchase `json:"purchase,omitempty" jsonschema:"where it was bought and the order's status"`
+
+	ImageStatus          *string `json:"image_status,omitempty" jsonschema:"the image's moderation status: pending until it's checked, then approved or rejected; only ever present for the set's owner"`
+	ImageRejectionReason *string `json:"image_rejection_reason,omitempty" jsonschema:"why a rejected image was rejected: the moderation label, or unprocessable when the file couldn't be checked; only ever present for the set's owner"`
 }
 
 // KeycapKitPurchase is a kit's purchase and order lifecycle, independent of

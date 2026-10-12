@@ -229,7 +229,7 @@ func (s *SwitchToAPISuite) TestImagePresent_ReturnsPresignedURL() {
 	s.Require().NoError(err)
 
 	s.Require().NotNil(out.Image)
-	s.Equal("https://example.com/img", out.Image.Url)
+	s.Equal("https://example.com/img", *out.Image.Url)
 }
 
 func (s *SwitchToAPISuite) TestNoImage_ImageFieldNil() {

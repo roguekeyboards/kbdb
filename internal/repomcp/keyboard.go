@@ -28,7 +28,7 @@ func (k Keyboard) ToMCP(kb repository.Keyboard, isOwner bool, ownerPrefs reposit
 		Purchase:   k.purchaseToMCP(kb.Purchase, isOwner, ownerPrefs),
 		Notes:      kb.Notes,
 		Visibility: ownerVisibility(kb.Visibility, isOwner),
-		HasImages:  len(kb.Images) > 0,
+		HasImages:  anyVisible(kb.Images, func(e repository.KeyboardImageEntry) repository.ImageStatus { return e.Status }, isOwner),
 	}
 	if ownerPrefs.ShowPriceSingle(isOwner) {
 		out.TotalCost = kb.TotalCost()
@@ -52,7 +52,7 @@ func (k Keyboard) ToMCPSummary(kb repository.Keyboard, isOwner bool, ownerPrefs 
 		Size:        kb.Size,
 		Layout:      kb.Layout,
 		OrderStatus: kb.Purchase.OrderStatus,
-		HasImages:   len(kb.Images) > 0,
+		HasImages:   anyVisible(kb.Images, func(e repository.KeyboardImageEntry) repository.ImageStatus { return e.Status }, isOwner),
 	}
 	if ownerPrefs.ShowPriceSummary(isOwner) {
 		summary.TotalCost = kb.TotalCost()
@@ -64,6 +64,22 @@ func (k Keyboard) ToMCPSummary(kb repository.Keyboard, isOwner bool, ownerPrefs 
 	}
 
 	return summary
+}
+
+// ImagesToMCP lists the keyboard's images the caller may see, in the
+// order they were added. Only the owner sees each one's status.
+func (k Keyboard) ImagesToMCP(kb repository.Keyboard, isOwner bool) []schema.KeyboardImage {
+	out := []schema.KeyboardImage{}
+	for _, img := range repository.SortedKeyboardImages(kb.Images) {
+		if !img.Status.VisibleTo(isOwner) {
+			continue
+		}
+		entry := schema.KeyboardImage{ImageID: img.ImageID}
+		entry.Status, entry.RejectionReason = imageStatusToMCP(true, img.Status, img.RejectionReason, isOwner)
+		out = append(out, entry)
+	}
+
+	return out
 }
 
 func (k Keyboard) designToMCP(d repository.KeyboardDesign) *schema.KeyboardDesign {

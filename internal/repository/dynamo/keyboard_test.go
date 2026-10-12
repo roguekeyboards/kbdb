@@ -698,6 +698,7 @@ func (s *KeyboardRepositorySuite) TestSetImageStatus_NoReason_RemovesRejectionRe
 	s.Require().NoError(err)
 	s.True(ok)
 	s.True(removesAttr(captured, "rejection_reason"))
+	s.False(removesAttr(captured, "get_url"), "an approval keeps the cached URL")
 }
 
 func (s *KeyboardRepositorySuite) TestSetImageStatus_ConditionFails_ReturnsFalseWithoutError() {

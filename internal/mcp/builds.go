@@ -59,7 +59,7 @@ var deleteBuildTool = &mcp.Tool{
 
 var addBuildImageTool = &mcp.Tool{
 	Name:        "add_build_image",
-	Description: "Mints a presigned URL to upload a new image to one of your own builds. Doesn't upload the image itself - PUT the image bytes to the returned upload_url using the same content_type as the Content-Type header, an If-None-Match: * header, and a body of exactly size_bytes. The upload_url is for one upload: another PUT to it fails with 412 while that image is stored. Images are capped at 5 MB; resize anything larger first. If image uploads aren't available at the moment, this fails without issuing a URL; try again later. A build may have at most 10 images; this always adds a new one rather than replacing an existing image.",
+	Description: "Mints a presigned URL to upload a new image to one of your own builds. Doesn't upload the image itself - PUT the image bytes to the returned upload_url using the same content_type as the Content-Type header, an If-None-Match: * header, and a body of exactly size_bytes. The upload_url is for one upload: another PUT to it fails with 412 while that image is stored. Images are capped at 5 MB; resize anything larger first. If image uploads aren't available at the moment, this fails without issuing a URL; try again later. A new image starts pending until it's checked, and only you can see it until it's approved. A rejected image is shown only to you, with the reason, and still counts toward the image limit until you delete it. A build may have at most 10 images; this always adds a new one rather than replacing an existing image.",
 }
 
 var deleteBuildImageTool = &mcp.Tool{
@@ -69,7 +69,7 @@ var deleteBuildImageTool = &mcp.Tool{
 
 var listBuildImagesTool = &mcp.Tool{
 	Name:        "list_build_images",
-	Description: "Lists the ids of a build's images. get_build/list_builds only report whether any exist via has_images/has_image - call this to get their ids, e.g. before deleting one.",
+	Description: "Lists the ids of a build's images. get_build/list_builds only report whether any exist via has_images/has_image - call this to get their ids, e.g. before deleting one. Its owner gets every image with its moderation status; anyone else gets approved images only.",
 }
 
 func handleListBuilds(
@@ -440,11 +440,7 @@ func handleListBuildImages(
 			return nil, schema.ListBuildImagesOutput{}, err
 		}
 
-		sorted := repository.SortedBuildImages(b.Images)
-		images := make([]schema.BuildImage, len(sorted))
-		for i, img := range sorted {
-			images[i] = schema.BuildImage{ImageID: img.ImageID}
-		}
+		images := repomcp.Build{}.ImagesToMCP(*b, authz.IsOwner(ctx, b.UserID))
 
 		return nil, schema.ListBuildImagesOutput{Images: images}, nil
 	}

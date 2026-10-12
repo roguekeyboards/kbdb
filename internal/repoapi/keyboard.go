@@ -38,7 +38,7 @@ func (k Keyboard) ToAPI(ctx context.Context, kb repository.Keyboard, isOwner boo
 		return api.Keyboard{}, err
 	}
 
-	imgs, err := k.imagesToAPI(ctx, kb.UserID, kb.ID, repository.SortedKeyboardImages(kb.Images))
+	imgs, err := k.imagesToAPI(ctx, kb.UserID, kb.ID, repository.SortedKeyboardImages(kb.Images), isOwner)
 	if err != nil {
 		return api.Keyboard{}, err
 	}
@@ -65,10 +65,12 @@ func (k Keyboard) ToAPI(ctx context.Context, kb repository.Keyboard, isOwner boo
 	return out, nil
 }
 
-// imagesToAPI resolves a presigned GET URL per image, reusing each image's
-// cached URL if still fresh, mirroring [Build.imagesToAPI]. images is
-// already ordered (by Seq) by the caller.
-func (k Keyboard) imagesToAPI(ctx context.Context, ownerID, keyboardID string, images []repository.KeyboardImage) (*[]api.KeyboardImage, error) {
+// imagesToAPI keeps the images the caller may see and resolves a presigned
+// GET URL for each one not rejected, reusing each image's cached URL if
+// still fresh, mirroring [Build.imagesToAPI]. images is already ordered
+// (by Seq) by the caller.
+func (k Keyboard) imagesToAPI(ctx context.Context, ownerID, keyboardID string, images []repository.KeyboardImage, isOwner bool) (*[]api.KeyboardImage, error) {
+	images = visibleImages(images, func(img repository.KeyboardImage) repository.ImageStatus { return img.Status }, isOwner)
 	if len(images) == 0 {
 		return nil, nil //nolint:nilnil // no images is a valid, expected result
 	}
@@ -82,12 +84,17 @@ func (k Keyboard) imagesToAPI(ctx context.Context, ownerID, keyboardID string, i
 		go func(i int, img repository.KeyboardImage) {
 			defer wg.Done()
 
+			out[i] = api.KeyboardImage{ImageId: img.ImageID}
+			out[i].Status, out[i].RejectionReason = imageStatusToAPI(img.Status, img.RejectionReason, isOwner)
+			if !img.Status.Downloadable() {
+				return
+			}
 			url, err := k.resolveKeyboardImageURL(ctx, ownerID, keyboardID, img)
 			if err != nil {
 				errs[i] = fmt.Errorf("presigning keyboard image %q: %w", img.ImageID, err)
 				return
 			}
-			out[i] = api.KeyboardImage{ImageId: img.ImageID, Url: url}
+			out[i].Url = &url
 		}(i, img)
 	}
 	wg.Wait()

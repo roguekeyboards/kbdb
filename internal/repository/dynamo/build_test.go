@@ -873,6 +873,7 @@ func (s *BuildRepositorySuite) TestSetImageStatus_NoReason_RemovesRejectionReaso
 	s.Require().NoError(err)
 	s.True(ok)
 	s.True(removesAttr(captured, "rejection_reason"))
+	s.False(removesAttr(captured, "get_url"), "an approval keeps the cached URL")
 }
 
 func (s *BuildRepositorySuite) TestSetImageStatus_ConditionFails_ReturnsFalseWithoutError() {

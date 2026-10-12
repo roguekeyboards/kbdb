@@ -83,7 +83,7 @@ type ProfileSummary struct {
 	Username        string  `json:"username" jsonschema:"the profile's unique username"`
 	UserID          string  `json:"user_id" jsonschema:"the profile owner's user id; pass to get_profile or as the user_id argument to list_keyboards, list_builds, and the other collection tools"`
 	DiscordUsername *string `json:"discord_username,omitempty" jsonschema:"the owner's Discord username, if given"`
-	HasAvatar       bool    `json:"has_avatar" jsonschema:"whether this profile has an avatar on file"`
+	HasAvatar       bool    `json:"has_avatar" jsonschema:"whether this profile has an avatar you can see (its owner sees it whatever its moderation status, anyone else only once approved)"`
 }
 
 // SetProfileImageInput is the set_profile_image tool's input. It takes no
@@ -118,6 +118,9 @@ type Profile struct {
 	DiscordUsername *string             `json:"discord_username,omitempty" jsonschema:"the owner's Discord username, if given"`
 	Bio             *string             `json:"bio,omitempty" jsonschema:"free-form bio, if given"`
 	Links           []ProfileLink       `json:"links,omitempty" jsonschema:"the profile's links (name/url pairs)"`
-	HasAvatar       bool                `json:"has_avatar" jsonschema:"whether this profile has an avatar on file"`
+	HasAvatar       bool                `json:"has_avatar" jsonschema:"whether this profile has an avatar you can see (its owner sees it whatever its moderation status, anyone else only once approved)"`
 	Preferences     *ProfilePreferences `json:"preferences,omitempty" jsonschema:"display/visibility preferences; only ever present for the profile's owner"`
+
+	AvatarStatus          *string `json:"avatar_status,omitempty" jsonschema:"the avatar's moderation status: pending until it's checked, then approved or rejected; only ever present for the profile's owner"`
+	AvatarRejectionReason *string `json:"avatar_rejection_reason,omitempty" jsonschema:"why a rejected avatar was rejected: the moderation label, or unprocessable when the file couldn't be checked; only ever present for the profile's owner"`
 }

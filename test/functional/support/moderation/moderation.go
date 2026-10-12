@@ -5,11 +5,15 @@ package moderation
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/rekognition"
+	rektypes "github.com/aws/aws-sdk-go-v2/service/rekognition/types"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	"github.com/rogueserenity/kbdb/test/functional/support"
@@ -26,7 +30,7 @@ type Label struct {
 // MockLabels has floci's Rekognition return labels for the object at key,
 // by replacing the AI mock config file. Only one spec may use it, since
 // each call replaces every earlier response.
-func MockLabels(key string, labels ...Label) error {
+func MockLabels(ctx context.Context, key string, labels ...Label) error {
 	config := map[string]any{
 		"rekognition": map[string]any{
 			support.ImagesBucketName() + "/" + key: map[string]any{
@@ -42,18 +46,62 @@ func MockLabels(key string, labels ...Label) error {
 		return err
 	}
 	// floci reads it as its own user, not ours.
-	return os.WriteFile(support.AIMockConfigPath(), data, 0o644) //nolint:gosec // canned test responses, nothing secret
+	if err := os.WriteFile(support.AIMockConfigPath(), data, 0o644); err != nil { //nolint:gosec // canned test responses, nothing secret
+		return err
+	}
+	return awaitMock(ctx, key)
+}
+
+// awaitMock waits until floci answers for key with the canned labels.
+// floci re-reads the file when its modification time changes, but through
+// Docker Desktop's file sharing the change can take a moment to show.
+func awaitMock(ctx context.Context, key string) error {
+	cfg, err := awsConfig(ctx)
+	if err != nil {
+		return err
+	}
+	client := rekognition.NewFromConfig(cfg, func(o *rekognition.Options) {
+		o.BaseEndpoint = aws.String(support.S3EndpointURL())
+	})
+	input := &rekognition.DetectModerationLabelsInput{Image: &rektypes.Image{S3Object: &rektypes.S3Object{
+		Bucket: aws.String(support.ImagesBucketName()),
+		Name:   aws.String(key),
+	}}}
+
+	deadline := time.Now().Add(15 * time.Second)
+	for {
+		out, err := client.DetectModerationLabels(ctx, input)
+		if err == nil && len(out.ModerationLabels) > 0 {
+			return nil
+		}
+		if time.Now().After(deadline) {
+			if err != nil {
+				return fmt.Errorf("floci didn't pick up the canned labels for %q: %w", key, err)
+			}
+			return fmt.Errorf("floci didn't pick up the canned labels for %q", key)
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+}
+
+// awsConfig is the SDK configuration for talking to floci.
+func awsConfig(ctx context.Context) (aws.Config, error) {
+	cfg, err := awsconfig.LoadDefaultConfig(ctx, awsconfig.WithRegion("us-east-2"))
+	if err != nil {
+		return aws.Config{}, err
+	}
+	if support.S3EndpointURL() != "" {
+		cfg.Credentials = credentials.NewStaticCredentialsProvider("test", "test", "")
+	}
+	return cfg, nil
 }
 
 // ObjectTags returns the tags on the object at key in the images bucket.
 func ObjectTags(ctx context.Context, key string) (map[string]string, error) {
 	endpoint := support.S3EndpointURL()
-	awsCfg, err := awsconfig.LoadDefaultConfig(ctx, awsconfig.WithRegion("us-east-2"))
+	awsCfg, err := awsConfig(ctx)
 	if err != nil {
 		return nil, err
-	}
-	if endpoint != "" {
-		awsCfg.Credentials = credentials.NewStaticCredentialsProvider("test", "test", "")
 	}
 	client := s3.NewFromConfig(awsCfg, func(o *s3.Options) {
 		if endpoint != "" {

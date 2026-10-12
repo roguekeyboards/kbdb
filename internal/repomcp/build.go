@@ -34,8 +34,24 @@ func (b Build) ToMCP(build repository.Build, isOwner bool, ownerPrefs repository
 		BuildDate:     build.BuildDate,
 		Notes:         build.Notes,
 		Visibility:    ownerVisibility(build.Visibility, isOwner),
-		HasImages:     len(build.Images) > 0,
+		HasImages:     anyVisible(build.Images, func(e repository.BuildImageEntry) repository.ImageStatus { return e.Status }, isOwner),
 	}
+}
+
+// ImagesToMCP lists the build's images the caller may see, in the order
+// they were added. Only the owner sees each one's status.
+func (b Build) ImagesToMCP(build repository.Build, isOwner bool) []schema.BuildImage {
+	out := []schema.BuildImage{}
+	for _, img := range repository.SortedBuildImages(build.Images) {
+		if !img.Status.VisibleTo(isOwner) {
+			continue
+		}
+		entry := schema.BuildImage{ImageID: img.ImageID}
+		entry.Status, entry.RejectionReason = imageStatusToMCP(true, img.Status, img.RejectionReason, isOwner)
+		out = append(out, entry)
+	}
+
+	return out
 }
 
 // ToMCPResolved is [Build.ToMCP] for a build read back from storage: a plate
@@ -90,7 +106,7 @@ func (b Build) ToMCPSummary(
 		ID:         build.ID,
 		KeyboardID: build.Keyboard,
 		BuildDate:  build.BuildDate,
-		HasImage:   len(build.Images) > 0,
+		HasImage:   anyVisible(build.Images, func(e repository.BuildImageEntry) repository.ImageStatus { return e.Status }, isOwner),
 	}
 	if isOwner {
 		v := string(build.Visibility)

@@ -64,7 +64,7 @@ type Build struct {
 	BuildDate     *string               `json:"build_date,omitempty" jsonschema:"when the build was assembled (YYYY-MM-DD)"`
 	Notes         *string               `json:"notes,omitempty" jsonschema:"free-form notes"`
 	Visibility    *string               `json:"visibility,omitempty" jsonschema:"who can read this build; one of \"public\", \"authenticated\", \"private\"; only ever present for the build's owner"`
-	HasImages     bool                  `json:"has_images" jsonschema:"whether this build has any images on file"`
+	HasImages     bool                  `json:"has_images" jsonschema:"whether this build has any images you can see (its owner sees every image, anyone else only approved ones); call list_build_images for their ids"`
 }
 
 // CreateBuildInput is the create_build tool's input.
@@ -127,7 +127,7 @@ type BuildSummary struct {
 	ID         string                `json:"id" jsonschema:"the build's unique id"`
 	KeyboardID string                `json:"keyboard_id" jsonschema:"the id of the referenced Keyboard resource; useful for grouping builds by keyboard"`
 	BuildDate  *string               `json:"build_date,omitempty" jsonschema:"when the build was assembled (YYYY-MM-DD)"`
-	HasImage   bool                  `json:"has_image" jsonschema:"whether this build has any images on file"`
+	HasImage   bool                  `json:"has_image" jsonschema:"whether this build has any images you can see (its owner sees every image, anyone else only approved ones)"`
 	Keyboard   *BuildSummaryKeyboard `json:"keyboard,omitempty" jsonschema:"the build's keyboard, denormalized for display"`
 	TotalCost  *float64              `json:"total_cost,omitempty" jsonschema:"total cost of the build's priced components (keyboard, switches, keycap kits, stabs); components with no known price are excluded rather than treated as zero, so this may undercount; present for the owner only if their show_price_to_me preference is set, and for any other caller only if the owner's show_price_to_others is"`
 	Currency   *string               `json:"currency,omitempty" jsonschema:"the owner's display currency (an ISO 4217 code) for total_cost; present exactly when total_cost is"`
@@ -182,5 +182,7 @@ type ListBuildImagesOutput struct {
 // add_build_image/delete_build_image to manage images by id; images are
 // served to end users through REST, not this MCP surface.
 type BuildImage struct {
-	ImageID string `json:"image_id" jsonschema:"the image's id"`
+	ImageID         string  `json:"image_id" jsonschema:"the image's id"`
+	Status          *string `json:"status,omitempty" jsonschema:"the image's moderation status: pending until it's checked, then approved or rejected; only ever present for the build's owner, since anyone else is only shown approved images"`
+	RejectionReason *string `json:"rejection_reason,omitempty" jsonschema:"why a rejected image was rejected: the moderation label, or unprocessable when the file couldn't be checked; only ever present for the build's owner"`
 }

@@ -51,12 +51,12 @@ var deleteKeyboardTool = &mcp.Tool{
 
 var listKeyboardImagesTool = &mcp.Tool{
 	Name:        "list_keyboard_images",
-	Description: "Lists the ids of a keyboard's images. get_keyboard/list_keyboards only report whether any exist via has_images - call this to get their ids, e.g. before deleting one.",
+	Description: "Lists the ids of a keyboard's images. get_keyboard/list_keyboards only report whether any exist via has_images - call this to get their ids, e.g. before deleting one. Its owner gets every image with its moderation status; anyone else gets approved images only.",
 }
 
 var addKeyboardImageTool = &mcp.Tool{
 	Name:        "add_keyboard_image",
-	Description: "Adds an image to a keyboard in your own collection. Doesn't upload the image itself - PUT the image bytes to the returned upload_url using the same content_type as the Content-Type header, an If-None-Match: * header, and a body of exactly size_bytes. The upload_url is for one upload: another PUT to it fails with 412 while that image is stored. Images are capped at 5 MB; resize anything larger first. If image uploads aren't available at the moment, this fails without issuing a URL; try again later. A keyboard may have at most 10 images.",
+	Description: "Adds an image to a keyboard in your own collection. Doesn't upload the image itself - PUT the image bytes to the returned upload_url using the same content_type as the Content-Type header, an If-None-Match: * header, and a body of exactly size_bytes. The upload_url is for one upload: another PUT to it fails with 412 while that image is stored. Images are capped at 5 MB; resize anything larger first. If image uploads aren't available at the moment, this fails without issuing a URL; try again later. A new image starts pending until it's checked, and only you can see it until it's approved. A rejected image is shown only to you, with the reason, and still counts toward the image limit until you delete it. A keyboard may have at most 10 images.",
 }
 
 var deleteKeyboardImageTool = &mcp.Tool{
@@ -244,11 +244,7 @@ func handleListKeyboardImages(
 			return nil, schema.ListKeyboardImagesOutput{}, err
 		}
 
-		sorted := repository.SortedKeyboardImages(kb.Images)
-		images := make([]schema.KeyboardImage, len(sorted))
-		for i, img := range sorted {
-			images[i] = schema.KeyboardImage{ImageID: img.ImageID}
-		}
+		images := repomcp.Keyboard{}.ImagesToMCP(*kb, authz.IsOwner(ctx, kb.UserID))
 
 		return nil, schema.ListKeyboardImagesOutput{Images: images}, nil
 	}

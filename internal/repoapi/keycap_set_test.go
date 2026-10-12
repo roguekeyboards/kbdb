@@ -382,7 +382,7 @@ func (s *KeycapKitToAPISuite) TestFullRoundTrip_PreservesEveryField() {
 	s.Equal(k.KitID, out.KitId)
 	s.Equal(k.Name, out.Name)
 	s.Require().NotNil(out.Image)
-	s.Equal("https://example.com/presigned-get", out.Image.Url)
+	s.Equal("https://example.com/presigned-get", *out.Image.Url)
 	s.Require().NotNil(out.Purchase)
 	s.Equal(k.Purchase.Vendor, out.Purchase.Vendor)
 	s.Equal(k.Purchase.Price, out.Purchase.Price)

@@ -21,7 +21,7 @@ type KeyboardSummary struct {
 	Size        *string  `json:"size,omitempty" jsonschema:"the keyboard's size, e.g. 65% or TKL"`
 	Layout      *string  `json:"layout,omitempty" jsonschema:"the keyboard's layout, e.g. ANSI or ISO"`
 	OrderStatus *string  `json:"order_status,omitempty" jsonschema:"where the order stands, e.g. ordered or delivered"`
-	HasImages   bool     `json:"has_images" jsonschema:"whether this keyboard has any images on file; call list_keyboard_images for their ids"`
+	HasImages   bool     `json:"has_images" jsonschema:"whether this keyboard has any images you can see (its owner sees every image, anyone else only approved ones); call list_keyboard_images for their ids"`
 	TotalCost   *float64 `json:"total_cost,omitempty" jsonschema:"the base price plus every plate's and PCB's price, skipping unknown ones; present for the owner only if their show_price_to_me preference is set, and for any other caller only if the owner's show_price_to_others is"`
 	Currency    *string  `json:"currency,omitempty" jsonschema:"the owner's display currency (an ISO 4217 code) for total_cost; present exactly when total_cost is"`
 	Visibility  *string  `json:"visibility,omitempty" jsonschema:"who can read this keyboard; one of \"public\", \"authenticated\", \"private\"; only ever present for the keyboard's owner"`
@@ -107,7 +107,7 @@ type Keyboard struct {
 	Purchase   *KeyboardPurchase `json:"purchase,omitempty" jsonschema:"where it was bought and the order's status; price is the base price, excluding plates and PCBs that have their own purchase"`
 	Notes      *string           `json:"notes,omitempty" jsonschema:"free-form notes"`
 	Visibility *string           `json:"visibility,omitempty" jsonschema:"who can read this keyboard; one of \"public\", \"authenticated\", \"private\"; only ever present for the keyboard's owner"`
-	HasImages  bool              `json:"has_images" jsonschema:"whether this keyboard has any images on file; call list_keyboard_images for their ids"`
+	HasImages  bool              `json:"has_images" jsonschema:"whether this keyboard has any images you can see (its owner sees every image, anyone else only approved ones); call list_keyboard_images for their ids"`
 	TotalCost  *float64          `json:"total_cost,omitempty" jsonschema:"the base price plus every plate's and PCB's price, skipping unknown ones"`
 	Currency   *string           `json:"currency,omitempty" jsonschema:"the owner's display currency (an ISO 4217 code) for total_cost; present exactly when total_cost is"`
 }
@@ -217,7 +217,9 @@ type ListKeyboardImagesOutput struct {
 // add_keyboard_image/delete_keyboard_image to manage images by id; images
 // are served to end users through REST, not this MCP surface.
 type KeyboardImage struct {
-	ImageID string `json:"image_id" jsonschema:"the image's id"`
+	ImageID         string  `json:"image_id" jsonschema:"the image's id"`
+	Status          *string `json:"status,omitempty" jsonschema:"the image's moderation status: pending until it's checked, then approved or rejected; only ever present for the keyboard's owner, since anyone else is only shown approved images"`
+	RejectionReason *string `json:"rejection_reason,omitempty" jsonschema:"why a rejected image was rejected: the moderation label, or unprocessable when the file couldn't be checked; only ever present for the keyboard's owner"`
 }
 
 // AddKeyboardImageInput is the add_keyboard_image tool's input. It doesn't

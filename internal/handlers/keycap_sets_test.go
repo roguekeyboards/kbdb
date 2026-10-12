@@ -274,7 +274,7 @@ func (s *ListKeycapSetsSuite) TestListKeycapSets_PrimaryKitWithImage_ReturnsPrim
 	s.Equal(kitID, *item.PrimaryKitId)
 	s.Require().NotNil(item.Kits)
 	s.Require().NotNil((*item.Kits)[0].Image)
-	s.Equal("https://example.com/presigned-get", (*item.Kits)[0].Image.Url)
+	s.Equal("https://example.com/presigned-get", *(*item.Kits)[0].Image.Url)
 }
 
 func (s *ListKeycapSetsSuite) TestListKeycapSets_RepositoryError_Returns500() {
@@ -379,7 +379,7 @@ func (s *GetKeycapSetSuite) TestGetKeycapSet_KitWithImagePath_IncludesPresignedU
 	s.Require().NotNil(got.Kits)
 	s.Require().Len(*got.Kits, 1)
 	s.Require().NotNil((*got.Kits)[0].Image)
-	s.Equal("https://example.com/presigned-get", (*got.Kits)[0].Image.Url)
+	s.Equal("https://example.com/presigned-get", *(*got.Kits)[0].Image.Url)
 }
 
 func (s *GetKeycapSetSuite) TestGetKeycapSet_AnonymousReadingPublicKeycapSet_Succeeds() {
