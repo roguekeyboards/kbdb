@@ -680,7 +680,7 @@ func (s *KeyboardRepositorySuite) TestSetImageStatus_ConditionedOnPathAndStatus(
 	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "rejected"))
 	s.True(setsAttr(captured, "rejection_reason"))
 	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "unprocessable"))
-	s.True(removesAttr(captured, "get_url"), "a cached URL must not outlive a status change")
+	s.True(removesAttr(captured, "get_url"), "a rejection drops the cached URL")
 	s.True(removesAttr(captured, "get_url_expires_at"))
 }
 

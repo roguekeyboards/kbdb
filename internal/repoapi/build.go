@@ -253,11 +253,10 @@ func (b Build) keyboardRefToAPI(
 		Layout: kb.Layout,
 	}
 
-	imgs := slices.DeleteFunc(repository.SortedKeyboardImages(kb.Images),
-		func(img repository.KeyboardImage) bool { return !servedInRef(true, img.Status, isOwner) })
-	if len(imgs) > 0 {
-		img := imgs[0]
-		url, err := b.resolveKeyboardImageURL(ctx, ownerID, keyboardID, img)
+	imgs := repository.SortedKeyboardImages(kb.Images)
+	served := func(img repository.KeyboardImage) bool { return servedInRef(img.Status, isOwner) }
+	if i := slices.IndexFunc(imgs, served); i >= 0 {
+		url, err := b.resolveKeyboardImageURL(ctx, ownerID, keyboardID, imgs[i])
 		if err != nil {
 			return api.BuildKeyboardRef{}, nil, fmt.Errorf("presigning keyboard image for keyboard %q: %w", keyboardID, err)
 		}
@@ -337,7 +336,7 @@ func (b Build) switchEntriesResolvedToAPI(
 				},
 			}
 
-			if servedInRef(sw.ImagePath != nil, sw.ImageStatus, isOwner) {
+			if sw.ImagePath != nil && servedInRef(sw.ImageStatus, isOwner) {
 				url, err := b.resolveSwitchImageURL(ctx, *sw)
 				if err != nil {
 					errs[i] = fmt.Errorf("presigning switch image for switch %q: %w", e.Switch, err)
@@ -434,7 +433,7 @@ func (b Build) keycapSetRefToAPI(
 		ref.Kits[i] = api.BuildKeycapKitRef{KitId: kit.KitID, Name: kit.Name}
 		costs[i] = kit.Purchase.Price
 
-		if servedInRef(kit.ImagePath != nil, kit.ImageStatus, isOwner) {
+		if kit.ImagePath != nil && servedInRef(kit.ImageStatus, isOwner) {
 			url, err := b.resolveKeycapKitImageURL(ctx, ownerID, ks.ID, kit)
 			if err != nil {
 				return api.BuildKeycapSetRef{}, nil, fmt.Errorf("presigning kit image for kit %q: %w", kitID, err)
@@ -541,6 +540,6 @@ func (b Build) resolveKeycapKitImageURL(ctx context.Context, ownerID, setID stri
 // build's reference to it. A reference carries only a URL, with no
 // status, so an image there must be one the caller may both see and
 // download.
-func servedInRef(hasImage bool, status repository.ImageStatus, isOwner bool) bool {
-	return hasImage && status.VisibleTo(isOwner) && status.Downloadable()
+func servedInRef(status repository.ImageStatus, isOwner bool) bool {
+	return status.VisibleTo(isOwner) && status.Downloadable()
 }

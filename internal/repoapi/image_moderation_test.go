@@ -166,11 +166,10 @@ func (s *ImageModerationSuite) TestBuildKeyboardRef_NonOwner_FirstApprovedImage(
 }
 
 func (s *ImageModerationSuite) TestServedInRef() {
-	s.True(servedInRef(true, "", false), "no status reads as approved")
-	s.True(servedInRef(true, repository.ImageStatusPending, true))
-	s.False(servedInRef(true, repository.ImageStatusPending, false))
-	s.False(servedInRef(true, repository.ImageStatusRejected, true))
-	s.False(servedInRef(false, repository.ImageStatusApproved, true))
+	s.True(servedInRef("", false), "no status reads as approved")
+	s.True(servedInRef(repository.ImageStatusPending, true))
+	s.False(servedInRef(repository.ImageStatusPending, false))
+	s.False(servedInRef(repository.ImageStatusRejected, true))
 }
 
 func (s *ImageModerationSuite) switchMapper(presigned ...repository.SwitchImageKey) Switch {

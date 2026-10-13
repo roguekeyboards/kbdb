@@ -60,27 +60,32 @@ func awaitMock(ctx context.Context, key string) error {
 	if err != nil {
 		return err
 	}
+	endpoint := support.S3EndpointURL()
 	client := rekognition.NewFromConfig(cfg, func(o *rekognition.Options) {
-		o.BaseEndpoint = aws.String(support.S3EndpointURL())
+		if endpoint != "" {
+			o.BaseEndpoint = aws.String(endpoint)
+		}
 	})
 	input := &rekognition.DetectModerationLabelsInput{Image: &rektypes.Image{S3Object: &rektypes.S3Object{
 		Bucket: aws.String(support.ImagesBucketName()),
 		Name:   aws.String(key),
 	}}}
 
-	deadline := time.Now().Add(15 * time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
 	for {
 		out, err := client.DetectModerationLabels(ctx, input)
 		if err == nil && len(out.ModerationLabels) > 0 {
 			return nil
 		}
-		if time.Now().After(deadline) {
+		select {
+		case <-ctx.Done():
 			if err != nil {
 				return fmt.Errorf("floci didn't pick up the canned labels for %q: %w", key, err)
 			}
-			return fmt.Errorf("floci didn't pick up the canned labels for %q", key)
+			return fmt.Errorf("floci didn't pick up the canned labels for %q: %w", key, ctx.Err())
+		case <-time.After(200 * time.Millisecond):
 		}
-		time.Sleep(200 * time.Millisecond)
 	}
 }
 

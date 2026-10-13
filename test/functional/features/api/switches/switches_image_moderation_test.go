@@ -62,20 +62,23 @@ var _ = Describe("Moderating an uploaded switch image", func() {
 		}).WithTimeout(90 * time.Second).WithPolling(time.Second).Should(And(want...))
 	}
 
+	BeforeEach(func(ctx SpecContext) {
+		client = api.NewSwitchesClient()
+		var err error
+		ownerToken, ownerID, err = api.NewAuthIdentity(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		otherToken, _, err = api.NewAuthIdentity(ctx)
+		Expect(err).NotTo(HaveOccurred())
+
+		switchID = "moderate-image-switch-" + uuid.NewString()
+		DeferCleanup(func(ctx SpecContext) {
+			Expect(db.DeleteSwitch(ctx, ownerID, switchID)).To(Succeed())
+		})
+	})
+
 	Context("given a public switch whose owner was issued an image upload URL", func() {
 		BeforeEach(func(ctx SpecContext) {
-			client = api.NewSwitchesClient()
-			var err error
-			ownerToken, ownerID, err = api.NewAuthIdentity(ctx)
-			Expect(err).NotTo(HaveOccurred())
-			otherToken, _, err = api.NewAuthIdentity(ctx)
-			Expect(err).NotTo(HaveOccurred())
-
-			switchID = "moderate-image-switch-" + uuid.NewString()
 			Expect(db.SeedSwitch(ctx, ownerID, switchID, "public")).To(Succeed())
-			DeferCleanup(func(ctx SpecContext) {
-				Expect(db.DeleteSwitch(ctx, ownerID, switchID)).To(Succeed())
-			})
 
 			resp, err := client.SetImage(ctx, ownerID, switchID, ownerToken, api.JPEGUploadBody())
 			Expect(err).NotTo(HaveOccurred())
@@ -117,15 +120,8 @@ var _ = Describe("Moderating an uploaded switch image", func() {
 			When("the image is uploaded", func() {
 				BeforeEach(upload)
 
-				It("approves it, and then shows it to everyone", func(ctx SpecContext) {
-					By("marking the image approved")
+				It("marks the image approved", func(ctx SpecContext) {
 					awaitStatus(ctx, HaveField("Status", "approved"))
-
-					By("showing another user its URL, without a status")
-					img := getImage(ctx, otherToken)
-					Expect(img).NotTo(BeNil())
-					Expect(img.URL).NotTo(BeNil())
-					Expect(img.Status).To(BeNil())
 				})
 			})
 		})
@@ -144,21 +140,66 @@ var _ = Describe("Moderating an uploaded switch image", func() {
 			When("the image is uploaded", func() {
 				BeforeEach(upload)
 
-				It("rejects it, tags the file to expire, and shows only the owner why", func(ctx SpecContext) {
+				It("rejects it, and tags the file to expire", func(ctx SpecContext) {
 					By("rejecting it with the highest-confidence label as the reason")
 					awaitStatus(ctx, HaveField("Status", "rejected"), HaveField("RejectionReason", "Explicit"))
 
 					By("tagging the file for the bucket's expiry rule")
 					Expect(moderation.ObjectTags(ctx, key)).To(HaveKeyWithValue("moderation", "rejected"))
+				})
+			})
+		})
+	})
 
-					By("showing the owner the reason and no URL")
+	Context("given a public switch whose image was approved", func() {
+		BeforeEach(func(ctx SpecContext) {
+			Expect(db.SeedSwitchWithModeratedImage(ctx, ownerID, switchID, "public", "approved", "")).To(Succeed())
+		})
+
+		Context("given the caller is the owner", func() {
+			When("getting the switch", func() {
+				It("shows the image as approved, with a URL", func(ctx SpecContext) {
+					img := getImage(ctx, ownerToken)
+					Expect(img).NotTo(BeNil())
+					Expect(img.Status).To(HaveValue(Equal("approved")))
+					Expect(img.URL).NotTo(BeNil())
+					Expect(img.RejectionReason).To(BeNil())
+				})
+			})
+		})
+
+		Context("given the caller is another user", func() {
+			When("getting the switch", func() {
+				It("shows the image's URL, without a status", func(ctx SpecContext) {
+					img := getImage(ctx, otherToken)
+					Expect(img).NotTo(BeNil())
+					Expect(img.URL).NotTo(BeNil())
+					Expect(img.Status).To(BeNil())
+				})
+			})
+		})
+	})
+
+	Context("given a public switch whose image was rejected", func() {
+		BeforeEach(func(ctx SpecContext) {
+			Expect(db.SeedSwitchWithModeratedImage(ctx, ownerID, switchID, "public", "rejected", "Explicit")).To(Succeed())
+		})
+
+		Context("given the caller is the owner", func() {
+			When("getting the switch", func() {
+				It("shows the rejection reason, with no URL", func(ctx SpecContext) {
 					img := getImage(ctx, ownerToken)
 					Expect(img).NotTo(BeNil())
 					Expect(img.Status).To(HaveValue(Equal("rejected")))
 					Expect(img.RejectionReason).To(HaveValue(Equal("Explicit")))
 					Expect(img.URL).To(BeNil())
+				})
+			})
+		})
 
-					By("showing another user no image")
+		Context("given the caller is another user", func() {
+			When("getting the switch", func() {
+				It("shows no image", func(ctx SpecContext) {
 					Expect(getImage(ctx, otherToken)).To(BeNil())
 				})
 			})

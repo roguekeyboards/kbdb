@@ -608,8 +608,25 @@ func (s *SwitchRepositorySuite) TestSetImageStatus_ConditionedOnPathAndStatus() 
 	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "rejected"))
 	s.True(setsAttr(captured, "image_rejection_reason"))
 	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "unprocessable"))
-	s.True(removesAttr(captured, "get_url"), "a cached URL must not outlive a status change")
+	s.True(removesAttr(captured, "get_url"), "a rejection drops the cached URL")
 	s.True(removesAttr(captured, "get_url_expires_at"))
+}
+
+func (s *SwitchRepositorySuite) TestSetImageStatus_Approval_KeepsCachedURL() {
+	var captured *dynamodb.UpdateItemInput
+	s.mockClient.EXPECT().
+		UpdateItem(mock.Anything, mock.MatchedBy(func(in *dynamodb.UpdateItemInput) bool {
+			captured = in
+			return true
+		})).
+		Return(&dynamodb.UpdateItemOutput{}, nil)
+
+	ok, err := s.repo.SetImageStatus(s.T().Context(), "alice", "sw1", "switches/alice/sw1/image/up1", repository.ImageStatusPending, repository.ImageStatusApproved, nil)
+
+	s.Require().NoError(err)
+	s.True(ok)
+	s.False(removesAttr(captured, "get_url"), "an approval keeps the cached URL")
+	s.False(removesAttr(captured, "get_url_expires_at"))
 }
 
 func (s *SwitchRepositorySuite) TestSetImageStatus_ConditionFails_ReturnsFalseWithoutError() {
