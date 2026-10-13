@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"runtime"
@@ -100,19 +101,23 @@ func parseSince(s string) (time.Duration, error) {
 // ViewCmd presigns a short-lived GET for an image with the operator's
 // credentials, which works even for a rejected image the API won't serve.
 type ViewCmd struct {
-	Key string `arg:"" help:"The image's object key."`
+	Key string `arg:"" help:"The image's object key, or any link to it."`
 }
 
 func (c *ViewCmd) Run(ctx context.Context, st *stack) error {
+	key, err := keyArg(c.Key, st.bucket)
+	if err != nil {
+		return err
+	}
 	client := s3.NewFromConfig(st.cfg)
-	if _, err := client.HeadObject(ctx, &s3.HeadObjectInput{Bucket: &st.bucket, Key: &c.Key}); err != nil {
-		return fmt.Errorf("reading %q: %w", c.Key, err)
+	if _, err := client.HeadObject(ctx, &s3.HeadObjectInput{Bucket: &st.bucket, Key: &key}); err != nil {
+		return fmt.Errorf("reading %q: %w", key, err)
 	}
 	req, err := s3.NewPresignClient(client).PresignGetObject(ctx,
-		&s3.GetObjectInput{Bucket: &st.bucket, Key: &c.Key},
+		&s3.GetObjectInput{Bucket: &st.bucket, Key: &key},
 		s3.WithPresignExpires(viewURLLifetime))
 	if err != nil {
-		return fmt.Errorf("presigning %q: %w", c.Key, err)
+		return fmt.Errorf("presigning %q: %w", key, err)
 	}
 	fmt.Printf("Opening the image in your browser. The link works for %s:\n%s\n", viewURLLifetime, req.URL)
 	openBrowser(ctx, req.URL)
@@ -121,43 +126,66 @@ func (c *ViewCmd) Run(ctx context.Context, st *stack) error {
 
 // ApproveCmd overrides a rejection.
 type ApproveCmd struct {
-	Key string `arg:"" help:"The rejected image's object key."`
+	Key string `arg:"" help:"The rejected image's object key, or any link to it."`
 }
 
 func (c *ApproveCmd) Run(ctx context.Context, st *stack) error {
-	already, untagged, err := st.overrides().Approve(ctx, c.Key)
+	key, err := keyArg(c.Key, st.bucket)
+	if err != nil {
+		return err
+	}
+	already, untagged, err := st.overrides().Approve(ctx, key)
 	if err != nil {
 		return err
 	}
 	switch {
 	case already && untagged:
-		fmt.Printf("%s was already approved; removed its rejected tag.\n", c.Key)
+		fmt.Printf("%s was already approved; removed its rejected tag.\n", key)
 		return nil
 	case already:
-		fmt.Printf("%s was already approved; nothing changed.\n", c.Key)
+		fmt.Printf("%s was already approved; nothing changed.\n", key)
 		return nil
 	}
-	fmt.Printf("Approved %s.\n", c.Key)
+	fmt.Printf("Approved %s.\n", key)
 	return nil
 }
 
 // RejectCmd takes down an approved image.
 type RejectCmd struct {
-	Key    string `arg:"" help:"The approved image's object key."`
+	Key    string `arg:"" help:"The approved image's object key, or any link to it, e.g. one copied from the site."`
 	Reason string `arg:"" optional:"" default:"manual" help:"Rejection reason the owner sees."`
 }
 
 func (c *RejectCmd) Run(ctx context.Context, st *stack) error {
-	already, err := st.overrides().Reject(ctx, c.Key, c.Reason)
+	key, err := keyArg(c.Key, st.bucket)
+	if err != nil {
+		return err
+	}
+	already, err := st.overrides().Reject(ctx, key, c.Reason)
 	if err != nil {
 		return err
 	}
 	if already {
-		fmt.Printf("%s was already rejected; its reason is unchanged.\n", c.Key)
+		fmt.Printf("%s was already rejected; its reason is unchanged.\n", key)
 		return nil
 	}
-	fmt.Printf("Rejected %s (%s). Download links issued before now keep working until they expire, within an hour.\n", c.Key, c.Reason)
+	fmt.Printf("Rejected %s (%s). Download links issued before now keep working until they expire, within an hour.\n", key, c.Reason)
 	return nil
+}
+
+// keyArg returns the object key an argument names: the key itself, or an
+// image link such as the presigned GET the site loads it from, expired or
+// not. A link's path is the key, after the bucket for a path-style one.
+func keyArg(arg, bucket string) (string, error) {
+	if !strings.HasPrefix(arg, "https://") && !strings.HasPrefix(arg, "http://") {
+		return arg, nil
+	}
+	u, err := url.Parse(arg)
+	if err != nil {
+		return "", fmt.Errorf("invalid image link %q: %w", arg, err)
+	}
+	key := strings.TrimPrefix(u.Path, "/")
+	return strings.TrimPrefix(key, bucket+"/"), nil
 }
 
 // openBrowser best-effort opens url in the system browser. Failures are
