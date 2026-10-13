@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/rekognition"
 	rektypes "github.com/aws/aws-sdk-go-v2/service/rekognition/types"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/smithy-go"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
@@ -174,6 +175,17 @@ func (s *ModeratorSuite) TestRekognitionRefusesImage_RejectedUnprocessable() {
 	s.contentType("image/jpeg")
 	s.rekognition.EXPECT().DetectModerationLabels(mock.Anything, mock.Anything).
 		Return(nil, &rektypes.InvalidImageFormatException{Message: aws.String("bad")})
+	tagged := s.expectTagged()
+	s.expectStatus(repository.ImageStatusRejected, aws.String("unprocessable")).NotBefore(tagged)
+
+	s.Require().NoError(s.handle(testKey))
+}
+
+func (s *ModeratorSuite) TestRekognitionImageBytesTooLarge_RejectedUnprocessable() {
+	s.stored(testKey, repository.ImageStatusPending)
+	s.contentType("image/jpeg")
+	s.rekognition.EXPECT().DetectModerationLabels(mock.Anything, mock.Anything).
+		Return(nil, &smithy.GenericAPIError{Code: "ValidationException", Message: "Member must have length less than or equal to 5242880"})
 	tagged := s.expectTagged()
 	s.expectStatus(repository.ImageStatusRejected, aws.String("unprocessable")).NotBefore(tagged)
 

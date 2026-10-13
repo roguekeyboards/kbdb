@@ -17,6 +17,7 @@ import (
 	rektypes "github.com/aws/aws-sdk-go-v2/service/rekognition/types"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/aws/smithy-go"
 
 	"github.com/rogueserenity/kbdb/internal/imagekey"
 	"github.com/rogueserenity/kbdb/internal/repository"
@@ -182,7 +183,10 @@ func permanent(err error) bool {
 	var format *rektypes.InvalidImageFormatException
 	var tooLarge *rektypes.ImageTooLargeException
 	var invalid *rektypes.InvalidParameterException
-	return errors.As(err, &format) || errors.As(err, &tooLarge) || errors.As(err, &invalid)
+	// Rekognition answers Bytes over 5 MiB with an unmodeled ValidationException.
+	var api smithy.APIError
+	return errors.As(err, &format) || errors.As(err, &tooLarge) || errors.As(err, &invalid) ||
+		(errors.As(err, &api) && api.ErrorCode() == "ValidationException")
 }
 
 // tagRejected marks the object for the bucket's lifecycle rule, which

@@ -2,6 +2,8 @@ package moderation
 
 import (
 	"bytes"
+	"crypto/rand"
+	"image"
 	"image/jpeg"
 	"os"
 	"testing"
@@ -38,6 +40,35 @@ func (s *TranscodeSuite) TestTransparentPixelsBecomeWhite() {
 	s.Greater(r>>8, uint32(180))
 	s.Less(g>>8, uint32(40))
 	s.Less(b>>8, uint32(40))
+}
+
+func (s *TranscodeSuite) TestOverPixelLimit_UnprocessableWithoutDecoding() {
+	// A 35 KB lossless WebP that decodes to 7000x7000, over maxPixels.
+	data, err := os.ReadFile("testdata/oversized.webp")
+	s.Require().NoError(err)
+
+	_, err = webpToJPEG(data)
+	s.ErrorIs(err, errUnprocessable)
+}
+
+func (s *TranscodeSuite) TestLargeImage_ShrunkToMaxSide() {
+	out, err := toJPEG(image.NewRGBA(image.Rect(0, 0, 3200, 2000)))
+	s.Require().NoError(err)
+
+	cfg, err := jpeg.DecodeConfig(bytes.NewReader(out))
+	s.Require().NoError(err)
+	s.Equal(1600, cfg.Width)
+	s.Equal(1000, cfg.Height)
+}
+
+func (s *TranscodeSuite) TestNoise_UnderRekognitionBytesLimit() {
+	// Pure noise is the worst case for JPEG size; 2560 is the web UI's largest.
+	img := image.NewRGBA(image.Rect(0, 0, 2560, 2560))
+	_, _ = rand.Read(img.Pix)
+
+	out, err := toJPEG(img)
+	s.Require().NoError(err)
+	s.LessOrEqual(len(out), 5<<20)
 }
 
 func (s *TranscodeSuite) TestNotWebP_Unprocessable() {
