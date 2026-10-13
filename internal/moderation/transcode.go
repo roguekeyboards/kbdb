@@ -12,12 +12,9 @@ import (
 	"golang.org/x/image/webp"
 )
 
-// minDimension is Rekognition's smallest accepted width or height.
-const minDimension = 80
-
 // errUnprocessable marks an image that can never be moderated (it doesn't
-// decode, is the wrong type, or is outside Rekognition's size limits), so
-// it's rejected rather than retried.
+// decode, is the wrong type, or Rekognition refuses it), so it's rejected
+// rather than retried.
 var errUnprocessable = errors.New("unprocessable image")
 
 // webpToJPEG re-encodes a WebP as JPEG, since Rekognition only takes JPEG
@@ -29,10 +26,6 @@ func webpToJPEG(data []byte) ([]byte, error) {
 		return nil, fmt.Errorf("%w: decoding webp: %w", errUnprocessable, err)
 	}
 	b := src.Bounds()
-	if b.Dx() < minDimension || b.Dy() < minDimension {
-		return nil, fmt.Errorf("%w: %dx%d is below %dpx", errUnprocessable, b.Dx(), b.Dy(), minDimension)
-	}
-
 	flat := image.NewRGBA(b)
 	draw.Draw(flat, b, image.NewUniform(color.White), image.Point{}, draw.Src)
 	draw.Draw(flat, b, src, b.Min, draw.Over)

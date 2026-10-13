@@ -40,15 +40,6 @@ func (s *TranscodeSuite) TestTransparentPixelsBecomeWhite() {
 	s.Less(b>>8, uint32(40))
 }
 
-func (s *TranscodeSuite) TestBelowMinimumSize_Unprocessable() {
-	// 40x40, below Rekognition's 80px minimum.
-	data, err := os.ReadFile("testdata/small.webp")
-	s.Require().NoError(err)
-
-	_, err = webpToJPEG(data)
-	s.ErrorIs(err, errUnprocessable)
-}
-
 func (s *TranscodeSuite) TestNotWebP_Unprocessable() {
 	_, err := webpToJPEG([]byte("not an image"))
 	s.ErrorIs(err, errUnprocessable)
