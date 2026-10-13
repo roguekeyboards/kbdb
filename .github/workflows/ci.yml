@@ -168,6 +168,10 @@ jobs:
             --stack-name "${{ steps.pr-stack.outputs.stack-name }}" \
             --query "Stacks[0].Outputs[?OutputKey=='UploadCounterTableName'].OutputValue" \
             --output text)
+          IMAGES_BUCKET_NAME=$(aws cloudformation describe-stacks \
+            --stack-name "${{ steps.pr-stack.outputs.stack-name }}" \
+            --query "Stacks[0].Outputs[?OutputKey=='ImagesBucketName'].OutputValue" \
+            --output text)
           {
             echo "api-url=$API_URL"
             echo "switch-table-name=$SWITCH_TABLE_NAME"
@@ -177,6 +181,7 @@ jobs:
             echo "profile-table-name=$PROFILE_TABLE_NAME"
             echo "profile-username-table-name=$PROFILE_USERNAME_TABLE_NAME"
             echo "upload-counter-table-name=$UPLOAD_COUNTER_TABLE_NAME"
+            echo "images-bucket-name=$IMAGES_BUCKET_NAME"
           } >> "$GITHUB_OUTPUT"
 
       - name: Run functional tests
@@ -192,6 +197,7 @@ jobs:
           KBDB_PROFILE_TABLE_NAME: ${{ steps.stack-outputs.outputs.profile-table-name }}
           KBDB_PROFILE_USERNAME_TABLE_NAME: ${{ steps.stack-outputs.outputs.profile-username-table-name }}
           KBDB_UPLOAD_COUNTER_TABLE_NAME: ${{ steps.stack-outputs.outputs.upload-counter-table-name }}
+          KBDB_IMAGES_BUCKET_NAME: ${{ steps.stack-outputs.outputs.images-bucket-name }}
           # Explicitly empty (not omitted) - func-test.sh only falls back to
           # its LocalStack default for a genuinely unset variable.
           KBDB_DYNAMODB_ENDPOINT_URL: ""
