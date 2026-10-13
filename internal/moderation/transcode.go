@@ -58,7 +58,7 @@ func toJPEG(src image.Image) ([]byte, error) {
 
 	flat := image.NewRGBA(image.Rect(0, 0, w, h))
 	draw.Draw(flat, flat.Bounds(), image.NewUniform(color.White), image.Point{}, draw.Src)
-	draw.CatmullRom.Scale(flat, flat.Bounds(), src, b, draw.Over, nil)
+	draw.ApproxBiLinear.Scale(flat, flat.Bounds(), src, b, draw.Over, nil)
 
 	var out bytes.Buffer
 	if err := jpeg.Encode(&out, flat, &jpeg.Options{Quality: 90}); err != nil {
