@@ -18,7 +18,8 @@ const testLogGroup = "/aws/lambda/kbdb-moderate-test"
 
 type RejectionsSuite struct {
 	suite.Suite
-	logs *mocks.MockLogsAPI
+	logs         *mocks.MockLogsAPI
+	pollInterval time.Duration
 }
 
 func TestRejectionsSuite(t *testing.T) {
@@ -27,7 +28,11 @@ func TestRejectionsSuite(t *testing.T) {
 
 func (s *RejectionsSuite) SetupTest() {
 	s.logs = mocks.NewMockLogsAPI(s.T())
-	queryPollInterval = 0
+	s.pollInterval, queryPollInterval = queryPollInterval, 0
+}
+
+func (s *RejectionsSuite) TearDownTest() {
+	queryPollInterval = s.pollInterval
 }
 
 func row(message string) []logtypes.ResultField {
@@ -60,8 +65,9 @@ func (s *RejectionsSuite) TestParsesDecisionLines() {
 		row(`{"time":"2026-10-11T09:00:00Z","msg":"moderated image","key":"profiles/bob/avatar/up2","decision":"rejected","reason":"unprocessable","error":"bad image"}`),
 	)
 
-	rs, err := Rejections(s.T().Context(), s.logs, testLogGroup, start)
+	rs, truncated, err := Rejections(s.T().Context(), s.logs, testLogGroup, start)
 	s.Require().NoError(err)
+	s.False(truncated)
 	s.Equal([]Rejection{
 		{Time: time.Date(2026, 10, 12, 10, 0, 0, 0, time.UTC), Key: "switches/alice/sw1/image/up1", Reason: "Graphic Violence", Confidence: 91.25},
 		{Time: time.Date(2026, 10, 11, 9, 0, 0, 0, time.UTC), Key: "profiles/bob/avatar/up2", Reason: "unprocessable"},
@@ -76,11 +82,28 @@ func (s *RejectionsSuite) TestKeepsNewestPerKey() {
 		row(`{"time":"2026-10-12T10:00:00Z","key":"profiles/bob/avatar/up2","reason":"unprocessable"}`),
 	)
 
-	rs, err := Rejections(s.T().Context(), s.logs, testLogGroup, start)
+	rs, _, err := Rejections(s.T().Context(), s.logs, testLogGroup, start)
 	s.Require().NoError(err)
 	s.Equal([]Rejection{
 		{Time: time.Date(2026, 10, 12, 10, 0, 5, 0, time.UTC), Key: "profiles/bob/avatar/up2", Reason: "unprocessable"},
 	}, rs)
+}
+
+// Truncation is judged on the rows the query returned, before duplicate
+// keys are dropped.
+func (s *RejectionsSuite) TestTruncated() {
+	start := time.Now()
+	s.started(start)
+	rows := make([][]logtypes.ResultField, RejectionsLimit)
+	for i := range rows {
+		rows[i] = row(`{"time":"2026-10-12T10:00:00Z","key":"profiles/bob/avatar/up2","reason":"unprocessable"}`)
+	}
+	s.results(logtypes.QueryStatusComplete, rows...)
+
+	rs, truncated, err := Rejections(s.T().Context(), s.logs, testLogGroup, start)
+	s.Require().NoError(err)
+	s.True(truncated)
+	s.Len(rs, 1)
 }
 
 func (s *RejectionsSuite) TestQueryFailed() {
@@ -88,14 +111,14 @@ func (s *RejectionsSuite) TestQueryFailed() {
 	s.started(start)
 	s.results(logtypes.QueryStatusFailed)
 
-	_, err := Rejections(s.T().Context(), s.logs, testLogGroup, start)
+	_, _, err := Rejections(s.T().Context(), s.logs, testLogGroup, start)
 	s.Require().ErrorContains(err, "ended Failed")
 }
 
 func (s *RejectionsSuite) TestStartFails() {
 	s.logs.EXPECT().StartQuery(mock.Anything, mock.Anything).Return(nil, errors.New("boom"))
 
-	_, err := Rejections(s.T().Context(), s.logs, testLogGroup, time.Now())
+	_, _, err := Rejections(s.T().Context(), s.logs, testLogGroup, time.Now())
 	s.Require().ErrorContains(err, "boom")
 }
 
@@ -104,6 +127,6 @@ func (s *RejectionsSuite) TestMalformedLine() {
 	s.started(start)
 	s.results(logtypes.QueryStatusComplete, row(`not json`))
 
-	_, err := Rejections(s.T().Context(), s.logs, testLogGroup, start)
+	_, _, err := Rejections(s.T().Context(), s.logs, testLogGroup, start)
 	s.Require().ErrorContains(err, "parsing a decision line")
 }

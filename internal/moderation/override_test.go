@@ -3,6 +3,7 @@ package moderation
 import (
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -30,7 +31,7 @@ func TestOverridesSuite(t *testing.T) {
 func (s *OverridesSuite) SetupTest() {
 	s.s3 = mocks.NewMockS3API(s.T())
 	s.switches = repomocks.NewMockSwitchRepository(s.T())
-	s.overrides = &Overrides{s3: s.s3, images: &Images{Switches: s.switches}, bucket: testBucket}
+	s.overrides = &Overrides{s3: s.s3, images: &Images{Switches: s.switches}, bucket: testBucket, now: time.Now}
 }
 
 func (s *OverridesSuite) setStatus(from, to repository.ImageStatus, reason *string, ok bool) {
@@ -70,84 +71,103 @@ func (s *OverridesSuite) untagged() {
 
 func (s *OverridesSuite) TestApprove_Rejected() {
 	s.exists()
-	s.setStatus(repository.ImageStatusRejected, repository.ImageStatusApproved, nil, true)
 	s.untagged()
+	s.setStatus(repository.ImageStatusRejected, repository.ImageStatusApproved, nil, true)
 
-	already, err := s.overrides.Approve(s.T().Context(), testKey)
+	already, untagged, err := s.overrides.Approve(s.T().Context(), testKey)
 	s.Require().NoError(err)
 	s.False(already)
+	s.True(untagged)
 }
 
 func (s *OverridesSuite) TestApprove_AlreadyApproved() {
 	s.exists()
+	s.tags()
 	s.setStatus(repository.ImageStatusRejected, repository.ImageStatusApproved, nil, false)
 	s.stored(testKey, repository.ImageStatusApproved)
-	s.untagged()
 
-	already, err := s.overrides.Approve(s.T().Context(), testKey)
+	already, untagged, err := s.overrides.Approve(s.T().Context(), testKey)
 	s.Require().NoError(err)
 	s.True(already)
+	s.False(untagged)
 }
 
 func (s *OverridesSuite) TestApprove_Pending() {
 	s.exists()
+	s.tags()
 	s.setStatus(repository.ImageStatusRejected, repository.ImageStatusApproved, nil, false)
 	s.stored(testKey, repository.ImageStatusPending)
 
-	_, err := s.overrides.Approve(s.T().Context(), testKey)
+	_, _, err := s.overrides.Approve(s.T().Context(), testKey)
 	s.Require().ErrorContains(err, "is pending, not rejected")
 }
 
 func (s *OverridesSuite) TestApprove_Replaced() {
 	s.exists()
+	s.tags()
 	s.setStatus(repository.ImageStatusRejected, repository.ImageStatusApproved, nil, false)
 	s.stored("switches/alice/sw1/image/up2", repository.ImageStatusRejected)
 
-	_, err := s.overrides.Approve(s.T().Context(), testKey)
+	_, _, err := s.overrides.Approve(s.T().Context(), testKey)
 	s.Require().ErrorIs(err, ErrNotCurrent)
 }
 
+// The status write never happens, so a failed untag leaves the image
+// rejected rather than approved and still expiring.
 func (s *OverridesSuite) TestApprove_UntagFails() {
 	s.exists()
-	s.setStatus(repository.ImageStatusRejected, repository.ImageStatusApproved, nil, true)
 	s.tags(tag("moderation", "rejected"))
 	s.s3.EXPECT().DeleteObjectTagging(mock.Anything, mock.Anything).Return(nil, errors.New("boom"))
 
-	_, err := s.overrides.Approve(s.T().Context(), testKey)
+	_, _, err := s.overrides.Approve(s.T().Context(), testKey)
 	s.Require().ErrorContains(err, "boom")
 }
 
 func (s *OverridesSuite) TestApprove_KeepsOtherTags() {
 	s.exists()
-	s.setStatus(repository.ImageStatusRejected, repository.ImageStatusApproved, nil, true)
 	s.tags(tag("team", "kbdb"), tag("moderation", "rejected"))
 	s.s3.EXPECT().PutObjectTagging(mock.Anything, mock.MatchedBy(func(in *s3.PutObjectTaggingInput) bool {
 		tags := in.Tagging.TagSet
 		return aws.ToString(in.Key) == testKey && len(tags) == 1 && aws.ToString(tags[0].Key) == "team"
 	})).Return(&s3.PutObjectTaggingOutput{}, nil)
-
-	_, err := s.overrides.Approve(s.T().Context(), testKey)
-	s.Require().NoError(err)
-}
-
-func (s *OverridesSuite) TestApprove_Untagged() {
-	s.exists()
 	s.setStatus(repository.ImageStatusRejected, repository.ImageStatusApproved, nil, true)
-	s.tags()
 
-	_, err := s.overrides.Approve(s.T().Context(), testKey)
+	_, untagged, err := s.overrides.Approve(s.T().Context(), testKey)
 	s.Require().NoError(err)
+	s.True(untagged)
 }
 
-func (s *OverridesSuite) TestApprove_FileExpired() {
+func (s *OverridesSuite) TestApprove_FileDeleted() {
 	s.s3.EXPECT().HeadObject(mock.Anything, mock.Anything).Return(nil, &s3types.NotFound{})
 
-	_, err := s.overrides.Approve(s.T().Context(), testKey)
+	_, _, err := s.overrides.Approve(s.T().Context(), testKey)
 	s.Require().ErrorIs(err, ErrImageGone)
 }
 
+func (s *OverridesSuite) TestApprove_FilePastExpiry() {
+	s.overrides.now = func() time.Time { return time.Date(2026, 10, 13, 12, 0, 0, 0, time.UTC) }
+	s.s3.EXPECT().HeadObject(mock.Anything, mock.Anything).Return(&s3.HeadObjectOutput{
+		Expiration: aws.String(`expiry-date="Tue, 13 Oct 2026 00:00:00 GMT", rule-id="expire-rejected-images"`),
+	}, nil)
+
+	_, _, err := s.overrides.Approve(s.T().Context(), testKey)
+	s.Require().ErrorIs(err, ErrImageGone)
+}
+
+func (s *OverridesSuite) TestApprove_FileExpiresLater() {
+	s.overrides.now = func() time.Time { return time.Date(2026, 10, 13, 12, 0, 0, 0, time.UTC) }
+	s.s3.EXPECT().HeadObject(mock.Anything, mock.Anything).Return(&s3.HeadObjectOutput{
+		Expiration: aws.String(`expiry-date="Wed, 14 Oct 2026 00:00:00 GMT", rule-id="expire-rejected-images"`),
+	}, nil)
+	s.untagged()
+	s.setStatus(repository.ImageStatusRejected, repository.ImageStatusApproved, nil, true)
+
+	_, _, err := s.overrides.Approve(s.T().Context(), testKey)
+	s.Require().NoError(err)
+}
+
 func (s *OverridesSuite) TestApprove_UnknownKey() {
-	_, err := s.overrides.Approve(s.T().Context(), "other/thing")
+	_, _, err := s.overrides.Approve(s.T().Context(), "other/thing")
 	s.Require().ErrorIs(err, imagekey.ErrUnknownKey)
 }
 

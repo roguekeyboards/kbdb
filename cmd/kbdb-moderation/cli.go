@@ -42,7 +42,7 @@ func (c *RejectionsCmd) Run(ctx context.Context, st *stack) error {
 	if err != nil {
 		return err
 	}
-	rs, err := moderation.Rejections(ctx, cloudwatchlogs.NewFromConfig(st.cfg), st.logGroup, time.Now().Add(-since))
+	rs, truncated, err := moderation.Rejections(ctx, cloudwatchlogs.NewFromConfig(st.cfg), st.logGroup, time.Now().Add(-since))
 	if err != nil {
 		return err
 	}
@@ -65,25 +65,34 @@ func (c *RejectionsCmd) Run(ctx context.Context, st *stack) error {
 	if err := w.Flush(); err != nil {
 		return err
 	}
-	if len(rs) == moderation.RejectionsLimit {
+	if truncated {
 		fmt.Printf("Showing only the newest %d; narrow --since to see older ones.\n", moderation.RejectionsLimit)
 	}
 	return nil
 }
 
+// logRetention is ModerateFunctionLogGroup's RetentionInDays in
+// template.yaml: --since can't usefully reach further back.
+const logRetention = 60 * 24 * time.Hour
+
 // parseSince reads a --since value: whole days as "7d", or anything
-// time.ParseDuration accepts.
+// time.ParseDuration accepts, up to logRetention.
 func parseSince(s string) (time.Duration, error) {
+	var d time.Duration
 	if days, ok := strings.CutSuffix(s, "d"); ok {
 		n, err := strconv.Atoi(days)
-		if err != nil || n <= 0 {
-			return 0, fmt.Errorf("invalid --since %q", s)
+		if err != nil || n <= 0 || n > int(logRetention/(24*time.Hour)) {
+			return 0, fmt.Errorf("invalid --since %q: want 1d to 60d, or a duration", s)
 		}
-		return time.Duration(n) * 24 * time.Hour, nil
+		d = time.Duration(n) * 24 * time.Hour
+	} else {
+		var err error
+		if d, err = time.ParseDuration(s); err != nil || d <= 0 {
+			return 0, fmt.Errorf("invalid --since %q: want 1d to 60d, or a duration", s)
+		}
 	}
-	d, err := time.ParseDuration(s)
-	if err != nil || d <= 0 {
-		return 0, fmt.Errorf("invalid --since %q", s)
+	if d > logRetention {
+		return 0, fmt.Errorf("invalid --since %q: decision logs are kept 60 days", s)
 	}
 	return d, nil
 }
@@ -116,12 +125,16 @@ type ApproveCmd struct {
 }
 
 func (c *ApproveCmd) Run(ctx context.Context, st *stack) error {
-	already, err := st.overrides().Approve(ctx, c.Key)
+	already, untagged, err := st.overrides().Approve(ctx, c.Key)
 	if err != nil {
 		return err
 	}
-	if already {
+	switch {
+	case already && untagged:
 		fmt.Printf("%s was already approved; removed its rejected tag.\n", c.Key)
+		return nil
+	case already:
+		fmt.Printf("%s was already approved; nothing changed.\n", c.Key)
 		return nil
 	}
 	fmt.Printf("Approved %s.\n", c.Key)

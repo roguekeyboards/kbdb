@@ -50,8 +50,9 @@ type decisionLine struct {
 }
 
 // Rejections lists the rejections logged to logGroup since start, newest
-// first, once per key: a retried event logs its decision again.
-func Rejections(ctx context.Context, client logsAPI, logGroup string, start time.Time) ([]Rejection, error) {
+// first, once per key: a retried event logs its decision again. truncated
+// reports that the query hit RejectionsLimit, so older ones were cut.
+func Rejections(ctx context.Context, client logsAPI, logGroup string, start time.Time) (rs []Rejection, truncated bool, err error) {
 	q, err := client.StartQuery(ctx, &cloudwatchlogs.StartQueryInput{
 		LogGroupNames: []string{logGroup},
 		QueryString:   aws.String(rejectionsQuery),
@@ -59,25 +60,26 @@ func Rejections(ctx context.Context, client logsAPI, logGroup string, start time
 		EndTime:       aws.Int64(time.Now().Unix()),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("querying %s: %w", logGroup, err)
+		return nil, false, fmt.Errorf("querying %s: %w", logGroup, err)
 	}
 
 	for {
 		out, err := client.GetQueryResults(ctx, &cloudwatchlogs.GetQueryResultsInput{QueryId: q.QueryId})
 		if err != nil {
-			return nil, fmt.Errorf("reading the results of the query on %s: %w", logGroup, err)
+			return nil, false, fmt.Errorf("reading the results of the query on %s: %w", logGroup, err)
 		}
 		switch out.Status {
 		case logtypes.QueryStatusComplete:
-			return parseRejections(out.Results)
+			rs, err := parseRejections(out.Results)
+			return rs, len(out.Results) >= RejectionsLimit, err
 		case logtypes.QueryStatusScheduled, logtypes.QueryStatusRunning:
 		default:
-			return nil, fmt.Errorf("the query on %s ended %s", logGroup, out.Status)
+			return nil, false, fmt.Errorf("the query on %s ended %s", logGroup, out.Status)
 		}
 
 		select {
 		case <-ctx.Done():
-			return nil, ctx.Err()
+			return nil, false, ctx.Err()
 		case <-time.After(queryPollInterval):
 		}
 	}

@@ -4,7 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"regexp"
 	"slices"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -18,42 +21,74 @@ import (
 var ErrNotCurrent = errors.New("no item holds this image")
 
 // ErrImageGone is returned when approving an image whose file has
-// already expired.
-var ErrImageGone = errors.New("the image's file no longer exists")
+// expired, whether S3 has deleted it yet or not.
+var ErrImageGone = errors.New("the image's file has expired")
 
 // Overrides changes moderation decisions by hand, for the operator CLI.
 type Overrides struct {
 	s3     s3API
 	images *Images
 	bucket string
+	now    func() time.Time
 }
 
 // NewOverrides returns Overrides for the images in bucket.
 func NewOverrides(s3Client *s3.Client, images *Images, bucket string) *Overrides {
-	return &Overrides{s3: s3Client, images: images, bucket: bucket}
+	return &Overrides{s3: s3Client, images: images, bucket: bucket, now: time.Now}
 }
 
 // Approve marks a rejected image approved and removes the tag that would
-// expire it. Approving an image already approved only removes the tag, so
-// a run that failed partway can be repeated; already reports that case.
-func (o *Overrides) Approve(ctx context.Context, key string) (already bool, err error) {
-	if _, err := imagekey.Parse(key); err != nil {
-		return false, err
-	}
-	// Checked before the write: approving an expired file would leave the
-	// item pointing at nothing.
-	if _, err := o.s3.HeadObject(ctx, &s3.HeadObjectInput{Bucket: &o.bucket, Key: &key}); err != nil {
-		if _, ok := errors.AsType[*s3types.NotFound](err); ok {
-			return false, fmt.Errorf("%w: %q", ErrImageGone, key)
-		}
-		return false, fmt.Errorf("reading %q's metadata: %w", key, err)
-	}
-	already, err = o.override(ctx, key, repository.ImageStatusRejected, repository.ImageStatusApproved, nil)
+// expire it. already reports an image that was already approved, and
+// untagged whether a tag was removed.
+//
+// The tag goes first, the mirror of the moderation function's order: if
+// the status write then fails, the image is left rejected but no longer
+// expiring, rather than approved with its file about to be deleted.
+func (o *Overrides) Approve(ctx context.Context, key string) (already, untagged bool, err error) {
+	ref, err := imagekey.Parse(key)
 	if err != nil {
-		return false, err
+		return false, false, err
 	}
-	return already, o.untagRejected(ctx, key)
+	if err := o.checkNotExpired(ctx, key); err != nil {
+		return false, false, err
+	}
+	if untagged, err = o.untagRejected(ctx, key); err != nil {
+		return false, false, err
+	}
+	already, err = o.override(ctx, ref, key, repository.ImageStatusRejected, repository.ImageStatusApproved, nil)
+	return already, untagged, err
 }
+
+// checkNotExpired fails when key's file is gone or past the expiry date S3
+// reports for it: the lifecycle rule deletes in the background, so an
+// expired file can still exist for up to a day, and removing its tag then
+// doesn't save it.
+func (o *Overrides) checkNotExpired(ctx context.Context, key string) error {
+	head, err := o.s3.HeadObject(ctx, &s3.HeadObjectInput{Bucket: &o.bucket, Key: &key})
+	if err != nil {
+		if _, ok := errors.AsType[*s3types.NotFound](err); ok {
+			return fmt.Errorf("%w: %q", ErrImageGone, key)
+		}
+		return fmt.Errorf("reading %q's metadata: %w", key, err)
+	}
+	if expiry, ok := expiryDate(aws.ToString(head.Expiration)); ok && !expiry.After(o.now()) {
+		return fmt.Errorf("%w on %s: %q", ErrImageGone, expiry.Format(time.DateOnly), key)
+	}
+	return nil
+}
+
+// expiryDate reads the expiry-date out of an x-amz-expiration header, e.g.
+// expiry-date="Fri, 23 Dec 2012 00:00:00 GMT", rule-id="expire-rejected-images".
+func expiryDate(header string) (time.Time, bool) {
+	m := expiryDatePattern.FindStringSubmatch(header)
+	if m == nil {
+		return time.Time{}, false
+	}
+	t, err := http.ParseTime(m[1])
+	return t, err == nil
+}
+
+var expiryDatePattern = regexp.MustCompile(`expiry-date="([^"]+)"`)
 
 // Reject takes down an approved image: it marks it rejected with reason.
 // Unlike the moderation function's rejections, it isn't tagged to expire:
@@ -61,18 +96,23 @@ func (o *Overrides) Approve(ctx context.Context, key string) (already bool, err 
 // deleted within a day, before the takedown could be reviewed. already
 // reports an image already rejected, whose reason is left unchanged.
 func (o *Overrides) Reject(ctx context.Context, key, reason string) (already bool, err error) {
-	return o.override(ctx, key, repository.ImageStatusApproved, repository.ImageStatusRejected, &reason)
+	ref, err := imagekey.Parse(key)
+	if err != nil {
+		return false, err
+	}
+	return o.override(ctx, ref, key, repository.ImageStatusApproved, repository.ImageStatusRejected, &reason)
 }
 
-// untagRejected removes the moderation tag from key, keeping any others.
-func (o *Overrides) untagRejected(ctx context.Context, key string) error {
+// untagRejected removes the rejected tag from key, keeping any others.
+// untagged is false when there was none.
+func (o *Overrides) untagRejected(ctx context.Context, key string) (untagged bool, err error) {
 	out, err := o.s3.GetObjectTagging(ctx, &s3.GetObjectTaggingInput{Bucket: &o.bucket, Key: &key})
 	if err != nil {
-		return fmt.Errorf("reading %q's tags: %w", key, err)
+		return false, fmt.Errorf("reading %q's tags: %w", key, err)
 	}
-	kept := slices.DeleteFunc(out.TagSet, func(t s3types.Tag) bool { return aws.ToString(t.Key) == "moderation" })
+	kept := slices.DeleteFunc(slices.Clone(out.TagSet), func(t s3types.Tag) bool { return aws.ToString(t.Key) == rejectedTagKey })
 	if len(kept) == len(out.TagSet) {
-		return nil
+		return false, nil
 	}
 	if len(kept) == 0 {
 		_, err = o.s3.DeleteObjectTagging(ctx, &s3.DeleteObjectTaggingInput{Bucket: &o.bucket, Key: &key})
@@ -80,19 +120,15 @@ func (o *Overrides) untagRejected(ctx context.Context, key string) error {
 		_, err = o.s3.PutObjectTagging(ctx, &s3.PutObjectTaggingInput{Bucket: &o.bucket, Key: &key, Tagging: &s3types.Tagging{TagSet: kept}})
 	}
 	if err != nil {
-		return fmt.Errorf("removing the rejected tag from %q: %w", key, err)
+		return false, fmt.Errorf("removing the rejected tag from %q: %w", key, err)
 	}
-	return nil
+	return true, nil
 }
 
-// override moves the image at key from one status to the other. Approve
-// writes the status before removing the tag, so a failed tag change is
-// fixed by running it again, which finds the image already at to.
-func (o *Overrides) override(ctx context.Context, key string, from, to repository.ImageStatus, reason *string) (already bool, err error) {
-	ref, err := imagekey.Parse(key)
-	if err != nil {
-		return false, err
-	}
+// override moves the image at key from one status to the other. already
+// reports an image already at to, so a rerun after a partial failure
+// succeeds.
+func (o *Overrides) override(ctx context.Context, ref imagekey.Ref, key string, from, to repository.ImageStatus, reason *string) (already bool, err error) {
 	ok, err := o.images.SetStatus(ctx, ref, key, from, to, reason)
 	if err != nil {
 		return false, fmt.Errorf("writing the status of %q: %w", key, err)

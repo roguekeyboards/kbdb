@@ -84,7 +84,7 @@ mise run moderation-reject [env] <key> [reason]     # take down an approved imag
 
 A manual reject doesn't tag the file to expire the way the moderation function's rejections do: the lifecycle rule counts from upload, so an older image would be deleted within a day. The file stays until it's approved again, or its owner deletes or replaces it.
 
-`moderation-rejections` reads the moderation function's decision logs, which are kept 60 days, and lists each key once. Manual rejections aren't logged there, so it doesn't list them.
+`moderation-rejections` reads the moderation function's decision logs, which are kept 60 days (so `--since` goes up to `60d`), and lists each key once. Manual rejections aren't logged there, so it doesn't list them.
 
 ## Deploying to AWS
 
