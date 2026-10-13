@@ -47,10 +47,33 @@ var _ = Describe("Moderating an uploaded switch image", func() {
 		return sw.Image
 	}
 
-	upload := func(ctx SpecContext) {
-		resp, err := api.DoPresigned(ctx, http.MethodPut, uploadURL, "image/jpeg", bytes.NewReader(api.TestJPEG))
+	// issueUpload has the owner set the switch's image, keeping the upload
+	// URL and the object key it was issued for.
+	issueUpload := func(ctx SpecContext, body string) {
+		GinkgoHelper()
+		resp, err := client.SetImage(ctx, ownerID, switchID, ownerToken, body)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(resp.StatusCode).To(Equal(http.StatusCreated))
+		var created struct {
+			UploadURL string `json:"upload_url"`
+		}
+		Expect(json.NewDecoder(resp.Body).Decode(&created)).To(Succeed())
+		uploadURL = created.UploadURL
+
+		img, err := db.GetSwitchImage(ctx, ownerID, switchID)
+		Expect(err).NotTo(HaveOccurred())
+		key = img.Path
+	}
+
+	put := func(ctx SpecContext, contentType string, data []byte) {
+		GinkgoHelper()
+		resp, err := api.DoPresigned(ctx, http.MethodPut, uploadURL, contentType, bytes.NewReader(data))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
+	}
+
+	upload := func(ctx SpecContext) {
+		put(ctx, "image/jpeg", api.TestJPEG)
 	}
 
 	// The moderation function runs asynchronously after the upload, and its
@@ -79,19 +102,7 @@ var _ = Describe("Moderating an uploaded switch image", func() {
 	Context("given a public switch whose owner was issued an image upload URL", func() {
 		BeforeEach(func(ctx SpecContext) {
 			Expect(db.SeedSwitch(ctx, ownerID, switchID, "public")).To(Succeed())
-
-			resp, err := client.SetImage(ctx, ownerID, switchID, ownerToken, api.JPEGUploadBody())
-			Expect(err).NotTo(HaveOccurred())
-			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
-			var created struct {
-				UploadURL string `json:"upload_url"`
-			}
-			Expect(json.NewDecoder(resp.Body).Decode(&created)).To(Succeed())
-			uploadURL = created.UploadURL
-
-			img, err := db.GetSwitchImage(ctx, ownerID, switchID)
-			Expect(err).NotTo(HaveOccurred())
-			key = img.Path
+			issueUpload(ctx, api.JPEGUploadBody())
 		})
 
 		Context("given nothing has been uploaded to it yet", func() {
@@ -143,6 +154,57 @@ var _ = Describe("Moderating an uploaded switch image", func() {
 				It("rejects it, and tags the file to expire", func(ctx SpecContext) {
 					By("rejecting it with the highest-confidence label as the reason")
 					awaitStatus(ctx, HaveField("Status", "rejected"), HaveField("RejectionReason", "Explicit"))
+
+					By("tagging the file for the bucket's expiry rule")
+					Expect(moderation.ObjectTags(ctx, key)).To(HaveKeyWithValue("moderation", "rejected"))
+				})
+			})
+		})
+	})
+
+	Context("given a public switch", func() {
+		BeforeEach(func(ctx SpecContext) {
+			Expect(db.SeedSwitch(ctx, ownerID, switchID, "public")).To(Succeed())
+		})
+
+		Context("given its owner was issued an upload URL for a busy 2560px WebP", func() {
+			var data []byte
+
+			BeforeEach(func(ctx SpecContext) {
+				if !support.IsCI() {
+					Skip("only CI's real Rekognition refuses Bytes over 5 MiB; floci doesn't")
+				}
+				data = api.BusyWebP()
+				issueUpload(ctx, api.WebPUploadBody(data))
+			})
+
+			When("the image is uploaded", func() {
+				BeforeEach(func(ctx SpecContext) {
+					put(ctx, "image/webp", data)
+				})
+
+				It("shrinks it enough for Rekognition and marks it approved", func(ctx SpecContext) {
+					awaitStatus(ctx, HaveField("Status", "approved"))
+				})
+			})
+		})
+
+		Context("given its owner was issued an upload URL for a WebP over the pixel limit", func() {
+			var data []byte
+
+			BeforeEach(func(ctx SpecContext) {
+				data = api.OversizedWebP()
+				issueUpload(ctx, api.WebPUploadBody(data))
+			})
+
+			When("the image is uploaded", func() {
+				BeforeEach(func(ctx SpecContext) {
+					put(ctx, "image/webp", data)
+				})
+
+				It("rejects it as unprocessable, and tags the file to expire", func(ctx SpecContext) {
+					By("rejecting it as unprocessable")
+					awaitStatus(ctx, HaveField("Status", "rejected"), HaveField("RejectionReason", "unprocessable"))
 
 					By("tagging the file for the bucket's expiry rule")
 					Expect(moderation.ObjectTags(ctx, key)).To(HaveKeyWithValue("moderation", "rejected"))
