@@ -709,7 +709,7 @@ func (s *ListProfilesSuite) TestAvatarPresigned_WhenSet() {
 	s.Require().NoError(json.Unmarshal(rec.Body.Bytes(), &got))
 	row := (*got.Items)[0]
 	s.Require().NotNil(row.Avatar)
-	s.Equal("https://signed/avatar", row.Avatar.Url)
+	s.Equal("https://signed/avatar", *row.Avatar.Url)
 }
 
 func (s *ListProfilesSuite) TestRepositoryError_500() {

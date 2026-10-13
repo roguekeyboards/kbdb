@@ -112,8 +112,9 @@ func (ks KeycapSet) StripPrices(out *api.KeycapSet) {
 }
 
 // KitToAPI maps a repository.KeycapKit to its wire representation. Image
-// is nil unless k.ImagePath is set, in which case it's a presigned GET URL,
-// reused from cache if still fresh.
+// is nil unless k.ImagePath is set and the caller may see it; its URL is a
+// presigned GET URL, reused from cache if still fresh, and absent once the
+// image is rejected.
 func (ks KeycapSet) KitToAPI(ctx context.Context, ownerID, setID string, k repository.KeycapKit, isOwner bool, ownerPrefs repository.ProfilePreferences) (api.KeycapKit, error) {
 	purchase, err := ks.kitPurchaseToAPI(k.Purchase, isOwner, ownerPrefs)
 	if err != nil {
@@ -121,12 +122,16 @@ func (ks KeycapSet) KitToAPI(ctx context.Context, ownerID, setID string, k repos
 	}
 
 	var image *api.KeycapKitImage
-	if k.ImagePath != nil {
-		url, err := ks.resolveKeycapKitImageURL(ctx, ownerID, setID, k)
-		if err != nil {
-			return api.KeycapKit{}, fmt.Errorf("presigning kit image: %w", err)
+	if k.ImagePath != nil && k.ImageStatus.VisibleTo(isOwner) {
+		image = &api.KeycapKitImage{}
+		image.Status, image.RejectionReason = imageStatusToAPI(k.ImageStatus, k.ImageRejectionReason, isOwner)
+		if k.ImageStatus.Downloadable() {
+			url, err := ks.resolveKeycapKitImageURL(ctx, ownerID, setID, k)
+			if err != nil {
+				return api.KeycapKit{}, fmt.Errorf("presigning kit image: %w", err)
+			}
+			image.Url = &url
 		}
-		image = &api.KeycapKitImage{Url: url}
 	}
 
 	return api.KeycapKit{

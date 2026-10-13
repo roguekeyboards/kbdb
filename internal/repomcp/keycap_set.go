@@ -62,7 +62,7 @@ func (ks KeycapSet) ToMCPSummary(set repository.KeycapSet, isOwner bool, ownerPr
 		Name:               set.Name,
 		Profile:            set.Profile,
 		PrimaryKitID:       primaryKitID,
-		PrimaryKitHasImage: primaryKit != nil && primaryKit.ImagePath != nil,
+		PrimaryKitHasImage: primaryKit != nil && primaryKit.ImagePath != nil && primaryKit.ImageStatus.VisibleTo(isOwner),
 		OrderStatus:        repository.AggregateOrderStatus(set.Kits),
 	}
 	if ownerPrefs.ShowPriceSummary(isOwner) {
@@ -97,12 +97,15 @@ func (ks KeycapSet) FromMCP(in schema.KeycapSetInput) repository.KeycapSet {
 // collapses to the HasImage bool, never a URL - see schema.KeycapKit for
 // why.
 func (ks KeycapSet) KitToMCP(k repository.KeycapKit, isOwner bool, ownerPrefs repository.ProfilePreferences) schema.KeycapKit {
-	return schema.KeycapKit{
+	out := schema.KeycapKit{
 		KitID:    k.KitID,
 		Name:     k.Name,
-		HasImage: k.ImagePath != nil,
+		HasImage: k.ImagePath != nil && k.ImageStatus.VisibleTo(isOwner),
 		Purchase: ks.kitPurchaseToMCP(k.Purchase, isOwner, ownerPrefs),
 	}
+	out.ImageStatus, out.ImageRejectionReason = imageStatusToMCP(k.ImagePath != nil, k.ImageStatus, k.ImageRejectionReason, isOwner)
+
+	return out
 }
 
 // KitFromMCP maps a create_keycap_kit/update_keycap_kit tool argument to

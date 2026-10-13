@@ -69,3 +69,7 @@ linters:
         linters:
           - revive
         text: unused-parameter
+
+formatters:
+  enable:
+    - gofmt

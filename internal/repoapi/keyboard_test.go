@@ -265,9 +265,9 @@ func (s *KeyboardToAPISuite) TestImagesPresent_PresignsEachAndPreservesOrder() {
 	s.Require().NotNil(out.Images)
 	s.Require().Len(*out.Images, 2)
 	s.Equal("img1", (*out.Images)[0].ImageId)
-	s.Equal("https://example.com/img1", (*out.Images)[0].Url)
+	s.Equal("https://example.com/img1", *(*out.Images)[0].Url)
 	s.Equal("img2", (*out.Images)[1].ImageId)
-	s.Equal("https://example.com/img2", (*out.Images)[1].Url)
+	s.Equal("https://example.com/img2", *(*out.Images)[1].Url)
 }
 
 func (s *KeyboardToAPISuite) TestNoImages_ImagesFieldNil() {

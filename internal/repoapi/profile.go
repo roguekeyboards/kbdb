@@ -16,7 +16,8 @@ type Profile struct {
 }
 
 // ToAPI maps a repository.Profile to its wire shape, presigning the avatar
-// if set. Errors only if presigning fails.
+// if set and the caller may see it (see [repository.ImageStatus]). Errors
+// only if presigning fails.
 func (p Profile) ToAPI(ctx context.Context, prof repository.Profile, isOwner bool) (api.Profile, error) {
 	out := api.Profile{
 		Username:        prof.Username,
@@ -31,12 +32,16 @@ func (p Profile) ToAPI(ctx context.Context, prof repository.Profile, isOwner boo
 		out.Preferences = &prefs
 	}
 
-	if prof.AvatarPath != nil {
-		url, err := p.resolveProfileImageURL(ctx, prof)
-		if err != nil {
-			return api.Profile{}, fmt.Errorf("presigning profile avatar: %w", err)
+	if prof.AvatarPath != nil && prof.AvatarStatus.VisibleTo(isOwner) {
+		out.Avatar = &api.ProfileImage{}
+		out.Avatar.Status, out.Avatar.RejectionReason = imageStatusToAPI(prof.AvatarStatus, prof.AvatarRejectionReason, isOwner)
+		if prof.AvatarStatus.Downloadable() {
+			url, err := p.resolveProfileImageURL(ctx, prof)
+			if err != nil {
+				return api.Profile{}, fmt.Errorf("presigning profile avatar: %w", err)
+			}
+			out.Avatar.Url = &url
 		}
-		out.Avatar = &api.ProfileImage{Url: url}
 	}
 
 	return out, nil

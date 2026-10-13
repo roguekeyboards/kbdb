@@ -21,7 +21,7 @@ type SwitchSummary struct {
 	Name        string   `json:"name" jsonschema:"the switch's name"`
 	Type        string   `json:"type" jsonschema:"the switch type, e.g. linear or tactile"`
 	OrderStatus *string  `json:"order_status,omitempty" jsonschema:"where the order stands, e.g. ordered or delivered"`
-	HasImage    bool     `json:"has_image" jsonschema:"whether this switch has an image on file"`
+	HasImage    bool     `json:"has_image" jsonschema:"whether this switch has an image you can see (its owner sees it whatever its moderation status, anyone else only once approved)"`
 	Price       *float64 `json:"price,omitempty" jsonschema:"purchase price; present for the owner only if their show_price_to_me preference is set, and for any other caller only if the owner's show_price_to_others is"`
 	Currency    *string  `json:"currency,omitempty" jsonschema:"the owner's display currency (an ISO 4217 code) for price; present exactly when price is"`
 	Visibility  *string  `json:"visibility,omitempty" jsonschema:"who can read this switch; one of \"public\", \"authenticated\", \"private\"; only ever present for the switch's owner"`
@@ -117,7 +117,10 @@ type Switch struct {
 	Purchase     *SwitchPurchase `json:"purchase,omitempty" jsonschema:"where it was bought and the order's status"`
 	Notes        *string         `json:"notes,omitempty" jsonschema:"free-form notes"`
 	Visibility   *string         `json:"visibility,omitempty" jsonschema:"who can read this switch; one of \"public\", \"authenticated\", \"private\"; only ever present for the switch's owner"`
-	HasImage     bool            `json:"has_image" jsonschema:"whether this switch has an image on file"`
+	HasImage     bool            `json:"has_image" jsonschema:"whether this switch has an image you can see (its owner sees it whatever its moderation status, anyone else only once approved)"`
+
+	ImageStatus          *string `json:"image_status,omitempty" jsonschema:"the image's moderation status: pending until it's checked, then approved or rejected; only ever present for the switch's owner"`
+	ImageRejectionReason *string `json:"image_rejection_reason,omitempty" jsonschema:"why a rejected image was rejected: the moderation label, or unprocessable when the file couldn't be checked; only ever present for the switch's owner"`
 }
 
 // SwitchMaterial is a switch's housing and stem materials.

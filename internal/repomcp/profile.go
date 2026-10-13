@@ -19,8 +19,9 @@ func (p Profile) ToMCP(prof repository.Profile, isOwner bool) schema.Profile {
 		DiscordUsername: prof.DiscordUsername,
 		Bio:             prof.Bio,
 		Links:           p.linksToMCP(prof.Links),
-		HasAvatar:       prof.AvatarPath != nil,
+		HasAvatar:       prof.AvatarPath != nil && prof.AvatarStatus.VisibleTo(isOwner),
 	}
+	out.AvatarStatus, out.AvatarRejectionReason = imageStatusToMCP(prof.AvatarPath != nil, prof.AvatarStatus, prof.AvatarRejectionReason, isOwner)
 	if isOwner {
 		prefs := p.preferencesToMCP(prof.Preferences)
 		out.Preferences = &prefs
@@ -31,12 +32,12 @@ func (p Profile) ToMCP(prof repository.Profile, isOwner bool) schema.Profile {
 
 // ToMCPSummary maps a repository.Profile to a list_profiles row - no bio
 // or links, avatar as a bool.
-func (p Profile) ToMCPSummary(prof repository.Profile) schema.ProfileSummary {
+func (p Profile) ToMCPSummary(prof repository.Profile, isOwner bool) schema.ProfileSummary {
 	return schema.ProfileSummary{
 		Username:        prof.Username,
 		UserID:          prof.OwnerID,
 		DiscordUsername: prof.DiscordUsername,
-		HasAvatar:       prof.AvatarPath != nil,
+		HasAvatar:       prof.AvatarPath != nil && prof.AvatarStatus.VisibleTo(isOwner),
 	}
 }
 

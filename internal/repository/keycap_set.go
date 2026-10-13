@@ -230,7 +230,7 @@ type KeycapSetRepository interface {
 	// SetKitImageStatus sets the matching kit's image's moderation status to
 	// `to` and its rejection reason to reason (cleared when nil), conditioned
 	// on ImagePath still equalling forPath and the status still being from (a
-	// missing status counts as approved). Also drops any cached GET URL. Takes
+	// missing status counts as approved). A rejection also drops any cached GET URL. Takes
 	// an explicit ownerID: the moderation Lambda and operator CLI act on any
 	// owner's images. Returns ok=false (not an error) if that condition fails
 	// or the item doesn't exist.

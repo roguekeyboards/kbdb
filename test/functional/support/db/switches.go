@@ -37,7 +37,23 @@ func SeedSwitch(ctx context.Context, ownerID, id, visibility string) error {
 // object exists, only specs that fetch the URL's content would need that.
 func SeedSwitchWithImage(ctx context.Context, ownerID, id, visibility string) error {
 	table := NewDynamoTable(ctx, support.SwitchTableName())
-	return table.PutItem(ctx, map[string]any{
+	return table.PutItem(ctx, switchWithImage(ownerID, id, visibility))
+}
+
+// SeedSwitchWithModeratedImage is [SeedSwitchWithImage] with the image's
+// moderation status already written. An empty reason is left out.
+func SeedSwitchWithModeratedImage(ctx context.Context, ownerID, id, visibility, status, reason string) error {
+	item := switchWithImage(ownerID, id, visibility)
+	item["image_status"] = status
+	if reason != "" {
+		item["image_rejection_reason"] = reason
+	}
+	table := NewDynamoTable(ctx, support.SwitchTableName())
+	return table.PutItem(ctx, item)
+}
+
+func switchWithImage(ownerID, id, visibility string) map[string]any {
+	return map[string]any{
 		"user_id":    ownerID,
 		"id":         id,
 		"brand":      "Gateron",
@@ -50,7 +66,7 @@ func SeedSwitchWithImage(ctx context.Context, ownerID, id, visibility string) er
 			"price":  0.35,
 		},
 		"image_path": fmt.Sprintf("switches/%s/%s/image/up1", ownerID, id),
-	})
+	}
 }
 
 // DeleteSwitch removes a switch seeded by SeedSwitch, or one created via the
@@ -67,8 +83,8 @@ type SwitchImage struct {
 	RejectionReason string `dynamodbav:"image_rejection_reason"`
 }
 
-// GetSwitchImage reads a switch's image slot straight from DynamoDB: the
-// API doesn't return moderation status yet.
+// GetSwitchImage reads a switch's image slot straight from DynamoDB, for
+// specs waiting on the moderation function.
 func GetSwitchImage(ctx context.Context, ownerID, id string) (SwitchImage, error) {
 	var img SwitchImage
 	_, err := NewDynamoTable(ctx, support.SwitchTableName()).

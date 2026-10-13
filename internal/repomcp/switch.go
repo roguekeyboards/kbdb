@@ -19,7 +19,7 @@ type Switch struct{}
 // owner always sees their own purchase.price; a non-owner sees it only if
 // ownerPrefs.ShowPriceToOthers.
 func (s Switch) ToMCP(sw repository.Switch, isOwner bool, ownerPrefs repository.ProfilePreferences) schema.Switch {
-	return schema.Switch{
+	out := schema.Switch{
 		ID:           sw.ID,
 		Brand:        sw.Brand,
 		Manufacturer: sw.Manufacturer,
@@ -33,8 +33,11 @@ func (s Switch) ToMCP(sw repository.Switch, isOwner bool, ownerPrefs repository.
 		Purchase:     s.purchaseToMCP(sw.Purchase, isOwner, ownerPrefs),
 		Notes:        sw.Notes,
 		Visibility:   ownerVisibility(sw.Visibility, isOwner),
-		HasImage:     sw.ImagePath != nil,
+		HasImage:     sw.ImagePath != nil && sw.ImageStatus.VisibleTo(isOwner),
 	}
+	out.ImageStatus, out.ImageRejectionReason = imageStatusToMCP(sw.ImagePath != nil, sw.ImageStatus, sw.ImageRejectionReason, isOwner)
+
+	return out
 }
 
 // ToMCPSummary maps a repository.Switch to the abbreviated shape
@@ -50,7 +53,7 @@ func (s Switch) ToMCPSummary(sw repository.Switch, isOwner bool, ownerPrefs repo
 		Name:        sw.Name,
 		Type:        sw.Type,
 		OrderStatus: sw.Purchase.OrderStatus,
-		HasImage:    sw.ImagePath != nil,
+		HasImage:    sw.ImagePath != nil && sw.ImageStatus.VisibleTo(isOwner),
 	}
 	if ownerPrefs.ShowPriceSummary(isOwner) {
 		summary.Price = sw.Purchase.Price

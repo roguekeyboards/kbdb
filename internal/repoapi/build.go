@@ -45,24 +45,24 @@ func (b Build) ToAPI(ctx context.Context, build repository.Build, isOwner bool, 
 		return api.Build{}, err
 	}
 
-	imgs, err := b.imagesToAPI(ctx, build.UserID, build.ID, repository.SortedBuildImages(build.Images))
+	imgs, err := b.imagesToAPI(ctx, build.UserID, build.ID, repository.SortedBuildImages(build.Images), isOwner)
 	if err != nil {
 		return api.Build{}, err
 	}
 
-	keyboardRef, kb, err := b.keyboardRefToAPI(ctx, build.UserID, build.Keyboard)
+	keyboardRef, kb, err := b.keyboardRefToAPI(ctx, build.UserID, build.Keyboard, isOwner)
 	if err != nil {
 		return api.Build{}, err
 	}
 	plate := kb.Plate(build.Plate)
 	pcb := kb.PCB(build.PCB)
 
-	switches, switchesCost, err := b.switchEntriesResolvedToAPI(ctx, build.UserID, build.Switches)
+	switches, switchesCost, err := b.switchEntriesResolvedToAPI(ctx, build.UserID, build.Switches, isOwner)
 	if err != nil {
 		return api.Build{}, err
 	}
 
-	keycapSets, keycapKitsCost, err := b.keycapSetRefsToAPI(ctx, build.UserID, build.KeycapKits)
+	keycapSets, keycapKitsCost, err := b.keycapSetRefsToAPI(ctx, build.UserID, build.KeycapKits, isOwner)
 	if err != nil {
 		return api.Build{}, err
 	}
@@ -235,9 +235,10 @@ func (b Build) keycapKitEntriesToRepo(entries *[]api.BuildKeycapKitEntry) []repo
 }
 
 // keyboardRefToAPI resolves keyboardID into a denormalized reference plus
-// the keyboard itself. The ref carries only the keyboard's first image.
+// the keyboard itself. The ref carries only the first of the keyboard's
+// images the caller may see and download (see [servedInRef]).
 func (b Build) keyboardRefToAPI(
-	ctx context.Context, ownerID, keyboardID string,
+	ctx context.Context, ownerID, keyboardID string, isOwner bool,
 ) (api.BuildKeyboardRef, *repository.Keyboard, error) {
 	kb, err := b.KeyboardRepo.Get(ctx, ownerID, keyboardID)
 	if err != nil {
@@ -252,9 +253,10 @@ func (b Build) keyboardRefToAPI(
 		Layout: kb.Layout,
 	}
 
-	if imgs := repository.SortedKeyboardImages(kb.Images); len(imgs) > 0 {
-		img := imgs[0]
-		url, err := b.resolveKeyboardImageURL(ctx, ownerID, keyboardID, img)
+	imgs := repository.SortedKeyboardImages(kb.Images)
+	served := func(img repository.KeyboardImage) bool { return servedInRef(img.Status, isOwner) }
+	if i := slices.IndexFunc(imgs, served); i >= 0 {
+		url, err := b.resolveKeyboardImageURL(ctx, ownerID, keyboardID, imgs[i])
 		if err != nil {
 			return api.BuildKeyboardRef{}, nil, fmt.Errorf("presigning keyboard image for keyboard %q: %w", keyboardID, err)
 		}
@@ -301,7 +303,7 @@ func (b Build) pcbRefToAPI(p *repository.KeyboardPCB) *api.BuildPCBRef {
 // (Price/Quantity)*Count only when Quantity is set and non-zero; otherwise
 // its cost is unknown and excluded rather than guessed at.
 func (b Build) switchEntriesResolvedToAPI(
-	ctx context.Context, ownerID string, entries []repository.BuildSwitchEntry,
+	ctx context.Context, ownerID string, entries []repository.BuildSwitchEntry, isOwner bool,
 ) (*[]api.BuildSwitchEntryResolved, *float64, error) {
 	if entries == nil {
 		return nil, nil, nil //nolint:nilnil // no switches is a valid, expected result
@@ -334,7 +336,7 @@ func (b Build) switchEntriesResolvedToAPI(
 				},
 			}
 
-			if sw.ImagePath != nil {
+			if sw.ImagePath != nil && servedInRef(sw.ImageStatus, isOwner) {
 				url, err := b.resolveSwitchImageURL(ctx, *sw)
 				if err != nil {
 					errs[i] = fmt.Errorf("presigning switch image for switch %q: %w", e.Switch, err)
@@ -365,7 +367,7 @@ func (b Build) switchEntriesResolvedToAPI(
 // sets. A kit listed more than once appears, and is priced, once. Also
 // returns the summed price across kits with a known price.
 func (b Build) keycapSetRefsToAPI(
-	ctx context.Context, ownerID string, entries []repository.BuildKeycapKitEntry,
+	ctx context.Context, ownerID string, entries []repository.BuildKeycapKitEntry, isOwner bool,
 ) (*[]api.BuildKeycapSetRef, *float64, error) {
 	if entries == nil {
 		return nil, nil, nil //nolint:nilnil // no keycap kits is a valid, expected result
@@ -391,7 +393,7 @@ func (b Build) keycapSetRefsToAPI(
 		wg.Add(1)
 		go func(i int, setID string) {
 			defer wg.Done()
-			out[i], costs[i], errs[i] = b.keycapSetRefToAPI(ctx, ownerID, setID, kitIDs[setID])
+			out[i], costs[i], errs[i] = b.keycapSetRefToAPI(ctx, ownerID, setID, kitIDs[setID], isOwner)
 		}(i, setID)
 	}
 	wg.Wait()
@@ -406,7 +408,7 @@ func (b Build) keycapSetRefsToAPI(
 // keycapSetRefToAPI resolves setID and the given kits within it, returning
 // each kit's price alongside.
 func (b Build) keycapSetRefToAPI(
-	ctx context.Context, ownerID, setID string, kitIDs []string,
+	ctx context.Context, ownerID, setID string, kitIDs []string, isOwner bool,
 ) (api.BuildKeycapSetRef, []*float64, error) {
 	ks, err := b.KeycapSetRepo.Get(ctx, ownerID, setID)
 	if err != nil {
@@ -431,7 +433,7 @@ func (b Build) keycapSetRefToAPI(
 		ref.Kits[i] = api.BuildKeycapKitRef{KitId: kit.KitID, Name: kit.Name}
 		costs[i] = kit.Purchase.Price
 
-		if kit.ImagePath != nil {
+		if kit.ImagePath != nil && servedInRef(kit.ImageStatus, isOwner) {
 			url, err := b.resolveKeycapKitImageURL(ctx, ownerID, ks.ID, kit)
 			if err != nil {
 				return api.BuildKeycapSetRef{}, nil, fmt.Errorf("presigning kit image for kit %q: %w", kitID, err)
@@ -443,10 +445,12 @@ func (b Build) keycapSetRefToAPI(
 	return ref, costs, nil
 }
 
-// imagesToAPI resolves a presigned GET URL per image, reusing each image's
-// cached URL if still fresh, mirroring [KeycapSet.KitToAPI]'s handling of a
-// kit's image. images is already ordered (by Seq) by the caller.
-func (b Build) imagesToAPI(ctx context.Context, ownerID, buildID string, images []repository.BuildImage) (*[]api.BuildImage, error) {
+// imagesToAPI keeps the images the caller may see and resolves a presigned
+// GET URL for each one not rejected, reusing each image's cached URL if
+// still fresh, mirroring [KeycapSet.KitToAPI]'s handling of a kit's image.
+// images is already ordered (by Seq) by the caller.
+func (b Build) imagesToAPI(ctx context.Context, ownerID, buildID string, images []repository.BuildImage, isOwner bool) (*[]api.BuildImage, error) {
+	images = visibleImages(images, func(img repository.BuildImage) repository.ImageStatus { return img.Status }, isOwner)
 	if len(images) == 0 {
 		return nil, nil //nolint:nilnil // no images is a valid, expected result
 	}
@@ -460,12 +464,17 @@ func (b Build) imagesToAPI(ctx context.Context, ownerID, buildID string, images 
 		go func(i int, img repository.BuildImage) {
 			defer wg.Done()
 
+			out[i] = api.BuildImage{ImageId: img.ImageID}
+			out[i].Status, out[i].RejectionReason = imageStatusToAPI(img.Status, img.RejectionReason, isOwner)
+			if !img.Status.Downloadable() {
+				return
+			}
 			url, err := b.resolveBuildImageURL(ctx, ownerID, buildID, img)
 			if err != nil {
 				errs[i] = fmt.Errorf("presigning build image %q: %w", img.ImageID, err)
 				return
 			}
-			out[i] = api.BuildImage{ImageId: img.ImageID, Url: url}
+			out[i].Url = &url
 		}(i, img)
 	}
 	wg.Wait()
@@ -525,4 +534,12 @@ func (b Build) resolveKeycapKitImageURL(ctx context.Context, ownerID, setID stri
 			return err
 		},
 	)
+}
+
+// servedInRef reports whether a referenced item's image is shown in a
+// build's reference to it. A reference carries only a URL, with no
+// status, so an image there must be one the caller may both see and
+// download.
+func servedInRef(status repository.ImageStatus, isOwner bool) bool {
+	return status.VisibleTo(isOwner) && status.Downloadable()
 }

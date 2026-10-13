@@ -90,7 +90,7 @@ func (s *ProfileMapperSuite) TestProfileToAPI_PresignsAvatar() {
 
 	s.Require().NoError(err)
 	s.Require().NotNil(out.Avatar)
-	s.Equal("https://example.com/avatar", out.Avatar.Url)
+	s.Equal("https://example.com/avatar", *out.Avatar.Url)
 }
 
 func (s *ProfileMapperSuite) TestProfileToAPI_PresignError_Propagates() {

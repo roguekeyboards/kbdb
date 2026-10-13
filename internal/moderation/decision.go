@@ -14,14 +14,14 @@ import (
 var categories = map[string]bool{
 	"Explicit": true,
 	"Non-Explicit Nudity of Intimate parts and Kissing": true,
-	"Swimwear or Underwear": true,
-	"Violence":              true,
-	"Visually Disturbing":   true,
-	"Drugs & Tobacco":       true,
-	"Alcohol":               true,
-	"Rude Gestures":         true,
-	"Gambling":              true,
-	"Hate Symbols":          true,
+	"Swimwear or Underwear":                             true,
+	"Violence":                                          true,
+	"Visually Disturbing":                               true,
+	"Drugs & Tobacco":                                   true,
+	"Alcohol":                                           true,
+	"Rude Gestures":                                     true,
+	"Gambling":                                          true,
+	"Hate Symbols":                                      true,
 }
 
 // thresholds is the minimum confidence at which a label under each

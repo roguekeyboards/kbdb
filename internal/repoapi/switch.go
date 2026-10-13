@@ -26,12 +26,16 @@ func (s Switch) ToAPI(ctx context.Context, sw repository.Switch, isOwner bool, o
 	}
 
 	var image *api.SwitchImage
-	if sw.ImagePath != nil {
-		url, err := s.resolveSwitchImageURL(ctx, sw)
-		if err != nil {
-			return api.Switch{}, fmt.Errorf("presigning switch image: %w", err)
+	if sw.ImagePath != nil && sw.ImageStatus.VisibleTo(isOwner) {
+		image = &api.SwitchImage{}
+		image.Status, image.RejectionReason = imageStatusToAPI(sw.ImageStatus, sw.ImageRejectionReason, isOwner)
+		if sw.ImageStatus.Downloadable() {
+			url, err := s.resolveSwitchImageURL(ctx, sw)
+			if err != nil {
+				return api.Switch{}, fmt.Errorf("presigning switch image: %w", err)
+			}
+			image.Url = &url
 		}
-		image = &api.SwitchImage{Url: url}
 	}
 
 	return api.Switch{

@@ -20,3 +20,15 @@ func (s ImageStatus) Effective() ImageStatus {
 	}
 	return s
 }
+
+// VisibleTo reports whether an image with status s is shown to a viewer
+// at all: its owner sees every image, anyone else only approved ones.
+func (s ImageStatus) VisibleTo(isOwner bool) bool {
+	return isOwner || s.Effective() == ImageStatusApproved
+}
+
+// Downloadable reports whether an image with status s may be served: a
+// rejected image never is, even to its owner.
+func (s ImageStatus) Downloadable() bool {
+	return s.Effective() != ImageStatusRejected
+}

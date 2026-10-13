@@ -1118,8 +1118,25 @@ func (s *KeycapSetRepositorySuite) TestSetKitImageStatus_ConditionedOnPathAndSta
 	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "rejected"))
 	s.True(setsAttr(captured, "image_rejection_reason"))
 	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "unprocessable"))
-	s.True(removesAttr(captured, "get_url"), "a cached URL must not outlive a status change")
+	s.True(removesAttr(captured, "get_url"), "a rejection drops the cached URL")
 	s.True(removesAttr(captured, "get_url_expires_at"))
+}
+
+func (s *KeycapSetRepositorySuite) TestSetKitImageStatus_Approval_KeepsCachedURL() {
+	var captured *dynamodb.UpdateItemInput
+	s.mockClient.EXPECT().
+		UpdateItem(mock.Anything, mock.MatchedBy(func(in *dynamodb.UpdateItemInput) bool {
+			captured = in
+			return true
+		})).
+		Return(&dynamodb.UpdateItemOutput{}, nil)
+
+	ok, err := s.repo.SetKitImageStatus(s.T().Context(), "alice", "set1", "kit1", "keycap-sets/alice/set1/kits/kit1/image/up1", repository.ImageStatusPending, repository.ImageStatusApproved, nil)
+
+	s.Require().NoError(err)
+	s.True(ok)
+	s.False(removesAttr(captured, "get_url"), "an approval keeps the cached URL")
+	s.False(removesAttr(captured, "get_url_expires_at"))
 }
 
 func (s *KeycapSetRepositorySuite) TestSetKitImageStatus_ConditionFails_ReturnsFalseWithoutError() {

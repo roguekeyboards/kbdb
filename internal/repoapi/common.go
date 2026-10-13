@@ -94,3 +94,27 @@ func ownerVisibility(v repository.Visibility, isOwner bool) *api.Visibility {
 
 	return &out
 }
+
+// imageStatusToAPI is the moderation status and rejection reason the
+// caller sees: both are the owner's alone.
+func imageStatusToAPI(status repository.ImageStatus, reason *string, isOwner bool) (*api.ImageStatus, *string) {
+	if !isOwner {
+		return nil, nil
+	}
+	out := api.ImageStatus(status.Effective())
+
+	return &out, reason
+}
+
+// visibleImages keeps the images the caller may see - see
+// [repository.ImageStatus.VisibleTo].
+func visibleImages[T any](images []T, statusOf func(T) repository.ImageStatus, isOwner bool) []T {
+	var out []T
+	for _, img := range images {
+		if statusOf(img).VisibleTo(isOwner) {
+			out = append(out, img)
+		}
+	}
+
+	return out
+}

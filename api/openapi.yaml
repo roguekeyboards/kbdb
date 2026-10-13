@@ -1911,9 +1911,22 @@ components:
             presigned URL is signed for this size, so S3 rejects a PUT whose
             body is any other length.
 
+    ImageStatus:
+      type: string
+      enum: [pending, approved, rejected]
+      description: >
+        Where an image stands in moderation, shown only to its owner. A new
+        upload is pending until it's checked, then approved or rejected.
+        A pending image can still be downloaded by its owner; a rejected
+        one has no URL and still counts toward the item's image limit
+        until it's deleted.
+
     KeyboardImage:
       type: object
-      required: [image_id, url]
+      description: >
+        Its owner sees every image with its status; anyone else sees only
+        approved images.
+      required: [image_id]
       properties:
         image_id:
           type: string
@@ -1924,7 +1937,15 @@ components:
           description: >
             A freshly-minted, short-lived presigned S3 GET URL. Generated
             new on every fetch of the keyboard — do not cache or persist
-            this value, it expires.
+            this value, it expires. Absent when the image was rejected.
+        status:
+          $ref: "#/components/schemas/ImageStatus"
+        rejection_reason:
+          type: string
+          description: >
+            Only on a rejected image, and only for its owner: the moderation
+            label that rejected it, or `unprocessable` when the file couldn't
+            be checked at all.
 
     KeyboardImageUpload:
       type: object
@@ -2158,7 +2179,10 @@ components:
 
     SwitchImage:
       type: object
-      required: [url]
+      description: >
+        A switch has at most one image (its vendor render/product shot) —
+        see POST/DELETE .../switches/{switchId}/image. Its owner sees it
+        whatever its status; anyone else sees it only once approved.
       properties:
         url:
           type: string
@@ -2166,8 +2190,15 @@ components:
           description: >
             A freshly-minted, short-lived presigned S3 GET URL. Generated
             new on every fetch — do not cache or persist this value, it
-            expires. A switch has at most one image (its vendor render/
-            product shot) — see POST/DELETE .../switches/{switchId}/image.
+            expires. Absent when the image was rejected.
+        status:
+          $ref: "#/components/schemas/ImageStatus"
+        rejection_reason:
+          type: string
+          description: >
+            Only on a rejected image, and only for its owner: the moderation
+            label that rejected it, or `unprocessable` when the file couldn't
+            be checked at all.
 
     SwitchImageUpload:
       type: object
@@ -2253,16 +2284,26 @@ components:
 
     ProfileImage:
       type: object
-      required: [url]
+      description: >
+        The profile's avatar, managed via POST/DELETE
+        .../profile/{identifier}/image, not via a body PUT. Its owner sees
+        it whatever its status; anyone else sees it only once approved.
       properties:
         url:
           type: string
           format: uri
           description: >
             A freshly-minted, short-lived presigned S3 GET URL for the
-            profile's avatar. Generated new on every fetch — do not cache
-            or persist it. Managed via POST/DELETE
-            .../profile/{identifier}/image, not via a body PUT.
+            avatar. Generated new on every fetch — do not cache or persist
+            it. Absent when the avatar was rejected.
+        status:
+          $ref: "#/components/schemas/ImageStatus"
+        rejection_reason:
+          type: string
+          description: >
+            Only on a rejected image, and only for its owner: the moderation
+            label that rejected it, or `unprocessable` when the file couldn't
+            be checked at all.
 
     ProfileImageUpload:
       type: object
@@ -2428,7 +2469,10 @@ components:
 
     KeycapKitImage:
       type: object
-      required: [url]
+      description: >
+        A kit has at most one image (its vendor render/product shot) — see
+        POST/DELETE .../kits/{kitId}/image. Its owner sees it whatever its
+        status; anyone else sees it only once approved.
       properties:
         url:
           type: string
@@ -2436,8 +2480,15 @@ components:
           description: >
             A freshly-minted, short-lived presigned S3 GET URL. Generated
             new on every fetch — do not cache or persist this value, it
-            expires. A kit has at most one image (its vendor render/product
-            shot) — see POST/DELETE .../kits/{kitId}/image.
+            expires. Absent when the image was rejected.
+        status:
+          $ref: "#/components/schemas/ImageStatus"
+        rejection_reason:
+          type: string
+          description: >
+            Only on a rejected image, and only for its owner: the moderation
+            label that rejected it, or `unprocessable` when the file couldn't
+            be checked at all.
 
     KeycapKitImageUpload:
       type: object
@@ -2612,9 +2663,10 @@ components:
           format: uri
           description: >
             A freshly-minted, short-lived presigned S3 GET URL for the
-            referenced keyboard's first image, if it has one. Generated new
-            on every fetch of the build — do not cache or persist this
-            value, it expires.
+            referenced keyboard's first image the caller may see (any but a
+            rejected one for the owner, approved only for anyone else), if
+            it has one. Generated new on every fetch of the build — do not
+            cache or persist this value, it expires.
 
     BuildPlateRef:
       type: object
@@ -2674,9 +2726,9 @@ components:
           format: uri
           description: >
             A freshly-minted, short-lived presigned S3 GET URL for the
-            referenced switch's image, if it has one. Generated new on
-            every fetch of the build — do not cache or persist this value,
-            it expires.
+            referenced switch's image, if it has one the caller may see
+            (see BuildKeyboardRef.image_url). Generated new on every fetch
+            of the build — do not cache or persist this value, it expires.
 
     BuildSwitchEntryResolved:
       type: object
@@ -2724,9 +2776,9 @@ components:
           format: uri
           description: >
             A freshly-minted, short-lived presigned S3 GET URL for the
-            referenced kit's image, if it has one. Generated new on every
-            fetch of the build — do not cache or persist this value, it
-            expires.
+            referenced kit's image, if it has one the caller may see (see
+            BuildKeyboardRef.image_url). Generated new on every fetch of the
+            build — do not cache or persist this value, it expires.
 
     BuildStabsInput:
       type: object
@@ -2817,7 +2869,10 @@ components:
 
     BuildImage:
       type: object
-      required: [image_id, url]
+      description: >
+        Its owner sees every image with its status; anyone else sees only
+        approved images.
+      required: [image_id]
       properties:
         image_id:
           type: string
@@ -2828,7 +2883,15 @@ components:
           description: >
             A freshly-minted, short-lived presigned S3 GET URL. Generated
             new on every fetch of the build — do not cache or persist this
-            value, it expires.
+            value, it expires. Absent when the image was rejected.
+        status:
+          $ref: "#/components/schemas/ImageStatus"
+        rejection_reason:
+          type: string
+          description: >
+            Only on a rejected image, and only for its owner: the moderation
+            label that rejected it, or `unprocessable` when the file couldn't
+            be checked at all.
 
     BuildImageUpload:
       type: object

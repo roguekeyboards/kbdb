@@ -855,7 +855,7 @@ func (s *BuildRepositorySuite) TestSetImageStatus_ConditionedOnPathAndStatus() {
 	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "rejected"))
 	s.True(setsAttr(captured, "rejection_reason"))
 	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "unprocessable"))
-	s.True(removesAttr(captured, "get_url"), "a cached URL must not outlive a status change")
+	s.True(removesAttr(captured, "get_url"), "a rejection drops the cached URL")
 	s.True(removesAttr(captured, "get_url_expires_at"))
 }
 
@@ -873,6 +873,7 @@ func (s *BuildRepositorySuite) TestSetImageStatus_NoReason_RemovesRejectionReaso
 	s.Require().NoError(err)
 	s.True(ok)
 	s.True(removesAttr(captured, "rejection_reason"))
+	s.False(removesAttr(captured, "get_url"), "an approval keeps the cached URL")
 }
 
 func (s *BuildRepositorySuite) TestSetImageStatus_ConditionFails_ReturnsFalseWithoutError() {

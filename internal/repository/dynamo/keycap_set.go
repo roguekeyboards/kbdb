@@ -558,16 +558,17 @@ func (r *KeycapSetRepository) SetKitImageGetCache(ctx context.Context, ownerID, 
 	return true, nil
 }
 
-// SetKitImageStatus implements repository.KeycapSetRepository. Also clears any
-// cached GET URL, so a rejected image's URL isn't served from the cache.
+// SetKitImageStatus implements repository.KeycapSetRepository. A rejection
+// also clears any cached GET URL, so it isn't served from the cache.
 func (r *KeycapSetRepository) SetKitImageStatus(ctx context.Context, ownerID, setID, kitID string, forPath repository.KeycapKitImageKey, from, to repository.ImageStatus, reason *string) (bool, error) {
 	kitPath, ok := mapKey("kits", kitID)
 	if !ok {
 		return false, nil
 	}
-	update := statusUpdate(field(kitPath, "image_status"), field(kitPath, "image_rejection_reason"), to, reason).
-		Remove(field(kitPath, "get_url")).
-		Remove(field(kitPath, "get_url_expires_at"))
+	update := statusUpdate(field(kitPath, "image_status"), field(kitPath, "image_rejection_reason"), to, reason)
+	if to == repository.ImageStatusRejected {
+		update = update.Remove(field(kitPath, "get_url")).Remove(field(kitPath, "get_url_expires_at"))
+	}
 	cond := expression.AttributeExists(kitPath).
 		And(field(kitPath, "image_path").Equal(expression.Value(forPath))).
 		And(statusIs(field(kitPath, "image_status"), from))
