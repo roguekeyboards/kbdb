@@ -122,11 +122,17 @@ func (s *RejectionsSuite) TestStartFails() {
 	s.Require().ErrorContains(err, "boom")
 }
 
-func (s *RejectionsSuite) TestMalformedLine() {
+func (s *RejectionsSuite) TestSkipsMalformedLine() {
 	start := time.Now()
 	s.started(start)
-	s.results(logtypes.QueryStatusComplete, row(`not json`))
+	s.results(logtypes.QueryStatusComplete,
+		row(`{"time":"2026-10-12T10:00:00Z","key":"profiles/bob/avatar/up2","rea`),
+		row(`{"time":"2026-10-11T09:00:00Z","key":"profiles/carol/avatar/up3","reason":"unprocessable"}`),
+	)
 
-	_, _, err := Rejections(s.T().Context(), s.logs, testLogGroup, start)
-	s.Require().ErrorContains(err, "parsing a decision line")
+	rs, _, err := Rejections(s.T().Context(), s.logs, testLogGroup, start)
+	s.Require().NoError(err)
+	s.Equal([]Rejection{
+		{Time: time.Date(2026, 10, 11, 9, 0, 0, 0, time.UTC), Key: "profiles/carol/avatar/up3", Reason: "unprocessable"},
+	}, rs)
 }

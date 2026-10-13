@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -70,8 +71,7 @@ func Rejections(ctx context.Context, client logsAPI, logGroup string, start time
 		}
 		switch out.Status {
 		case logtypes.QueryStatusComplete:
-			rs, err := parseRejections(out.Results)
-			return rs, len(out.Results) >= RejectionsLimit, err
+			return parseRejections(out.Results), len(out.Results) >= RejectionsLimit, nil
 		case logtypes.QueryStatusScheduled, logtypes.QueryStatusRunning:
 		default:
 			return nil, false, fmt.Errorf("the query on %s ended %s", logGroup, out.Status)
@@ -85,7 +85,7 @@ func Rejections(ctx context.Context, client logsAPI, logGroup string, start time
 	}
 }
 
-func parseRejections(results [][]logtypes.ResultField) ([]Rejection, error) {
+func parseRejections(results [][]logtypes.ResultField) []Rejection {
 	out := make([]Rejection, 0, len(results))
 	seen := make(map[string]bool, len(results))
 	for _, row := range results {
@@ -95,7 +95,8 @@ func parseRejections(results [][]logtypes.ResultField) ([]Rejection, error) {
 			}
 			var line decisionLine
 			if err := json.Unmarshal([]byte(aws.ToString(f.Value)), &line); err != nil {
-				return nil, fmt.Errorf("parsing a decision line: %w", err)
+				slog.Warn("skipping a decision line that isn't valid JSON", "error", err)
+				continue
 			}
 			if seen[line.Key] {
 				continue
@@ -110,5 +111,5 @@ func parseRejections(results [][]logtypes.ResultField) ([]Rejection, error) {
 			out = append(out, r)
 		}
 	}
-	return out, nil
+	return out
 }

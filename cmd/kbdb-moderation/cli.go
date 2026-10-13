@@ -66,7 +66,7 @@ func (c *RejectionsCmd) Run(ctx context.Context, st *stack) error {
 		return err
 	}
 	if truncated {
-		fmt.Printf("Showing only the newest %d; narrow --since to see older ones.\n", moderation.RejectionsLimit)
+		fmt.Printf("The query hit its %d-line limit, so older rejections may be missing; narrow --since to see them.\n", moderation.RejectionsLimit)
 	}
 	return nil
 }
@@ -156,7 +156,7 @@ func (c *RejectCmd) Run(ctx context.Context, st *stack) error {
 		fmt.Printf("%s was already rejected; its reason is unchanged.\n", c.Key)
 		return nil
 	}
-	fmt.Printf("Rejected %s (%s).\n", c.Key, c.Reason)
+	fmt.Printf("Rejected %s (%s). Download links issued before now keep working until they expire, within an hour.\n", c.Key, c.Reason)
 	return nil
 }
 

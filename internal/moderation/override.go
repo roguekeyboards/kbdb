@@ -41,9 +41,11 @@ func NewOverrides(s3Client *s3.Client, images *Images, bucket string) *Overrides
 // expire it. already reports an image that was already approved, and
 // untagged whether a tag was removed.
 //
-// The tag goes first, the mirror of the moderation function's order: if
-// the status write then fails, the image is left rejected but no longer
-// expiring, rather than approved with its file about to be deleted.
+// The status is read first, so the tag stays on a file that isn't a
+// current rejected or approved image. The tag then goes before the status
+// write, the mirror of the moderation function's order: if the write
+// fails, the image is left rejected but no longer expiring, rather than
+// approved with its file about to be deleted.
 func (o *Overrides) Approve(ctx context.Context, key string) (already, untagged bool, err error) {
 	ref, err := imagekey.Parse(key)
 	if err != nil {
@@ -52,10 +54,18 @@ func (o *Overrides) Approve(ctx context.Context, key string) (already, untagged 
 	if err := o.checkNotExpired(ctx, key); err != nil {
 		return false, false, err
 	}
+	from, to := repository.ImageStatusRejected, repository.ImageStatusApproved
+	status, err := o.currentStatus(ctx, ref, key, from, to)
+	if err != nil {
+		return false, false, err
+	}
 	if untagged, err = o.untagRejected(ctx, key); err != nil {
 		return false, false, err
 	}
-	already, err = o.override(ctx, ref, key, repository.ImageStatusRejected, repository.ImageStatusApproved, nil)
+	if status == to {
+		return true, untagged, nil
+	}
+	already, err = o.override(ctx, ref, key, from, to, nil)
 	return already, untagged, err
 }
 
@@ -137,14 +147,27 @@ func (o *Overrides) override(ctx context.Context, ref imagekey.Ref, key string, 
 		return false, nil
 	}
 
+	status, err := o.currentStatus(ctx, ref, key, from, to)
+	if err != nil {
+		return false, err
+	}
+	if status != to {
+		return false, fmt.Errorf("%q changed while it was being updated; run this again", key)
+	}
+	return true, nil
+}
+
+// currentStatus returns the status of the image at key, failing unless an
+// item still holds it and it's at from or already at to.
+func (o *Overrides) currentStatus(ctx context.Context, ref imagekey.Ref, key string, from, to repository.ImageStatus) (repository.ImageStatus, error) {
 	status, current, err := o.images.Status(ctx, ref, key)
 	switch {
 	case err != nil:
-		return false, fmt.Errorf("reading the status of %q: %w", key, err)
+		return "", fmt.Errorf("reading the status of %q: %w", key, err)
 	case !current:
-		return false, fmt.Errorf("%w: %q", ErrNotCurrent, key)
-	case status != to:
-		return false, fmt.Errorf("%q is %s, not %s", key, status, from)
+		return "", fmt.Errorf("%w: %q", ErrNotCurrent, key)
+	case status != from && status != to:
+		return "", fmt.Errorf("%q is %s, not %s", key, status, from)
 	}
-	return true, nil
+	return status, nil
 }

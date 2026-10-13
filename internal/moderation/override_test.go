@@ -43,7 +43,7 @@ func (s *OverridesSuite) setStatus(from, to repository.ImageStatus, reason *stri
 func (s *OverridesSuite) stored(path string, status repository.ImageStatus) {
 	p := repository.SwitchImageKey(path)
 	s.switches.EXPECT().Get(mock.Anything, "alice", "sw1").
-		Return(&repository.Switch{ID: "sw1", ImagePath: &p, ImageStatus: status}, nil)
+		Return(&repository.Switch{ID: "sw1", ImagePath: &p, ImageStatus: status}, nil).Once()
 }
 
 func (s *OverridesSuite) exists() {
@@ -71,6 +71,7 @@ func (s *OverridesSuite) untagged() {
 
 func (s *OverridesSuite) TestApprove_Rejected() {
 	s.exists()
+	s.stored(testKey, repository.ImageStatusRejected)
 	s.untagged()
 	s.setStatus(repository.ImageStatusRejected, repository.ImageStatusApproved, nil, true)
 
@@ -82,9 +83,8 @@ func (s *OverridesSuite) TestApprove_Rejected() {
 
 func (s *OverridesSuite) TestApprove_AlreadyApproved() {
 	s.exists()
-	s.tags()
-	s.setStatus(repository.ImageStatusRejected, repository.ImageStatusApproved, nil, false)
 	s.stored(testKey, repository.ImageStatusApproved)
+	s.tags()
 
 	already, untagged, err := s.overrides.Approve(s.T().Context(), testKey)
 	s.Require().NoError(err)
@@ -92,21 +92,43 @@ func (s *OverridesSuite) TestApprove_AlreadyApproved() {
 	s.False(untagged)
 }
 
+// A rerun after the status write failed: approved, but still tagged.
+func (s *OverridesSuite) TestApprove_AlreadyApprovedStillTagged() {
+	s.exists()
+	s.stored(testKey, repository.ImageStatusApproved)
+	s.untagged()
+
+	already, untagged, err := s.overrides.Approve(s.T().Context(), testKey)
+	s.Require().NoError(err)
+	s.True(already)
+	s.True(untagged)
+}
+
+// The tag is left alone on an image that isn't rejected or approved.
 func (s *OverridesSuite) TestApprove_Pending() {
 	s.exists()
-	s.tags()
-	s.setStatus(repository.ImageStatusRejected, repository.ImageStatusApproved, nil, false)
 	s.stored(testKey, repository.ImageStatusPending)
 
 	_, _, err := s.overrides.Approve(s.T().Context(), testKey)
 	s.Require().ErrorContains(err, "is pending, not rejected")
 }
 
+// The tag is left alone on a file no item holds, so it still expires.
 func (s *OverridesSuite) TestApprove_Replaced() {
 	s.exists()
-	s.tags()
-	s.setStatus(repository.ImageStatusRejected, repository.ImageStatusApproved, nil, false)
 	s.stored("switches/alice/sw1/image/up2", repository.ImageStatusRejected)
+
+	_, _, err := s.overrides.Approve(s.T().Context(), testKey)
+	s.Require().ErrorIs(err, ErrNotCurrent)
+}
+
+// The image changed between the read and the conditional write.
+func (s *OverridesSuite) TestApprove_ChangedDuringUpdate() {
+	s.exists()
+	s.stored(testKey, repository.ImageStatusRejected)
+	s.untagged()
+	s.setStatus(repository.ImageStatusRejected, repository.ImageStatusApproved, nil, false)
+	s.stored("switches/alice/sw1/image/up2", repository.ImageStatusPending)
 
 	_, _, err := s.overrides.Approve(s.T().Context(), testKey)
 	s.Require().ErrorIs(err, ErrNotCurrent)
@@ -116,6 +138,7 @@ func (s *OverridesSuite) TestApprove_Replaced() {
 // rejected rather than approved and still expiring.
 func (s *OverridesSuite) TestApprove_UntagFails() {
 	s.exists()
+	s.stored(testKey, repository.ImageStatusRejected)
 	s.tags(tag("moderation", "rejected"))
 	s.s3.EXPECT().DeleteObjectTagging(mock.Anything, mock.Anything).Return(nil, errors.New("boom"))
 
@@ -125,6 +148,7 @@ func (s *OverridesSuite) TestApprove_UntagFails() {
 
 func (s *OverridesSuite) TestApprove_KeepsOtherTags() {
 	s.exists()
+	s.stored(testKey, repository.ImageStatusRejected)
 	s.tags(tag("team", "kbdb"), tag("moderation", "rejected"))
 	s.s3.EXPECT().PutObjectTagging(mock.Anything, mock.MatchedBy(func(in *s3.PutObjectTaggingInput) bool {
 		tags := in.Tagging.TagSet
@@ -159,6 +183,7 @@ func (s *OverridesSuite) TestApprove_FileExpiresLater() {
 	s.s3.EXPECT().HeadObject(mock.Anything, mock.Anything).Return(&s3.HeadObjectOutput{
 		Expiration: aws.String(`expiry-date="Wed, 14 Oct 2026 00:00:00 GMT", rule-id="expire-rejected-images"`),
 	}, nil)
+	s.stored(testKey, repository.ImageStatusRejected)
 	s.untagged()
 	s.setStatus(repository.ImageStatusRejected, repository.ImageStatusApproved, nil, true)
 
