@@ -100,17 +100,29 @@ func expiryDate(header string) (time.Time, bool) {
 
 var expiryDatePattern = regexp.MustCompile(`expiry-date="([^"]+)"`)
 
-// Reject takes down an approved image: it marks it rejected with reason.
-// Unlike the moderation function's rejections, it isn't tagged to expire:
-// the lifecycle rule counts from upload, so an older image would be
-// deleted within a day, before the takedown could be reviewed. already
-// reports an image already rejected, whose reason is left unchanged.
+// Reject takes down an approved image: it marks it rejected with reason
+// and tags it to expire like any other rejection. The lifecycle rule
+// counts from upload, so an older image is deleted at its next run: a
+// takedown is a decision already reviewed. already reports an image
+// already rejected, whose reason is left unchanged.
+//
+// The status is written before the tag, so a pending image is never
+// tagged; a failed tag is fixed by running Reject again. A file already
+// gone needs no tag.
 func (o *Overrides) Reject(ctx context.Context, key, reason string) (already bool, err error) {
 	ref, err := imagekey.Parse(key)
 	if err != nil {
 		return false, err
 	}
-	return o.override(ctx, ref, key, repository.ImageStatusApproved, repository.ImageStatusRejected, &reason)
+	already, err = o.override(ctx, ref, key, repository.ImageStatusApproved, repository.ImageStatusRejected, &reason)
+	if err != nil {
+		return false, err
+	}
+	err = tagRejected(ctx, o.s3, o.bucket, key)
+	if _, ok := errors.AsType[*s3types.NoSuchKey](err); ok {
+		return already, nil
+	}
+	return already, err
 }
 
 // untagRejected removes the rejected tag from key, keeping any others.

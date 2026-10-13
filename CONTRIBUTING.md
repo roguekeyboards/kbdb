@@ -82,7 +82,7 @@ mise run moderation-reject [env] <key> [reason]     # take down an approved imag
 
 `<key>` is the image's object key, as `moderation-rejections` prints it, or a link to the image: to take down an image reported on the site, copy its image address and pass that. A link's path is the key, so an expired link works too. Approve and reject are conditional writes: approve only acts on a rejected image, reject only on an approved one, and either fails if the item no longer holds that key. Running one again after it failed partway is safe. Approve refuses an image whose file has already expired.
 
-A manual reject doesn't tag the file to expire the way the moderation function's rejections do: the lifecycle rule counts from upload, so an older image would be deleted within a day. The file stays until it's approved again, or its owner deletes or replaces it. Download links the API handed out before the takedown keep working until they expire, within an hour; a presigned URL can't be revoked.
+A manual reject tags the file to expire like the moderation function's rejections, but the lifecycle rule counts from upload, so an image older than the expiry period is deleted at the rule's next nightly run: treat a takedown as final. Download links the API handed out before the takedown keep working until they expire, within an hour; a presigned URL can't be revoked.
 
 `moderation-rejections` reads the moderation function's decision logs, which are kept 60 days (so `--since` goes up to `60d`), and lists each key once. Manual rejections aren't logged there, so it doesn't list them.
 

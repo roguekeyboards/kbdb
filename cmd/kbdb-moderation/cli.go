@@ -30,7 +30,7 @@ type CLI struct {
 	Rejections RejectionsCmd `cmd:"" help:"List the moderation function's recent rejections. Manual rejections aren't listed."`
 	View       ViewCmd       `cmd:"" help:"Open an image in the browser, whatever its status."`
 	Approve    ApproveCmd    `cmd:"" help:"Override a rejection: mark the image approved and stop it expiring."`
-	Reject     RejectCmd     `cmd:"" help:"Take down an approved image: mark it rejected. Unlike the moderation function's rejections, the file is kept until it's approved again or its owner removes it."`
+	Reject     RejectCmd     `cmd:"" help:"Take down an approved image: mark it rejected and tag it to expire. The expiry counts from upload, so an older image is deleted within a day."`
 }
 
 // RejectionsCmd lists rejections from the moderation function's logs.
@@ -166,7 +166,7 @@ func (c *RejectCmd) Run(ctx context.Context, st *stack) error {
 		return err
 	}
 	if already {
-		fmt.Printf("%s was already rejected; its reason is unchanged.\n", key)
+		fmt.Printf("%s was already rejected; its reason is unchanged, and it's tagged to expire.\n", key)
 		return nil
 	}
 	fmt.Printf("Rejected %s (%s). Download links issued before now keep working until they expire, within an hour.\n", key, c.Reason)

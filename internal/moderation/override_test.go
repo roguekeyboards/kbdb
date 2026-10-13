@@ -62,6 +62,14 @@ func tag(k, v string) s3types.Tag {
 	return s3types.Tag{Key: aws.String(k), Value: aws.String(v)}
 }
 
+func (s *OverridesSuite) tagged() {
+	s.s3.EXPECT().PutObjectTagging(mock.Anything, mock.MatchedBy(func(in *s3.PutObjectTaggingInput) bool {
+		tags := in.Tagging.TagSet
+		return aws.ToString(in.Bucket) == testBucket && aws.ToString(in.Key) == testKey && len(tags) == 1 &&
+			aws.ToString(tags[0].Key) == "moderation" && aws.ToString(tags[0].Value) == "rejected"
+	})).Return(&s3.PutObjectTaggingOutput{}, nil)
+}
+
 func (s *OverridesSuite) untagged() {
 	s.tags(tag("moderation", "rejected"))
 	s.s3.EXPECT().DeleteObjectTagging(mock.Anything, mock.MatchedBy(func(in *s3.DeleteObjectTaggingInput) bool {
@@ -199,6 +207,7 @@ func (s *OverridesSuite) TestApprove_UnknownKey() {
 func (s *OverridesSuite) TestReject_Approved() {
 	reason := "manual"
 	s.setStatus(repository.ImageStatusApproved, repository.ImageStatusRejected, &reason, true)
+	s.tagged()
 
 	already, err := s.overrides.Reject(s.T().Context(), testKey, reason)
 	s.Require().NoError(err)
@@ -209,6 +218,7 @@ func (s *OverridesSuite) TestReject_AlreadyRejected() {
 	reason := "manual"
 	s.setStatus(repository.ImageStatusApproved, repository.ImageStatusRejected, &reason, false)
 	s.stored(testKey, repository.ImageStatusRejected)
+	s.tagged()
 
 	already, err := s.overrides.Reject(s.T().Context(), testKey, reason)
 	s.Require().NoError(err)
@@ -222,6 +232,24 @@ func (s *OverridesSuite) TestReject_Pending() {
 
 	_, err := s.overrides.Reject(s.T().Context(), testKey, reason)
 	s.Require().ErrorContains(err, "is pending, not approved")
+}
+
+func (s *OverridesSuite) TestReject_TagFails() {
+	reason := "manual"
+	s.setStatus(repository.ImageStatusApproved, repository.ImageStatusRejected, &reason, true)
+	s.s3.EXPECT().PutObjectTagging(mock.Anything, mock.Anything).Return(nil, errors.New("boom"))
+
+	_, err := s.overrides.Reject(s.T().Context(), testKey, reason)
+	s.Require().ErrorContains(err, "boom")
+}
+
+func (s *OverridesSuite) TestReject_FileGone() {
+	reason := "manual"
+	s.setStatus(repository.ImageStatusApproved, repository.ImageStatusRejected, &reason, true)
+	s.s3.EXPECT().PutObjectTagging(mock.Anything, mock.Anything).Return(nil, &s3types.NoSuchKey{})
+
+	_, err := s.overrides.Reject(s.T().Context(), testKey, reason)
+	s.Require().NoError(err)
 }
 
 func (s *OverridesSuite) TestReject_WriteFails() {
