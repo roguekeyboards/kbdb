@@ -8,7 +8,12 @@ import (
 	"image/jpeg"
 
 	"github.com/HugoSmits86/nativewebp"
+	"golang.org/x/image/webp"
 )
+
+// MaxUploadBytes is the API's cap on an uploaded image, and also
+// Rekognition's limit on an image sent as Bytes.
+const MaxUploadBytes = 5 << 20
 
 // TestImageBytes is the payload every spec PUTs to a presigned upload URL.
 // The URL is signed for the size_bytes declared when it was minted, so
@@ -70,6 +75,20 @@ func encodeWebP(img image.Image) []byte {
 		panic(err)
 	}
 	return buf.Bytes()
+}
+
+// FullSizeJPEGLen is how many bytes the WebP data comes to as a full-size
+// quality-90 JPEG, the moderation function's encoding before it shrinks.
+func FullSizeJPEGLen(data []byte) int {
+	img, err := webp.Decode(bytes.NewReader(data))
+	if err != nil {
+		panic(err)
+	}
+	var buf bytes.Buffer
+	if err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: 90}); err != nil {
+		panic(err)
+	}
+	return buf.Len()
 }
 
 // WebPUploadBody is an ImageUploadRequest JSON body sized for data.

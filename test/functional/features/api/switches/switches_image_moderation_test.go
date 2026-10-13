@@ -175,6 +175,8 @@ var _ = Describe("Moderating an uploaded switch image", func() {
 					Skip("only CI's real Rekognition refuses Bytes over 5 MiB; floci doesn't")
 				}
 				data = api.BusyWebP()
+				Expect(len(data)).To(BeNumerically("<=", api.MaxUploadBytes), "the WebP must fit the upload cap")
+				Expect(api.FullSizeJPEGLen(data)).To(BeNumerically(">", api.MaxUploadBytes), "only a shrunk JPEG may fit Rekognition's Bytes limit")
 				issueUpload(ctx, api.WebPUploadBody(data))
 			})
 
