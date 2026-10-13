@@ -26,11 +26,12 @@ import (
 // be moderated, as opposed to one a label rejected.
 const reasonUnprocessable = "unprocessable"
 
-// s3API is the subset of the S3 client the moderator uses.
+// s3API is the subset of the S3 client the moderator and Overrides use.
 type s3API interface {
 	HeadObject(ctx context.Context, in *s3.HeadObjectInput, opts ...func(*s3.Options)) (*s3.HeadObjectOutput, error)
 	GetObject(ctx context.Context, in *s3.GetObjectInput, opts ...func(*s3.Options)) (*s3.GetObjectOutput, error)
 	PutObjectTagging(ctx context.Context, in *s3.PutObjectTaggingInput, opts ...func(*s3.Options)) (*s3.PutObjectTaggingOutput, error)
+	DeleteObjectTagging(ctx context.Context, in *s3.DeleteObjectTaggingInput, opts ...func(*s3.Options)) (*s3.DeleteObjectTaggingOutput, error)
 }
 
 // rekognitionAPI is the subset of the Rekognition client the moderator
@@ -111,7 +112,7 @@ func (m *Moderator) moderate(ctx context.Context, bucket, key string) error {
 	// image still pending and tags it again rather than leaving it
 	// untagged.
 	if to == repository.ImageStatusRejected {
-		if err := m.tagRejected(ctx, bucket, key); err != nil {
+		if err := tagRejected(ctx, m.s3, bucket, key); err != nil {
 			return err
 		}
 	}
@@ -187,8 +188,8 @@ func permanent(err error) bool {
 
 // tagRejected marks the object for the bucket's lifecycle rule, which
 // expires rejected images.
-func (m *Moderator) tagRejected(ctx context.Context, bucket, key string) error {
-	_, err := m.s3.PutObjectTagging(ctx, &s3.PutObjectTaggingInput{
+func tagRejected(ctx context.Context, client s3API, bucket, key string) error {
+	_, err := client.PutObjectTagging(ctx, &s3.PutObjectTaggingInput{
 		Bucket: &bucket,
 		Key:    &key,
 		Tagging: &s3types.Tagging{TagSet: []s3types.Tag{

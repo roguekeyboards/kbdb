@@ -69,6 +69,19 @@ bin/kbdb-migrate verify --base-url <target base url> --in ./dump
 
 Restore always **creates new** items (new server-generated IDs), recording an old→new `id-map.json` in the dump directory; builds are restored last with their keyboard/switch/keycap-kit references remapped through that map, and a re-run resumes from wherever a failure stopped.
 
+## Reviewing moderation decisions (`kbdb-moderation`)
+
+There's no admin UI for image moderation. `cmd/kbdb-moderation` reviews and overrides decisions in one environment's stack, run through these tasks with an admin AWS profile (`AWS_PROFILE=kbdb-dev-admin`, etc.). `env` defaults to `dev-$(whoami)`, as for `deploy`.
+
+```sh
+mise run moderation-rejections [env] [--since 7d]   # recent rejections from the moderation function's logs
+mise run moderation-view [env] <key>                # open the image in a browser, even a rejected one
+mise run moderation-approve [env] <key>             # override a rejection; the image no longer expires
+mise run moderation-reject [env] <key> [reason]     # take down an approved image (reason defaults to "manual")
+```
+
+`<key>` is the image's object key, as `moderation-rejections` prints it. Approve and reject are conditional writes: approve only acts on a rejected image, reject only on an approved one, and either fails if the item no longer holds that key. Running one again after it failed partway is safe. `moderation-rejections` reads the moderation function's decision logs, which are kept 60 days. Manual rejections aren't logged there, so it doesn't list them.
+
 ## Deploying to AWS
 
 Each environment is a section in `samconfig.toml` — stack name, artifact bucket, ECR repo, region and every template parameter — deployed with three tasks:

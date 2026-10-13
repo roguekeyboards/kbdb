@@ -11,6 +11,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.20.9
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.21.11
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/expression v1.9.11
+	github.com/aws/aws-sdk-go-v2/service/cloudformation v1.82.1
+	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.89.3
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.70.3
 	github.com/aws/aws-sdk-go-v2/service/rekognition v1.60.3
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.114.3
