@@ -29,7 +29,7 @@ type CLI struct {
 	Rejections RejectionsCmd `cmd:"" help:"List the moderation function's recent rejections. Manual rejections aren't listed."`
 	View       ViewCmd       `cmd:"" help:"Open an image in the browser, whatever its status."`
 	Approve    ApproveCmd    `cmd:"" help:"Override a rejection: mark the image approved and stop it expiring."`
-	Reject     RejectCmd     `cmd:"" help:"Take down an approved image: mark it rejected and let it expire."`
+	Reject     RejectCmd     `cmd:"" help:"Take down an approved image: mark it rejected. Unlike the moderation function's rejections, the file is kept until it's approved again or its owner removes it."`
 }
 
 // RejectionsCmd lists rejections from the moderation function's logs.
@@ -140,7 +140,7 @@ func (c *RejectCmd) Run(ctx context.Context, st *stack) error {
 		return err
 	}
 	if already {
-		fmt.Printf("%s was already rejected, so its reason is unchanged; tagged it to expire.\n", c.Key)
+		fmt.Printf("%s was already rejected; its reason is unchanged.\n", c.Key)
 		return nil
 	}
 	fmt.Printf("Rejected %s (%s).\n", c.Key, c.Reason)

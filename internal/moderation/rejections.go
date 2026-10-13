@@ -50,7 +50,7 @@ type decisionLine struct {
 }
 
 // Rejections lists the rejections logged to logGroup since start, newest
-// first.
+// first, once per key: a retried event logs its decision again.
 func Rejections(ctx context.Context, client logsAPI, logGroup string, start time.Time) ([]Rejection, error) {
 	q, err := client.StartQuery(ctx, &cloudwatchlogs.StartQueryInput{
 		LogGroupNames: []string{logGroup},
@@ -85,6 +85,7 @@ func Rejections(ctx context.Context, client logsAPI, logGroup string, start time
 
 func parseRejections(results [][]logtypes.ResultField) ([]Rejection, error) {
 	out := make([]Rejection, 0, len(results))
+	seen := make(map[string]bool, len(results))
 	for _, row := range results {
 		for _, f := range row {
 			if aws.ToString(f.Field) != "@message" {
@@ -94,6 +95,10 @@ func parseRejections(results [][]logtypes.ResultField) ([]Rejection, error) {
 			if err := json.Unmarshal([]byte(aws.ToString(f.Value)), &line); err != nil {
 				return nil, fmt.Errorf("parsing a decision line: %w", err)
 			}
+			if seen[line.Key] {
+				continue
+			}
+			seen[line.Key] = true
 			r := Rejection{Time: line.Time, Key: line.Key, Reason: line.Reason}
 			for _, l := range line.Labels {
 				if l.Name == line.Reason {

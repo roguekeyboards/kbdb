@@ -23,26 +23,25 @@ type stack struct {
 }
 
 func resolveStack(ctx context.Context, cfg aws.Config, name string) (*stack, error) {
-	cfn := cloudformation.NewFromConfig(cfg)
-	ids := map[string]string{
-		"ImagesBucket":             "",
-		"ModerateFunctionLogGroup": "",
-		"SwitchTable":              "",
-		"KeyboardTable":            "",
-		"KeycapSetTable":           "",
-		"BuildTable":               "",
-		"ProfileTable":             "",
-		"ProfileUsernameTable":     "",
-	}
-	for logical := range ids {
-		out, err := cfn.DescribeStackResource(ctx, &cloudformation.DescribeStackResourceInput{
-			StackName:         &name,
-			LogicalResourceId: aws.String(logical),
-		})
+	ids := map[string]string{}
+	pages := cloudformation.NewListStackResourcesPaginator(cloudformation.NewFromConfig(cfg),
+		&cloudformation.ListStackResourcesInput{StackName: &name})
+	for pages.HasMorePages() {
+		page, err := pages.NextPage(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("looking up %s in stack %s: %w", logical, name, err)
+			return nil, fmt.Errorf("listing the resources of stack %s: %w", name, err)
 		}
-		ids[logical] = aws.ToString(out.StackResourceDetail.PhysicalResourceId)
+		for _, r := range page.StackResourceSummaries {
+			ids[aws.ToString(r.LogicalResourceId)] = aws.ToString(r.PhysicalResourceId)
+		}
+	}
+	for _, logical := range []string{
+		"ImagesBucket", "ModerateFunctionLogGroup", "SwitchTable", "KeyboardTable",
+		"KeycapSetTable", "BuildTable", "ProfileTable", "ProfileUsernameTable",
+	} {
+		if ids[logical] == "" {
+			return nil, fmt.Errorf("stack %s has no %s", name, logical)
+		}
 	}
 
 	db := dynamodb.NewFromConfig(cfg)

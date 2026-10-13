@@ -213,6 +213,89 @@ func (_c *MockS3API_GetObject_Call) RunAndReturn(run func(ctx context.Context, i
 	return _c
 }
 
+// GetObjectTagging provides a mock function for the type MockS3API
+func (_mock *MockS3API) GetObjectTagging(ctx context.Context, in *s3.GetObjectTaggingInput, opts ...func(*s3.Options)) (*s3.GetObjectTaggingOutput, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, in, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, in)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetObjectTagging")
+	}
+
+	var r0 *s3.GetObjectTaggingOutput
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *s3.GetObjectTaggingInput, ...func(*s3.Options)) (*s3.GetObjectTaggingOutput, error)); ok {
+		return returnFunc(ctx, in, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *s3.GetObjectTaggingInput, ...func(*s3.Options)) *s3.GetObjectTaggingOutput); ok {
+		r0 = returnFunc(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*s3.GetObjectTaggingOutput)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *s3.GetObjectTaggingInput, ...func(*s3.Options)) error); ok {
+		r1 = returnFunc(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockS3API_GetObjectTagging_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetObjectTagging'
+type MockS3API_GetObjectTagging_Call struct {
+	*mock.Call
+}
+
+// GetObjectTagging is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in *s3.GetObjectTaggingInput
+//   - opts ...func(*s3.Options)
+func (_e *MockS3API_Expecter) GetObjectTagging(ctx any, in any, opts ...any) *MockS3API_GetObjectTagging_Call {
+	return &MockS3API_GetObjectTagging_Call{Call: _e.mock.On("GetObjectTagging",
+		append([]any{ctx, in}, opts...)...)}
+}
+
+func (_c *MockS3API_GetObjectTagging_Call) Run(run func(ctx context.Context, in *s3.GetObjectTaggingInput, opts ...func(*s3.Options))) *MockS3API_GetObjectTagging_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *s3.GetObjectTaggingInput
+		if args[1] != nil {
+			arg1 = args[1].(*s3.GetObjectTaggingInput)
+		}
+		var arg2 []func(*s3.Options)
+		var variadicArgs []func(*s3.Options)
+		if len(args) > 2 {
+			variadicArgs = args[2].([]func(*s3.Options))
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockS3API_GetObjectTagging_Call) Return(getObjectTaggingOutput *s3.GetObjectTaggingOutput, err error) *MockS3API_GetObjectTagging_Call {
+	_c.Call.Return(getObjectTaggingOutput, err)
+	return _c
+}
+
+func (_c *MockS3API_GetObjectTagging_Call) RunAndReturn(run func(ctx context.Context, in *s3.GetObjectTaggingInput, opts ...func(*s3.Options)) (*s3.GetObjectTaggingOutput, error)) *MockS3API_GetObjectTagging_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // HeadObject provides a mock function for the type MockS3API
 func (_mock *MockS3API) HeadObject(ctx context.Context, in *s3.HeadObjectInput, opts ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
 	var tmpRet mock.Arguments

@@ -68,6 +68,21 @@ func (s *RejectionsSuite) TestParsesDecisionLines() {
 	}, rs)
 }
 
+func (s *RejectionsSuite) TestKeepsNewestPerKey() {
+	start := time.Now()
+	s.started(start)
+	s.results(logtypes.QueryStatusComplete,
+		row(`{"time":"2026-10-12T10:00:05Z","key":"profiles/bob/avatar/up2","reason":"unprocessable"}`),
+		row(`{"time":"2026-10-12T10:00:00Z","key":"profiles/bob/avatar/up2","reason":"unprocessable"}`),
+	)
+
+	rs, err := Rejections(s.T().Context(), s.logs, testLogGroup, start)
+	s.Require().NoError(err)
+	s.Equal([]Rejection{
+		{Time: time.Date(2026, 10, 12, 10, 0, 5, 0, time.UTC), Key: "profiles/bob/avatar/up2", Reason: "unprocessable"},
+	}, rs)
+}
+
 func (s *RejectionsSuite) TestQueryFailed() {
 	start := time.Now()
 	s.started(start)
