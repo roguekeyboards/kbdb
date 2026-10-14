@@ -82,3 +82,6 @@ packages:
       rekognitionAPI:
         config:
           structname: 'MockRekognitionAPI'
+      logsAPI:
+        config:
+          structname: 'MockLogsAPI'

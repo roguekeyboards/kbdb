@@ -72,3 +72,23 @@ file = "scripts/client-gen.sh"
 alias = "mb"
 description = "Build the kbdb-migrate dump/restore CLI into bin/ (not covered by sam build)"
 file = "scripts/migrate-build.sh"
+
+[tasks.moderation-rejections]
+description = "List moderation rejections awaiting review: mise run moderation-rejections [env] [--since Nd] [--all] (needs an admin AWS profile)"
+run = "scripts/moderation.sh rejections"
+
+[tasks.moderation-view]
+description = "Open an image in the browser, whatever its status: mise run moderation-view [env] <key> (needs an admin AWS profile)"
+run = "scripts/moderation.sh view"
+
+[tasks.moderation-uphold]
+description = "Record that a rejection was reviewed and stands: mise run moderation-uphold [env] <key> (needs an admin AWS profile)"
+run = "scripts/moderation.sh uphold"
+
+[tasks.moderation-approve]
+description = "Override a rejection: mise run moderation-approve [env] <key> (needs an admin AWS profile)"
+run = "scripts/moderation.sh approve"
+
+[tasks.moderation-reject]
+description = "Take down an approved image: mise run moderation-reject [env] <key> [reason] (needs an admin AWS profile)"
+run = "scripts/moderation.sh reject"

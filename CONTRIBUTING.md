@@ -69,6 +69,10 @@ bin/kbdb-migrate verify --base-url <target base url> --in ./dump
 
 Restore always **creates new** items (new server-generated IDs), recording an old→new `id-map.json` in the dump directory; builds are restored last with their keyboard/switch/keycap-kit references remapped through that map, and a re-run resumes from wherever a failure stopped.
 
+## Reviewing moderation decisions (`kbdb-moderation`)
+
+There's no admin UI for image moderation. `cmd/kbdb-moderation`, run through the `mise run moderation-*` tasks with an admin AWS profile, works the review queue, takes down reported images and undoes either decision. See [`docs/moderation.md`](docs/moderation.md) for how to use it.
+
 ## Deploying to AWS
 
 Each environment is a section in `samconfig.toml` — stack name, artifact bucket, ECR repo, region and every template parameter — deployed with three tasks:

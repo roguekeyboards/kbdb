@@ -26,11 +26,13 @@ import (
 // be moderated, as opposed to one a label rejected.
 const reasonUnprocessable = "unprocessable"
 
-// s3API is the subset of the S3 client the moderator uses.
+// s3API is the subset of the S3 client the moderator and Overrides use.
 type s3API interface {
 	HeadObject(ctx context.Context, in *s3.HeadObjectInput, opts ...func(*s3.Options)) (*s3.HeadObjectOutput, error)
 	GetObject(ctx context.Context, in *s3.GetObjectInput, opts ...func(*s3.Options)) (*s3.GetObjectOutput, error)
 	PutObjectTagging(ctx context.Context, in *s3.PutObjectTaggingInput, opts ...func(*s3.Options)) (*s3.PutObjectTaggingOutput, error)
+	GetObjectTagging(ctx context.Context, in *s3.GetObjectTaggingInput, opts ...func(*s3.Options)) (*s3.GetObjectTaggingOutput, error)
+	DeleteObjectTagging(ctx context.Context, in *s3.DeleteObjectTaggingInput, opts ...func(*s3.Options)) (*s3.DeleteObjectTaggingOutput, error)
 }
 
 // rekognitionAPI is the subset of the Rekognition client the moderator
@@ -185,6 +187,13 @@ func permanent(err error) bool {
 	return errors.As(err, &format) || errors.As(err, &tooLarge) || errors.As(err, &invalid)
 }
 
+// The tag the moderation function puts on a rejected image, which the
+// bucket's expire-rejected-images lifecycle rule in template.yaml filters on.
+const (
+	rejectedTagKey   = "moderation"
+	rejectedTagValue = "rejected"
+)
+
 // tagRejected marks the object for the bucket's lifecycle rule, which
 // expires rejected images.
 func (m *Moderator) tagRejected(ctx context.Context, bucket, key string) error {
@@ -192,7 +201,7 @@ func (m *Moderator) tagRejected(ctx context.Context, bucket, key string) error {
 		Bucket: &bucket,
 		Key:    &key,
 		Tagging: &s3types.Tagging{TagSet: []s3types.Tag{
-			{Key: aws.String("moderation"), Value: aws.String("rejected")},
+			{Key: aws.String(rejectedTagKey), Value: aws.String(rejectedTagValue)},
 		}},
 	})
 	if err != nil {
