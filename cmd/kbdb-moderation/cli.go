@@ -161,15 +161,20 @@ func (c *RejectCmd) Run(ctx context.Context, st *stack) error {
 	if err != nil {
 		return err
 	}
-	already, err := st.overrides().Reject(ctx, key, c.Reason)
+	already, gone, err := st.overrides().Reject(ctx, key, c.Reason)
 	if err != nil {
 		return err
 	}
-	if already {
+	switch {
+	case already && gone:
+		fmt.Printf("%s was already rejected, and its file is already gone.\n", key)
+	case already:
 		fmt.Printf("%s was already rejected; its reason is unchanged, and it's tagged to expire.\n", key)
-		return nil
+	case gone:
+		fmt.Printf("Rejected %s (%s). Its file is already gone.\n", key, c.Reason)
+	default:
+		fmt.Printf("Rejected %s (%s). Download links issued before now keep working until they expire, within an hour.\n", key, c.Reason)
 	}
-	fmt.Printf("Rejected %s (%s). Download links issued before now keep working until they expire, within an hour.\n", key, c.Reason)
 	return nil
 }
 

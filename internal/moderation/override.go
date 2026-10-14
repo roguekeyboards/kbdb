@@ -7,11 +7,13 @@ import (
 	"net/http"
 	"regexp"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/aws/smithy-go"
 
 	"github.com/rogueserenity/kbdb/internal/imagekey"
 	"github.com/rogueserenity/kbdb/internal/repository"
@@ -101,28 +103,57 @@ func expiryDate(header string) (time.Time, bool) {
 var expiryDatePattern = regexp.MustCompile(`expiry-date="([^"]+)"`)
 
 // Reject takes down an approved image: it marks it rejected with reason
-// and tags it to expire like any other rejection. The lifecycle rule
-// counts from upload, so an older image is deleted at its next run: a
-// takedown is a decision already reviewed. already reports an image
-// already rejected, whose reason is left unchanged.
+// and tags it to expire like any other rejection, keeping any other tags.
+// The lifecycle rule counts from upload, so an older image is deleted at
+// its next run: a takedown is a decision already reviewed. already reports
+// an image already rejected, whose reason is left unchanged, and gone a
+// file already deleted, which needs no tag.
 //
 // The status is written before the tag, so a pending image is never
-// tagged; a failed tag is fixed by running Reject again. A file already
-// gone needs no tag.
-func (o *Overrides) Reject(ctx context.Context, key, reason string) (already bool, err error) {
+// tagged; a failed tag is fixed by running Reject again.
+func (o *Overrides) Reject(ctx context.Context, key, reason string) (already, gone bool, err error) {
+	if strings.TrimSpace(reason) == "" {
+		return false, false, errors.New("a rejection reason can't be blank")
+	}
 	ref, err := imagekey.Parse(key)
 	if err != nil {
-		return false, err
+		return false, false, err
 	}
 	already, err = o.override(ctx, ref, key, repository.ImageStatusApproved, repository.ImageStatusRejected, &reason)
 	if err != nil {
-		return false, err
+		return false, false, err
 	}
-	err = tagRejected(ctx, o.s3, o.bucket, key)
-	if _, ok := errors.AsType[*s3types.NoSuchKey](err); ok {
-		return already, nil
+	gone, err = o.addRejectedTag(ctx, key)
+	return already, gone, err
+}
+
+// addRejectedTag adds the rejected tag to key's tags. gone reports that
+// the file no longer exists.
+func (o *Overrides) addRejectedTag(ctx context.Context, key string) (gone bool, err error) {
+	out, err := o.s3.GetObjectTagging(ctx, &s3.GetObjectTaggingInput{Bucket: &o.bucket, Key: &key})
+	if isNoSuchKey(err) {
+		return true, nil
 	}
-	return already, err
+	if err != nil {
+		return false, fmt.Errorf("reading %q's tags: %w", key, err)
+	}
+	tags := slices.DeleteFunc(slices.Clone(out.TagSet), func(t s3types.Tag) bool { return aws.ToString(t.Key) == rejectedTagKey })
+	tags = append(tags, s3types.Tag{Key: aws.String(rejectedTagKey), Value: aws.String(rejectedTagValue)})
+	_, err = o.s3.PutObjectTagging(ctx, &s3.PutObjectTaggingInput{Bucket: &o.bucket, Key: &key, Tagging: &s3types.Tagging{TagSet: tags}})
+	if isNoSuchKey(err) {
+		return true, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("tagging %q rejected: %w", key, err)
+	}
+	return false, nil
+}
+
+// isNoSuchKey reports S3's NoSuchKey, which the object tagging calls
+// return as a plain API error rather than *s3types.NoSuchKey.
+func isNoSuchKey(err error) bool {
+	apiErr, ok := errors.AsType[smithy.APIError](err)
+	return ok && apiErr.ErrorCode() == "NoSuchKey"
 }
 
 // untagRejected removes the rejected tag from key, keeping any others.

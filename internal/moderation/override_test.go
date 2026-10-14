@@ -2,12 +2,14 @@ package moderation
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/aws/smithy-go"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
@@ -207,22 +209,39 @@ func (s *OverridesSuite) TestApprove_UnknownKey() {
 func (s *OverridesSuite) TestReject_Approved() {
 	reason := "manual"
 	s.setStatus(repository.ImageStatusApproved, repository.ImageStatusRejected, &reason, true)
+	s.tags()
 	s.tagged()
 
-	already, err := s.overrides.Reject(s.T().Context(), testKey, reason)
+	already, gone, err := s.overrides.Reject(s.T().Context(), testKey, reason)
 	s.Require().NoError(err)
 	s.False(already)
+	s.False(gone)
 }
 
 func (s *OverridesSuite) TestReject_AlreadyRejected() {
 	reason := "manual"
 	s.setStatus(repository.ImageStatusApproved, repository.ImageStatusRejected, &reason, false)
 	s.stored(testKey, repository.ImageStatusRejected)
+	s.tags(tag("moderation", "rejected"))
 	s.tagged()
 
-	already, err := s.overrides.Reject(s.T().Context(), testKey, reason)
+	already, _, err := s.overrides.Reject(s.T().Context(), testKey, reason)
 	s.Require().NoError(err)
 	s.True(already)
+}
+
+func (s *OverridesSuite) TestReject_KeepsOtherTags() {
+	reason := "manual"
+	s.setStatus(repository.ImageStatusApproved, repository.ImageStatusRejected, &reason, true)
+	s.tags(tag("team", "kbdb"))
+	s.s3.EXPECT().PutObjectTagging(mock.Anything, mock.MatchedBy(func(in *s3.PutObjectTaggingInput) bool {
+		tags := in.Tagging.TagSet
+		return len(tags) == 2 && aws.ToString(tags[0].Key) == "team" &&
+			aws.ToString(tags[1].Key) == "moderation" && aws.ToString(tags[1].Value) == "rejected"
+	})).Return(&s3.PutObjectTaggingOutput{}, nil)
+
+	_, _, err := s.overrides.Reject(s.T().Context(), testKey, reason)
+	s.Require().NoError(err)
 }
 
 func (s *OverridesSuite) TestReject_Pending() {
@@ -230,26 +249,35 @@ func (s *OverridesSuite) TestReject_Pending() {
 	s.setStatus(repository.ImageStatusApproved, repository.ImageStatusRejected, &reason, false)
 	s.stored(testKey, repository.ImageStatusPending)
 
-	_, err := s.overrides.Reject(s.T().Context(), testKey, reason)
+	_, _, err := s.overrides.Reject(s.T().Context(), testKey, reason)
 	s.Require().ErrorContains(err, "is pending, not approved")
 }
 
 func (s *OverridesSuite) TestReject_TagFails() {
 	reason := "manual"
 	s.setStatus(repository.ImageStatusApproved, repository.ImageStatusRejected, &reason, true)
+	s.tags()
 	s.s3.EXPECT().PutObjectTagging(mock.Anything, mock.Anything).Return(nil, errors.New("boom"))
 
-	_, err := s.overrides.Reject(s.T().Context(), testKey, reason)
+	_, _, err := s.overrides.Reject(s.T().Context(), testKey, reason)
 	s.Require().ErrorContains(err, "boom")
 }
 
+// The SDK returns NoSuchKey from the tagging calls as a plain API error.
 func (s *OverridesSuite) TestReject_FileGone() {
 	reason := "manual"
 	s.setStatus(repository.ImageStatusApproved, repository.ImageStatusRejected, &reason, true)
-	s.s3.EXPECT().PutObjectTagging(mock.Anything, mock.Anything).Return(nil, &s3types.NoSuchKey{})
+	s.s3.EXPECT().GetObjectTagging(mock.Anything, mock.Anything).
+		Return(nil, fmt.Errorf("operation error S3: GetObjectTagging: %w", &smithy.GenericAPIError{Code: "NoSuchKey"}))
 
-	_, err := s.overrides.Reject(s.T().Context(), testKey, reason)
+	_, gone, err := s.overrides.Reject(s.T().Context(), testKey, reason)
 	s.Require().NoError(err)
+	s.True(gone)
+}
+
+func (s *OverridesSuite) TestReject_BlankReason() {
+	_, _, err := s.overrides.Reject(s.T().Context(), testKey, " ")
+	s.Require().ErrorContains(err, "can't be blank")
 }
 
 func (s *OverridesSuite) TestReject_WriteFails() {
@@ -257,6 +285,6 @@ func (s *OverridesSuite) TestReject_WriteFails() {
 	s.switches.EXPECT().SetImageStatus(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(false, errors.New("boom"))
 
-	_, err := s.overrides.Reject(s.T().Context(), testKey, reason)
+	_, _, err := s.overrides.Reject(s.T().Context(), testKey, reason)
 	s.Require().ErrorContains(err, "boom")
 }
