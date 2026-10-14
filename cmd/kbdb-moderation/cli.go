@@ -278,11 +278,13 @@ func (c *ResumeCmd) Run(ctx context.Context, st *stack) error {
 	if err != nil {
 		return fmt.Errorf("resuming %s: %w", st.function, err)
 	}
+	fmt.Print("Resumed.")
 	n, err := st.dlq().Count(ctx)
 	if err != nil {
+		fmt.Println()
 		return err
 	}
-	fmt.Printf("Resumed. The dead-letter queue holds %d event(s)", n)
+	fmt.Printf(" The dead-letter queue holds %d event(s)", n)
 	if n > 0 {
 		fmt.Print("; list them with moderation-dlq and rerun them with moderation-redrive")
 	}
