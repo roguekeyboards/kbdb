@@ -71,21 +71,7 @@ Restore always **creates new** items (new server-generated IDs), recording an ol
 
 ## Reviewing moderation decisions (`kbdb-moderation`)
 
-There's no admin UI for image moderation. `cmd/kbdb-moderation` reviews and overrides decisions in one environment's stack, run through these tasks with an admin AWS profile (`AWS_PROFILE=kbdb-dev-admin`, etc.). `env` defaults to `dev-$(whoami)`, as for `deploy`.
-
-```sh
-mise run moderation-rejections [env] [--since Nd]   # rejections awaiting review (--all: every rejection and takedown, and how it was reviewed)
-mise run moderation-view [env] <key>                # open the image in a browser, even a rejected one
-mise run moderation-uphold [env] <key>              # the rejection stands; takes it off the list
-mise run moderation-approve [env] <key>             # override a rejection; the image no longer expires
-mise run moderation-reject [env] <key> [reason]     # take down an approved image (reason defaults to "manual")
-```
-
-`<key>` is the image's object key, as `moderation-rejections` prints it, or a link to the image: to take down an image reported on the site, copy its image address and pass that. A link's path is the key, so an expired link works too. Approve and reject are conditional writes: approve only acts on a rejected image, reject only on an approved one, and either fails if the item no longer holds that key. Running one again after it failed partway is safe. Approve refuses an image whose file has already expired.
-
-A manual reject tags the file to expire like the moderation function's rejections, but the lifecycle rule counts from upload, so an image older than the expiry period is deleted at the rule's next nightly run: treat a takedown as final. Download links the API handed out before the takedown keep working until they expire, within an hour; a presigned URL can't be revoked.
-
-`moderation-rejections` is the review queue: work through it with `view`, then `uphold` or `approve`. Each of `uphold`, `approve` and `reject` writes a review line to the moderation function's log group (stream `operator-reviews`), and a rejection with a later review drops off the list, as does one whose image its owner has since deleted or replaced. Reject on an image that's already rejected changes and records nothing; use `uphold` for a rejection awaiting review. (The exception is a takedown interrupted before its file was tagged: rerunning it tags the file and records it.) `--all` lists every rejection and takedown in the window, with its latest review, which is also the record of what was decided and when. `--since` defaults to the stack's `RejectedImageExpirationDays` plus a day, covering every rejected file not yet deleted. The logs are kept 60 days (so `--since` goes up to `60d`), longer than any rejected file, which expires after 30 by default. If recording a review fails after the action succeeded, the action stands; run the same command again to record it, except for a takedown whose file was already tagged: that one is missing from `--all`.
+There's no admin UI for image moderation. `cmd/kbdb-moderation`, run through the `mise run moderation-*` tasks with an admin AWS profile, works the review queue, takes down reported images and undoes either decision. See [`docs/moderation.md`](docs/moderation.md) for how to use it.
 
 ## Deploying to AWS
 
