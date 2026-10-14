@@ -53,17 +53,17 @@ mise run migrate-build          # -> bin/kbdb-migrate
 bin/kbdb-migrate login --issuer https://auth.jay.mykeebs.dev
 
 # 2. Dump.
-bin/kbdb-migrate dump --base-url https://api.jay.mykeebs.dev --out ./dump
+bin/kbdb-migrate dump --issuer https://auth.jay.mykeebs.dev --base-url https://api.jay.mykeebs.dev --out ./dump
 
 # 3. Get a token for the TARGET (may be a different account/environment), then restore.
 bin/kbdb-migrate login --issuer <target issuer>
-bin/kbdb-migrate restore --base-url <target base url> --in ./dump
+bin/kbdb-migrate restore --issuer <target issuer> --base-url <target base url> --in ./dump
 
 # 4. Check the restore against the dump.
-bin/kbdb-migrate verify --base-url <target base url> --in ./dump
+bin/kbdb-migrate verify --issuer <target issuer> --base-url <target base url> --in ./dump
 ```
 
-`login` runs a standard OAuth 2.0 authorization-code + PKCE flow and binds a **fixed** localhost port (`8765`) for the redirect, because IdP redirect URIs are exact-match. For a **dev** Stytch project this is already provisioned (redirect `http://localhost:8765/authorize.html`, SDK domain `http://localhost:8765`, and dynamic client registration is enabled so no client ID is needed). For a **prod** (Stytch Live) project, someone must first add that redirect URI and SDK domain in the Stytch dashboard and provision an OAuth client, then pass `--client-id` (or set `KBDB_OIDC_CLIENT_ID`). The token is cached under `~/.config/kbdb-migrate/` keyed by issuer host; `dump`/`restore`/`verify` also accept `--token` / `KBDB_AUTH_TOKEN` directly.
+`login` runs a standard OAuth 2.0 authorization-code + PKCE flow and binds a **fixed** localhost port (`8765`) for the redirect, because IdP redirect URIs are exact-match. For a **dev** Stytch project this is already provisioned (redirect `http://localhost:8765/authorize.html`, SDK domain `http://localhost:8765`, and dynamic client registration is enabled so no client ID is needed). For a **prod** (Stytch Live) project, someone must first add that redirect URI and SDK domain in the Stytch dashboard and provision an OAuth client, then pass `--client-id` (or set `KBDB_OIDC_CLIENT_ID`). The token is cached under `~/.config/kbdb-migrate/` keyed by issuer host; `dump`/`restore`/`verify` find that cached token only through `--issuer` (or `KBDB_OIDC_ISSUER_BASE_URL`), or take one directly with `--token` / `KBDB_AUTH_TOKEN`.
 
 **Moving data between two accounts on the same issuer** (step 1 and step 3 are different people): the second `login` opens the browser with the first account's IdP session still live, so it lands on the consent screen already "Signed in" as the wrong account. Click **"Not you? Use a different account"** on that page to drop the session and sign in as the target account.
 
