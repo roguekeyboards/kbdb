@@ -70,9 +70,9 @@ func main() {
 	s3Client := s3.NewFromConfig(awsCfg, func(o *s3.Options) {
 		if cfg.S3EndpointURL != "" {
 			o.BaseEndpoint = &cfg.S3EndpointURL
-			// LocalStack needs path-style addressing (bucket.s3.amazonaws.com
-			// virtual-hosted-style doesn't resolve against a non-AWS
-			// endpoint); real S3 doesn't.
+			// A local emulator needs path-style addressing
+			// (bucket.s3.amazonaws.com virtual-hosted-style doesn't resolve
+			// against a non-AWS endpoint); real S3 doesn't.
 			o.UsePathStyle = true
 		}
 	})

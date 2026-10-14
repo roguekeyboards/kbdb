@@ -128,7 +128,7 @@ var _ = Describe("Deleting a keycap set", func() {
 					Expect(err).NotTo(HaveOccurred())
 					// Real S3 returns 403 (not 404) for GetObject against a
 					// missing key when the caller lacks s3:ListBucket;
-					// LocalStack returns 404.
+					// floci returns 404.
 					Expect(getImageResp.StatusCode).To(BeElementOf(http.StatusNotFound, http.StatusForbidden))
 				})
 			})

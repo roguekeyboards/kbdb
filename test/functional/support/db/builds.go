@@ -127,7 +127,7 @@ func SeedBuildWithParts(ctx context.Context, ownerID, id, keyboardID, visibility
 // shared, long-lived table CI deploys per PR (see .github/workflows/ci.yml
 // - that stack persists across every push until the PR closes, so leftover
 // rows aren't cleaned up by a fresh-container teardown the way a local
-// LocalStack run's would be).
+// floci run's would be).
 func DeleteBuild(ctx context.Context, ownerID, id, keyboardID string) error {
 	table := NewDynamoTable(ctx, support.BuildTableName())
 

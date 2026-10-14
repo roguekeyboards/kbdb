@@ -200,9 +200,7 @@ Resources:
   # partition key, id the sort key - every real access pattern is scoped to
   # an already-known user_id (see README's DynamoDB rationale), so no GSI is
   # needed; visibility filtering happens as a Query filter expression, not
-  # an index. scripts/func-setup.sh hand-creates an equivalent table against
-  # LocalStack (sam local start-api doesn't run a real CloudFormation
-  # deploy) - keep that script's schema in sync with this resource.
+  # an index.
   SwitchTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -219,8 +217,6 @@ Resources:
           KeyType: RANGE
 
   # User-owned keyboards. Same key schema/rationale as SwitchTable above.
-  # scripts/func-setup.sh hand-creates an equivalent table against
-  # LocalStack - keep that script's schema in sync with this resource.
   KeyboardTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -237,8 +233,6 @@ Resources:
           KeyType: RANGE
 
   # User-owned keycap sets. Same key schema/rationale as SwitchTable above.
-  # scripts/func-setup.sh hand-creates an equivalent table against
-  # LocalStack - keep that script's schema in sync with this resource.
   KeycapSetTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -262,8 +256,6 @@ Resources:
   # Keyboard/Switch/KeycapKit reference, distinguished by a "REF#..." id
   # rather than a real build id) alongside real Build items, so the GSI has
   # something to index - see internal/repository/dynamo/build_ref.go.
-  # scripts/func-setup.sh hand-creates an equivalent table+index against
-  # LocalStack - keep that script's schema in sync with this resource.
   BuildTable:
     Type: AWS::DynamoDB::Table
     Properties:
