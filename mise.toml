@@ -74,7 +74,7 @@ description = "Build the kbdb-migrate dump/restore CLI into bin/ (not covered by
 file = "scripts/migrate-build.sh"
 
 [tasks.moderation-rejections]
-description = "List moderation rejections awaiting review: mise run moderation-rejections [env] [--since 30d] [--all] (needs an admin AWS profile)"
+description = "List moderation rejections awaiting review: mise run moderation-rejections [env] [--since Nd] [--all] (needs an admin AWS profile)"
 run = "scripts/moderation.sh rejections"
 
 [tasks.moderation-view]

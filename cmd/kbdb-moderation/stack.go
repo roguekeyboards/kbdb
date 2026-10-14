@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
@@ -21,11 +22,20 @@ type stack struct {
 	bucket   string
 	logGroup string
 	images   *moderation.Images
+
+	// expiryDays is the stack's RejectedImageExpirationDays.
+	expiryDays int
 }
 
 func resolveStack(ctx context.Context, cfg aws.Config, name string) (*stack, error) {
+	cfn := cloudformation.NewFromConfig(cfg)
+	expiryDays, err := expiryDays(ctx, cfn, name)
+	if err != nil {
+		return nil, err
+	}
+
 	ids := map[string]string{}
-	pages := cloudformation.NewListStackResourcesPaginator(cloudformation.NewFromConfig(cfg),
+	pages := cloudformation.NewListStackResourcesPaginator(cfn,
 		&cloudformation.ListStackResourcesInput{StackName: &name})
 	for pages.HasMorePages() {
 		page, err := pages.NextPage(ctx)
@@ -47,9 +57,10 @@ func resolveStack(ctx context.Context, cfg aws.Config, name string) (*stack, err
 
 	db := dynamodb.NewFromConfig(cfg)
 	return &stack{
-		cfg:      cfg,
-		bucket:   ids["ImagesBucket"],
-		logGroup: ids["ModerateFunctionLogGroup"],
+		cfg:        cfg,
+		expiryDays: expiryDays,
+		bucket:     ids["ImagesBucket"],
+		logGroup:   ids["ModerateFunctionLogGroup"],
 		images: &moderation.Images{
 			Keyboards:  dynamo.NewKeyboardRepository(db, ids["KeyboardTable"]),
 			Builds:     dynamo.NewBuildRepository(db, ids["BuildTable"]),
@@ -58,6 +69,24 @@ func resolveStack(ctx context.Context, cfg aws.Config, name string) (*stack, err
 			Profiles:   dynamo.NewProfileRepository(db, ids["ProfileTable"], ids["ProfileUsernameTable"]),
 		},
 	}, nil
+}
+
+// expiryDays reads the stack's RejectedImageExpirationDays parameter.
+func expiryDays(ctx context.Context, cfn *cloudformation.Client, name string) (int, error) {
+	out, err := cfn.DescribeStacks(ctx, &cloudformation.DescribeStacksInput{StackName: &name})
+	if err != nil {
+		return 0, fmt.Errorf("describing stack %s: %w", name, err)
+	}
+	for _, p := range out.Stacks[0].Parameters {
+		if aws.ToString(p.ParameterKey) == "RejectedImageExpirationDays" {
+			days, err := strconv.Atoi(aws.ToString(p.ParameterValue))
+			if err != nil {
+				return 0, fmt.Errorf("stack %s's RejectedImageExpirationDays: %w", name, err)
+			}
+			return days, nil
+		}
+	}
+	return 0, fmt.Errorf("stack %s has no RejectedImageExpirationDays parameter", name)
 }
 
 func (st *stack) overrides() *moderation.Overrides {

@@ -58,3 +58,8 @@ func (s *CLISuite) TestKeyArg_InvalidLink() {
 	_, err := keyArg("https://bad host/x", "bucket")
 	s.Require().ErrorContains(err, "invalid image link")
 }
+
+func (s *CLISuite) TestDefaultSince() {
+	s.Equal("31d", defaultSince(30))
+	s.Equal("60d", defaultSince(90))
+}

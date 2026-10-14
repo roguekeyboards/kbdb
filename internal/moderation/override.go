@@ -128,11 +128,14 @@ var expiryDatePattern = regexp.MustCompile(`expiry-date="([^"]+)"`)
 // its next run: a takedown is a decision already reviewed. gone reports a
 // file already deleted, which needs no tag.
 //
-// already reports an image that was already rejected: its reason is left
-// as it was and no review is recorded, so a rejection awaiting review
-// isn't cleared by mistake (Uphold is for that). The status is written
-// before the tag, so a pending image is never tagged, and a failed tag is
-// fixed by running Reject again; a failed review record is not.
+// The status is written before the tag, so a pending image is never
+// tagged. An already rejected image that still lacks the tag can only be
+// a takedown interrupted before tagging, since the moderation function
+// tags before it writes, so the rerun tags it and records the takedown,
+// completing it. already reports one that was rejected and tagged: a
+// rejection awaiting review, or a finished takedown. Its reason is left as
+// it was and nothing is recorded, so a queued rejection isn't cleared by
+// mistake (Uphold is for that).
 func (o *Overrides) Reject(ctx context.Context, key, reason string) (already, gone bool, err error) {
 	if strings.TrimSpace(reason) == "" {
 		return false, false, errors.New("a rejection reason can't be blank")
@@ -145,35 +148,42 @@ func (o *Overrides) Reject(ctx context.Context, key, reason string) (already, go
 	if err != nil {
 		return false, false, err
 	}
-	if gone, err = o.addRejectedTag(ctx, key); err != nil {
+	added, gone, err := o.addRejectedTag(ctx, key)
+	if err != nil {
 		return false, false, err
 	}
-	if already {
+	if already && !added {
 		return true, gone, nil
 	}
 	return false, gone, o.reviews.Record(ctx, key, ActionRejected, reason)
 }
 
-// addRejectedTag adds the rejected tag to key's tags. gone reports that
-// the file no longer exists.
-func (o *Overrides) addRejectedTag(ctx context.Context, key string) (gone bool, err error) {
+// addRejectedTag adds the rejected tag to key's tags. added reports that
+// it wasn't there already, gone that the file no longer exists.
+func (o *Overrides) addRejectedTag(ctx context.Context, key string) (added, gone bool, err error) {
 	out, err := o.s3.GetObjectTagging(ctx, &s3.GetObjectTaggingInput{Bucket: &o.bucket, Key: &key})
 	if isNoSuchKey(err) {
-		return true, nil
+		return false, true, nil
 	}
 	if err != nil {
-		return false, fmt.Errorf("reading %q's tags: %w", key, err)
+		return false, false, fmt.Errorf("reading %q's tags: %w", key, err)
 	}
-	tags := slices.DeleteFunc(slices.Clone(out.TagSet), func(t s3types.Tag) bool { return aws.ToString(t.Key) == rejectedTagKey })
+	tags := slices.DeleteFunc(slices.Clone(out.TagSet), func(t s3types.Tag) bool {
+		return aws.ToString(t.Key) == rejectedTagKey && aws.ToString(t.Value) == rejectedTagValue
+	})
+	if len(tags) < len(out.TagSet) {
+		return false, false, nil
+	}
+	tags = slices.DeleteFunc(tags, func(t s3types.Tag) bool { return aws.ToString(t.Key) == rejectedTagKey })
 	tags = append(tags, s3types.Tag{Key: aws.String(rejectedTagKey), Value: aws.String(rejectedTagValue)})
 	_, err = o.s3.PutObjectTagging(ctx, &s3.PutObjectTaggingInput{Bucket: &o.bucket, Key: &key, Tagging: &s3types.Tagging{TagSet: tags}})
 	if isNoSuchKey(err) {
-		return true, nil
+		return false, true, nil
 	}
 	if err != nil {
-		return false, fmt.Errorf("tagging %q rejected: %w", key, err)
+		return false, false, fmt.Errorf("tagging %q rejected: %w", key, err)
 	}
-	return false, nil
+	return true, false, nil
 }
 
 // isNoSuchKey reports S3's NoSuchKey, which the object tagging calls

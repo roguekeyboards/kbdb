@@ -298,11 +298,25 @@ func (s *OverridesSuite) TestReject_AlreadyRejected() {
 	s.setStatus(repository.ImageStatusApproved, repository.ImageStatusRejected, &reason, false)
 	s.stored(testKey, repository.ImageStatusRejected)
 	s.tags(tag("moderation", "rejected"))
-	s.tagged()
 
 	already, _, err := s.overrides.Reject(s.T().Context(), testKey, reason)
 	s.Require().NoError(err)
 	s.True(already)
+}
+
+// A rerun of a takedown whose tag write failed: rejected but untagged.
+// It's tagged now and the takedown recorded, completing it.
+func (s *OverridesSuite) TestReject_InterruptedTakedown() {
+	reason := "manual"
+	s.setStatus(repository.ImageStatusApproved, repository.ImageStatusRejected, &reason, false)
+	s.stored(testKey, repository.ImageStatusRejected)
+	s.tags()
+	s.tagged()
+	s.recorded(ActionRejected, "manual")
+
+	already, _, err := s.overrides.Reject(s.T().Context(), testKey, reason)
+	s.Require().NoError(err)
+	s.False(already)
 }
 
 func (s *OverridesSuite) TestReject_KeepsOtherTags() {

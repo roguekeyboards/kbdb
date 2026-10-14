@@ -36,11 +36,14 @@ type CLI struct {
 
 // RejectionsCmd lists rejections from the moderation function's logs.
 type RejectionsCmd struct {
-	Since string `default:"30d" help:"How far back to look: a number of days (7d) or a Go duration (12h). The default covers every rejected file not yet expired."`
+	Since string `help:"How far back to look: a number of days (7d) or a Go duration (12h). Defaults to the stack's RejectedImageExpirationDays plus a day, which covers every rejected file not yet deleted."`
 	All   bool   `help:"Also list reviewed rejections and takedowns, with how each was reviewed."`
 }
 
 func (c *RejectionsCmd) Run(ctx context.Context, st *stack) error {
+	if c.Since == "" {
+		c.Since = defaultSince(st.expiryDays)
+	}
 	since, err := parseSince(c.Since)
 	if err != nil {
 		return err
@@ -94,6 +97,8 @@ func reviewColumn(r moderation.Rejection) string {
 		return "takedown"
 	case r.Manual:
 		return "takedown, then " + r.Review.Action + " " + r.Review.Time.Local().Format(time.DateTime)
+	case r.Review.Action == moderation.ActionRejected:
+		return "takedown (" + r.Review.Reason + ") " + r.Review.Time.Local().Format(time.DateTime)
 	}
 	return r.Review.Action + " " + r.Review.Time.Local().Format(time.DateTime)
 }
@@ -101,6 +106,13 @@ func reviewColumn(r moderation.Rejection) string {
 // logRetention is ModerateFunctionLogGroup's RetentionInDays in
 // template.yaml: --since can't usefully reach further back.
 const logRetention = 60 * 24 * time.Hour
+
+// defaultSince covers every rejected file not yet deleted: the lifecycle
+// rule deletes at the first midnight UTC after expiryDays, so a file can
+// outlive that by up to a day. It's capped at logRetention.
+func defaultSince(expiryDays int) string {
+	return fmt.Sprintf("%dd", min(expiryDays+1, int(logRetention/(24*time.Hour))))
+}
 
 // parseSince reads a --since value: whole days as "7d", or anything
 // time.ParseDuration accepts, up to logRetention.
