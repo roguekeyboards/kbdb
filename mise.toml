@@ -92,3 +92,19 @@ run = "scripts/moderation.sh approve"
 [tasks.moderation-reject]
 description = "Take down an approved image: mise run moderation-reject [env] <key> [reason] (needs an admin AWS profile)"
 run = "scripts/moderation.sh reject"
+
+[tasks.moderation-pause]
+description = "Stop moderating new uploads (they stay pending): mise run moderation-pause [env] (needs an admin AWS profile)"
+run = "scripts/moderation.sh pause"
+
+[tasks.moderation-resume]
+description = "Start moderating again and report the dead-letter queue's size: mise run moderation-resume [env] (needs an admin AWS profile)"
+run = "scripts/moderation.sh resume"
+
+[tasks.moderation-dlq]
+description = "List events the moderation function failed on, without removing them: mise run moderation-dlq [env] (needs an admin AWS profile)"
+run = "scripts/moderation.sh dlq"
+
+[tasks.moderation-redrive]
+description = "Rerun failed moderation events: mise run moderation-redrive [env] [--key K] (needs an admin AWS profile)"
+run = "scripts/moderation.sh redrive"

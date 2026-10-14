@@ -85,3 +85,9 @@ packages:
       logsAPI:
         config:
           structname: 'MockLogsAPI'
+      sqsAPI:
+        config:
+          structname: 'MockSQSAPI'
+      lambdaAPI:
+        config:
+          structname: 'MockLambdaAPI'

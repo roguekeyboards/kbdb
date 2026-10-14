@@ -9,7 +9,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/lambda"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
 
 	"github.com/rogueserenity/kbdb/internal/moderation"
 	"github.com/rogueserenity/kbdb/internal/repository/dynamo"
@@ -21,6 +23,8 @@ type stack struct {
 	cfg      aws.Config
 	bucket   string
 	logGroup string
+	function string
+	dlqURL   string
 	images   *moderation.Images
 
 	// expiryDays is the stack's RejectedImageExpirationDays.
@@ -49,6 +53,7 @@ func resolveStack(ctx context.Context, cfg aws.Config, name string) (*stack, err
 	for _, logical := range []string{
 		"ImagesBucket", "ModerateFunctionLogGroup", "SwitchTable", "KeyboardTable",
 		"KeycapSetTable", "BuildTable", "ProfileTable", "ProfileUsernameTable",
+		"ModerateFunction", "ModerationDLQ",
 	} {
 		if ids[logical] == "" {
 			return nil, fmt.Errorf("stack %s has no %s", name, logical)
@@ -61,6 +66,8 @@ func resolveStack(ctx context.Context, cfg aws.Config, name string) (*stack, err
 		expiryDays: expiryDays,
 		bucket:     ids["ImagesBucket"],
 		logGroup:   ids["ModerateFunctionLogGroup"],
+		function:   ids["ModerateFunction"],
+		dlqURL:     ids["ModerationDLQ"],
 		images: &moderation.Images{
 			Keyboards:  dynamo.NewKeyboardRepository(db, ids["KeyboardTable"]),
 			Builds:     dynamo.NewBuildRepository(db, ids["BuildTable"]),
@@ -87,6 +94,10 @@ func expiryDays(ctx context.Context, cfn *cloudformation.Client, name string) (i
 		}
 	}
 	return 0, fmt.Errorf("stack %s has no RejectedImageExpirationDays parameter", name)
+}
+
+func (st *stack) dlq() *moderation.DLQ {
+	return moderation.NewDLQ(sqs.NewFromConfig(st.cfg), lambda.NewFromConfig(st.cfg), st.dlqURL, st.function)
 }
 
 func (st *stack) overrides() *moderation.Overrides {

@@ -14,8 +14,10 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/cloudformation v1.82.1
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.89.3
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.70.3
+	github.com/aws/aws-sdk-go-v2/service/lambda v1.112.2
 	github.com/aws/aws-sdk-go-v2/service/rekognition v1.60.3
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.114.3
+	github.com/aws/aws-sdk-go-v2/service/sqs v1.52.4
 	github.com/aws/aws-sdk-go-v2/service/sts v1.51.4
 	github.com/aws/smithy-go v1.28.5
 	github.com/coreos/go-oidc/v3 v3.21.0

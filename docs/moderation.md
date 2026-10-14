@@ -101,4 +101,27 @@ A few messages that look like errors but aren't:
 | `no item holds this image` | the owner deleted or replaced it, or the key or link is for another environment |
 | `… is pending, not rejected` | the moderation function hasn't decided yet; try again in a minute |
 
-If an image is stuck as pending for more than a few minutes, the moderation function failed on it; see the dead-letter queue tasks in #500.
+If an image is stuck as pending for more than a few minutes, the moderation function failed on it; see [Failed images](#failed-images).
+
+## Pausing moderation
+
+```sh
+mise run moderation-pause [env]    # stop moderating; new uploads stay pending
+mise run moderation-resume [env]   # start again; also reports how many events failed
+```
+
+Pause if moderation misbehaves or costs more than it should. While paused, uploads still succeed but stay pending: the owner sees them with the "pending review" badge, nobody else sees them, and the daily upload limit still applies. S3 keeps retrying each upload's event for up to 6 hours, so after a pause shorter than that everything catches up by itself once you resume. Events older than that land in the dead-letter queue. A deploy doesn't undo a pause.
+
+## Failed images
+
+When the moderation function fails on an image three times in a row (or the image waited out a pause longer than 6 hours), Lambda gives up and puts the event in the moderation **dead-letter queue**. The image stays pending until you rerun it. The queue keeps events for 14 days.
+
+```sh
+mise run moderation-dlq [env]                  # list what failed, and why
+mise run moderation-redrive [env]              # rerun all of them
+mise run moderation-redrive [env] --key <key>  # rerun one image
+```
+
+`moderation-dlq` shows each event's time, why Lambda gave up (`RetriesExhausted` or `EventAgeExceeded`), how many attempts it made, the image key and the last error. Listing doesn't remove anything.
+
+`moderation-redrive` runs the moderation function on each event and removes it from the queue once it succeeds. It stops at the first one that fails again, and leaves that one and the rest queued, so fix the cause (the error column says what it was) before trying again. Redriving is always safe: an image that's no longer pending (deleted, replaced, or already decided) is skipped without calling Rekognition. A redrive does nothing while moderation is paused, so resume first.
