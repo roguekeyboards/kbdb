@@ -116,7 +116,6 @@ func (s *OverridesSuite) TestApprove_AlreadyApprovedStillTagged() {
 
 // The tag is left alone on an image that isn't rejected or approved.
 func (s *OverridesSuite) TestApprove_Pending() {
-	s.exists()
 	s.stored(testKey, repository.ImageStatusPending)
 
 	_, _, err := s.overrides.Approve(s.T().Context(), testKey)
@@ -125,7 +124,6 @@ func (s *OverridesSuite) TestApprove_Pending() {
 
 // The tag is left alone on a file no item holds, so it still expires.
 func (s *OverridesSuite) TestApprove_Replaced() {
-	s.exists()
 	s.stored("switches/alice/sw1/image/up2", repository.ImageStatusRejected)
 
 	_, _, err := s.overrides.Approve(s.T().Context(), testKey)
@@ -172,6 +170,7 @@ func (s *OverridesSuite) TestApprove_KeepsOtherTags() {
 }
 
 func (s *OverridesSuite) TestApprove_FileDeleted() {
+	s.stored(testKey, repository.ImageStatusRejected)
 	s.s3.EXPECT().HeadObject(mock.Anything, mock.Anything).Return(nil, &s3types.NotFound{})
 
 	_, _, err := s.overrides.Approve(s.T().Context(), testKey)
@@ -180,6 +179,7 @@ func (s *OverridesSuite) TestApprove_FileDeleted() {
 
 func (s *OverridesSuite) TestApprove_FilePastExpiry() {
 	s.overrides.now = func() time.Time { return time.Date(2026, 10, 13, 12, 0, 0, 0, time.UTC) }
+	s.stored(testKey, repository.ImageStatusRejected)
 	s.s3.EXPECT().HeadObject(mock.Anything, mock.Anything).Return(&s3.HeadObjectOutput{
 		Expiration: aws.String(`expiry-date="Tue, 13 Oct 2026 00:00:00 GMT", rule-id="expire-rejected-images"`),
 	}, nil)
@@ -190,15 +190,36 @@ func (s *OverridesSuite) TestApprove_FilePastExpiry() {
 
 func (s *OverridesSuite) TestApprove_FileExpiresLater() {
 	s.overrides.now = func() time.Time { return time.Date(2026, 10, 13, 12, 0, 0, 0, time.UTC) }
+	s.stored(testKey, repository.ImageStatusRejected)
 	s.s3.EXPECT().HeadObject(mock.Anything, mock.Anything).Return(&s3.HeadObjectOutput{
 		Expiration: aws.String(`expiry-date="Wed, 14 Oct 2026 00:00:00 GMT", rule-id="expire-rejected-images"`),
 	}, nil)
-	s.stored(testKey, repository.ImageStatusRejected)
 	s.untagged()
 	s.setStatus(repository.ImageStatusRejected, repository.ImageStatusApproved, nil, true)
 
 	_, _, err := s.overrides.Approve(s.T().Context(), testKey)
 	s.Require().NoError(err)
+}
+
+// A key no item holds is reported as not current, whether or not a file
+// exists for it.
+func (s *OverridesSuite) TestApprove_NoItemNoFile() {
+	s.switches.EXPECT().Get(mock.Anything, "alice", "sw1").Return(nil, repository.ErrNotFound)
+
+	_, _, err := s.overrides.Approve(s.T().Context(), testKey)
+	s.Require().ErrorIs(err, ErrNotCurrent)
+}
+
+// The lifecycle rule deleted the file between the metadata read and the
+// tag read.
+func (s *OverridesSuite) TestApprove_FileDeletedMidRun() {
+	s.exists()
+	s.stored(testKey, repository.ImageStatusRejected)
+	s.s3.EXPECT().GetObjectTagging(mock.Anything, mock.Anything).
+		Return(nil, fmt.Errorf("operation error S3: GetObjectTagging: %w", &smithy.GenericAPIError{Code: "NoSuchKey"}))
+
+	_, _, err := s.overrides.Approve(s.T().Context(), testKey)
+	s.Require().ErrorIs(err, ErrImageGone)
 }
 
 func (s *OverridesSuite) TestApprove_UnknownKey() {

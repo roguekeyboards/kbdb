@@ -43,8 +43,9 @@ func NewOverrides(s3Client *s3.Client, images *Images, bucket string) *Overrides
 // expire it. already reports an image that was already approved, and
 // untagged whether a tag was removed.
 //
-// The status is read first, so the tag stays on a file that isn't a
-// current rejected or approved image. The tag then goes before the status
+// The status is read first, so a key no item holds is reported as such
+// rather than as an expired file, and the tag stays on a file that isn't
+// a current rejected or approved image. The tag then goes before the status
 // write, the mirror of the moderation function's order: if the write
 // fails, the image is left rejected but no longer expiring, rather than
 // approved with its file about to be deleted.
@@ -53,12 +54,12 @@ func (o *Overrides) Approve(ctx context.Context, key string) (already, untagged 
 	if err != nil {
 		return false, false, err
 	}
-	if err := o.checkNotExpired(ctx, key); err != nil {
-		return false, false, err
-	}
 	from, to := repository.ImageStatusRejected, repository.ImageStatusApproved
 	status, err := o.currentStatus(ctx, ref, key, from, to)
 	if err != nil {
+		return false, false, err
+	}
+	if err := o.checkNotExpired(ctx, key); err != nil {
 		return false, false, err
 	}
 	if untagged, err = o.untagRejected(ctx, key); err != nil {
@@ -157,9 +158,13 @@ func isNoSuchKey(err error) bool {
 }
 
 // untagRejected removes the rejected tag from key, keeping any others.
-// untagged is false when there was none.
+// untagged is false when there was none. A file the lifecycle rule
+// deleted since checkNotExpired is ErrImageGone.
 func (o *Overrides) untagRejected(ctx context.Context, key string) (untagged bool, err error) {
 	out, err := o.s3.GetObjectTagging(ctx, &s3.GetObjectTaggingInput{Bucket: &o.bucket, Key: &key})
+	if isNoSuchKey(err) {
+		return false, fmt.Errorf("%w: %q", ErrImageGone, key)
+	}
 	if err != nil {
 		return false, fmt.Errorf("reading %q's tags: %w", key, err)
 	}
@@ -171,6 +176,9 @@ func (o *Overrides) untagRejected(ctx context.Context, key string) (untagged boo
 		_, err = o.s3.DeleteObjectTagging(ctx, &s3.DeleteObjectTaggingInput{Bucket: &o.bucket, Key: &key})
 	} else {
 		_, err = o.s3.PutObjectTagging(ctx, &s3.PutObjectTaggingInput{Bucket: &o.bucket, Key: &key, Tagging: &s3types.Tagging{TagSet: kept}})
+	}
+	if isNoSuchKey(err) {
+		return false, fmt.Errorf("%w: %q", ErrImageGone, key)
 	}
 	if err != nil {
 		return false, fmt.Errorf("removing the rejected tag from %q: %w", key, err)
