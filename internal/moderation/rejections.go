@@ -11,6 +11,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	logtypes "github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
+
+	"github.com/rogueserenity/kbdb/internal/imagekey"
+	"github.com/rogueserenity/kbdb/internal/repository"
 )
 
 // RejectionsLimit is the most rejections one Rejections call returns,
@@ -63,10 +66,12 @@ type logLine struct {
 
 // Rejections lists the rejections logged to logGroup since start, newest
 // first, once per key: a retried event logs its decision again. Unless
-// all is set, only those awaiting review are listed; all adds reviewed
-// ones and takedowns. truncated reports that the query hit
-// RejectionsLimit, so older ones were cut.
-func Rejections(ctx context.Context, client logsAPI, logGroup string, start time.Time, all bool) (rs []Rejection, truncated bool, err error) {
+// all is set, only those awaiting review are listed, leaving out any whose
+// image is no longer a current rejected one (its owner deleted or
+// replaced it): there's nothing left to decide. all adds reviewed ones
+// and takedowns. truncated reports that the query hit RejectionsLimit, so
+// older ones were cut.
+func Rejections(ctx context.Context, client logsAPI, images *Images, logGroup string, start time.Time, all bool) (rs []Rejection, truncated bool, err error) {
 	q, err := client.StartQuery(ctx, &cloudwatchlogs.StartQueryInput{
 		LogGroupNames: []string{logGroup},
 		QueryString:   aws.String(rejectionsQuery),
@@ -84,7 +89,13 @@ func Rejections(ctx context.Context, client logsAPI, logGroup string, start time
 		}
 		switch out.Status {
 		case logtypes.QueryStatusComplete:
-			return parseRejections(out.Results, all), len(out.Results) >= RejectionsLimit, nil
+			rs := parseRejections(out.Results, all)
+			if !all {
+				if rs, err = stillRejected(ctx, images, rs); err != nil {
+					return nil, false, err
+				}
+			}
+			return rs, len(out.Results) >= RejectionsLimit, nil
 		case logtypes.QueryStatusScheduled, logtypes.QueryStatusRunning:
 		default:
 			return nil, false, fmt.Errorf("the query on %s ended %s", logGroup, out.Status)
@@ -96,6 +107,27 @@ func Rejections(ctx context.Context, client logsAPI, logGroup string, start time
 		case <-time.After(queryPollInterval):
 		}
 	}
+}
+
+// stillRejected keeps the rejections whose image an item still holds as
+// rejected. A key that doesn't parse is kept, so it's seen.
+func stillRejected(ctx context.Context, images *Images, rs []Rejection) ([]Rejection, error) {
+	kept := rs[:0]
+	for _, r := range rs {
+		ref, err := imagekey.Parse(r.Key)
+		if err != nil {
+			kept = append(kept, r)
+			continue
+		}
+		status, current, err := images.Status(ctx, ref, r.Key)
+		if err != nil {
+			return nil, fmt.Errorf("reading the status of %q: %w", r.Key, err)
+		}
+		if current && status == repository.ImageStatusRejected {
+			kept = append(kept, r)
+		}
+	}
+	return kept, nil
 }
 
 // parseRejections reads query results, which are newest first: a review

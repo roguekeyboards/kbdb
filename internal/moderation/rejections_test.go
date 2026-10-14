@@ -12,6 +12,8 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/rogueserenity/kbdb/internal/moderation/mocks"
+	"github.com/rogueserenity/kbdb/internal/repository"
+	repomocks "github.com/rogueserenity/kbdb/internal/repository/mocks"
 )
 
 const testLogGroup = "/aws/lambda/kbdb-moderate-test"
@@ -19,6 +21,8 @@ const testLogGroup = "/aws/lambda/kbdb-moderate-test"
 type RejectionsSuite struct {
 	suite.Suite
 	logs         *mocks.MockLogsAPI
+	profiles     *repomocks.MockProfileRepository
+	images       *Images
 	pollInterval time.Duration
 }
 
@@ -28,6 +32,8 @@ func TestRejectionsSuite(t *testing.T) {
 
 func (s *RejectionsSuite) SetupTest() {
 	s.logs = mocks.NewMockLogsAPI(s.T())
+	s.profiles = repomocks.NewMockProfileRepository(s.T())
+	s.images = &Images{Profiles: s.profiles}
 	s.pollInterval, queryPollInterval = queryPollInterval, 0
 }
 
@@ -65,7 +71,7 @@ func (s *RejectionsSuite) TestParsesDecisionLines() {
 		row(`{"time":"2026-10-11T09:00:00Z","msg":"moderated image","key":"profiles/bob/avatar/up2","decision":"rejected","reason":"unprocessable","error":"bad image"}`),
 	)
 
-	rs, truncated, err := Rejections(s.T().Context(), s.logs, testLogGroup, start, false)
+	rs, truncated, err := Rejections(s.T().Context(), s.logs, s.images, testLogGroup, start, true)
 	s.Require().NoError(err)
 	s.False(truncated)
 	s.Equal([]Rejection{
@@ -82,7 +88,7 @@ func (s *RejectionsSuite) TestKeepsNewestPerKey() {
 		row(`{"time":"2026-10-12T10:00:00Z","key":"profiles/bob/avatar/up2","reason":"unprocessable"}`),
 	)
 
-	rs, _, err := Rejections(s.T().Context(), s.logs, testLogGroup, start, false)
+	rs, _, err := Rejections(s.T().Context(), s.logs, s.images, testLogGroup, start, true)
 	s.Require().NoError(err)
 	s.Equal([]Rejection{
 		{Time: time.Date(2026, 10, 12, 10, 0, 5, 0, time.UTC), Key: "profiles/bob/avatar/up2", Reason: "unprocessable"},
@@ -100,7 +106,7 @@ func (s *RejectionsSuite) TestTruncated() {
 	}
 	s.results(logtypes.QueryStatusComplete, rows...)
 
-	rs, truncated, err := Rejections(s.T().Context(), s.logs, testLogGroup, start, false)
+	rs, truncated, err := Rejections(s.T().Context(), s.logs, s.images, testLogGroup, start, true)
 	s.Require().NoError(err)
 	s.True(truncated)
 	s.Len(rs, 1)
@@ -118,11 +124,18 @@ func (s *RejectionsSuite) reviewedResults(start time.Time) {
 	)
 }
 
+// avatar stores owner's avatar at path with status.
+func (s *RejectionsSuite) avatar(owner, path string, status repository.ImageStatus) {
+	p := repository.ProfileImageKey(path)
+	s.profiles.EXPECT().Get(mock.Anything, owner).Return(&repository.Profile{AvatarPath: &p, AvatarStatus: status}, nil)
+}
+
 func (s *RejectionsSuite) TestHidesReviewed() {
 	start := time.Now()
 	s.reviewedResults(start)
+	s.avatar("bob", "profiles/bob/avatar/up2", repository.ImageStatusRejected)
 
-	rs, _, err := Rejections(s.T().Context(), s.logs, testLogGroup, start, false)
+	rs, _, err := Rejections(s.T().Context(), s.logs, s.images, testLogGroup, start, false)
 	s.Require().NoError(err)
 	s.Equal([]Rejection{
 		{Time: time.Date(2026, 10, 11, 9, 0, 0, 0, time.UTC), Key: "profiles/bob/avatar/up2", Reason: "unprocessable"},
@@ -133,7 +146,7 @@ func (s *RejectionsSuite) TestAllIncludesReviewedAndTakedowns() {
 	start := time.Now()
 	s.reviewedResults(start)
 
-	rs, _, err := Rejections(s.T().Context(), s.logs, testLogGroup, start, true)
+	rs, _, err := Rejections(s.T().Context(), s.logs, s.images, testLogGroup, start, true)
 	s.Require().NoError(err)
 	s.Equal([]Rejection{
 		{
@@ -159,7 +172,7 @@ func (s *RejectionsSuite) TestLatestReviewWins() {
 		row(`{"time":"2026-10-11T09:00:00Z","msg":"moderated image","key":"profiles/bob/avatar/up2","decision":"rejected","reason":"Explicit"}`),
 	)
 
-	rs, _, err := Rejections(s.T().Context(), s.logs, testLogGroup, start, true)
+	rs, _, err := Rejections(s.T().Context(), s.logs, s.images, testLogGroup, start, true)
 	s.Require().NoError(err)
 	s.Require().Len(rs, 1)
 	s.Equal(ActionApproved, rs[0].Review.Action)
@@ -175,7 +188,7 @@ func (s *RejectionsSuite) TestReversedTakedown() {
 		row(`{"time":"2026-10-12T12:00:00Z","msg":"operator review","key":"builds/carol/b1/images/i1","action":"rejected","reason":"spam"}`),
 	)
 
-	rs, _, err := Rejections(s.T().Context(), s.logs, testLogGroup, start, true)
+	rs, _, err := Rejections(s.T().Context(), s.logs, s.images, testLogGroup, start, true)
 	s.Require().NoError(err)
 	s.Require().Len(rs, 1)
 	s.True(rs[0].Manual)
@@ -184,19 +197,41 @@ func (s *RejectionsSuite) TestReversedTakedown() {
 	s.Equal(ActionApproved, rs[0].Review.Action)
 }
 
+// An image its owner replaced or deleted, or one approved without a
+// recorded review, has nothing left to decide.
+func (s *RejectionsSuite) TestHidesImagesNoLongerRejected() {
+	start := time.Now()
+	s.started(start)
+	s.results(logtypes.QueryStatusComplete,
+		row(`{"time":"2026-10-13T09:00:00Z","msg":"moderated image","key":"profiles/bob/avatar/up2","decision":"rejected","reason":"Explicit"}`),
+		row(`{"time":"2026-10-12T09:00:00Z","msg":"moderated image","key":"profiles/carol/avatar/up3","decision":"rejected","reason":"Explicit"}`),
+		row(`{"time":"2026-10-11T09:00:00Z","msg":"moderated image","key":"profiles/dave/avatar/up4","decision":"rejected","reason":"Explicit"}`),
+		row(`{"time":"2026-10-10T09:00:00Z","msg":"moderated image","key":"profiles/erin/avatar/up5","decision":"rejected","reason":"Explicit"}`),
+	)
+	s.avatar("bob", "profiles/bob/avatar/up2", repository.ImageStatusRejected)
+	s.avatar("carol", "profiles/carol/avatar/new", repository.ImageStatusPending)
+	s.profiles.EXPECT().Get(mock.Anything, "dave").Return(nil, repository.ErrNotFound)
+	s.avatar("erin", "profiles/erin/avatar/up5", repository.ImageStatusApproved)
+
+	rs, _, err := Rejections(s.T().Context(), s.logs, s.images, testLogGroup, start, false)
+	s.Require().NoError(err)
+	s.Require().Len(rs, 1)
+	s.Equal("profiles/bob/avatar/up2", rs[0].Key)
+}
+
 func (s *RejectionsSuite) TestQueryFailed() {
 	start := time.Now()
 	s.started(start)
 	s.results(logtypes.QueryStatusFailed)
 
-	_, _, err := Rejections(s.T().Context(), s.logs, testLogGroup, start, false)
+	_, _, err := Rejections(s.T().Context(), s.logs, s.images, testLogGroup, start, false)
 	s.Require().ErrorContains(err, "ended Failed")
 }
 
 func (s *RejectionsSuite) TestStartFails() {
 	s.logs.EXPECT().StartQuery(mock.Anything, mock.Anything).Return(nil, errors.New("boom"))
 
-	_, _, err := Rejections(s.T().Context(), s.logs, testLogGroup, time.Now(), false)
+	_, _, err := Rejections(s.T().Context(), s.logs, s.images, testLogGroup, time.Now(), false)
 	s.Require().ErrorContains(err, "boom")
 }
 
@@ -208,7 +243,7 @@ func (s *RejectionsSuite) TestSkipsMalformedLine() {
 		row(`{"time":"2026-10-11T09:00:00Z","key":"profiles/carol/avatar/up3","reason":"unprocessable"}`),
 	)
 
-	rs, _, err := Rejections(s.T().Context(), s.logs, testLogGroup, start, false)
+	rs, _, err := Rejections(s.T().Context(), s.logs, s.images, testLogGroup, start, true)
 	s.Require().NoError(err)
 	s.Equal([]Rejection{
 		{Time: time.Date(2026, 10, 11, 9, 0, 0, 0, time.UTC), Key: "profiles/carol/avatar/up3", Reason: "unprocessable"},

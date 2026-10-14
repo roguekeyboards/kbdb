@@ -113,7 +113,7 @@ func (m *Moderator) moderate(ctx context.Context, bucket, key string) error {
 	// image still pending and tags it again rather than leaving it
 	// untagged.
 	if to == repository.ImageStatusRejected {
-		if err := tagRejected(ctx, m.s3, bucket, key); err != nil {
+		if err := m.tagRejected(ctx, bucket, key); err != nil {
 			return err
 		}
 	}
@@ -196,8 +196,8 @@ const (
 
 // tagRejected marks the object for the bucket's lifecycle rule, which
 // expires rejected images.
-func tagRejected(ctx context.Context, client s3API, bucket, key string) error {
-	_, err := client.PutObjectTagging(ctx, &s3.PutObjectTaggingInput{
+func (m *Moderator) tagRejected(ctx context.Context, bucket, key string) error {
+	_, err := m.s3.PutObjectTagging(ctx, &s3.PutObjectTaggingInput{
 		Bucket: &bucket,
 		Key:    &key,
 		Tagging: &s3types.Tagging{TagSet: []s3types.Tag{

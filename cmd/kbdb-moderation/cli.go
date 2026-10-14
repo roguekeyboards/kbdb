@@ -36,7 +36,7 @@ type CLI struct {
 
 // RejectionsCmd lists rejections from the moderation function's logs.
 type RejectionsCmd struct {
-	Since string `default:"7d" help:"How far back to look: a number of days (7d) or a Go duration (12h)."`
+	Since string `default:"30d" help:"How far back to look: a number of days (7d) or a Go duration (12h). The default covers every rejected file not yet expired."`
 	All   bool   `help:"Also list reviewed rejections and takedowns, with how each was reviewed."`
 }
 
@@ -45,7 +45,7 @@ func (c *RejectionsCmd) Run(ctx context.Context, st *stack) error {
 	if err != nil {
 		return err
 	}
-	rs, truncated, err := moderation.Rejections(ctx, cloudwatchlogs.NewFromConfig(st.cfg), st.logGroup, time.Now().Add(-since), c.All)
+	rs, truncated, err := moderation.Rejections(ctx, cloudwatchlogs.NewFromConfig(st.cfg), st.images, st.logGroup, time.Now().Add(-since), c.All)
 	if err != nil {
 		return err
 	}
@@ -209,10 +209,8 @@ func (c *RejectCmd) Run(ctx context.Context, st *stack) error {
 		return err
 	}
 	switch {
-	case already && gone:
-		fmt.Printf("%s was already rejected, and its file is already gone.\n", key)
 	case already:
-		fmt.Printf("%s was already rejected; its reason is unchanged, and it's tagged to expire.\n", key)
+		fmt.Printf("%s was already rejected, so nothing was recorded and its reason wasn't changed. To clear a rejection awaiting review, use uphold.\n", key)
 	case gone:
 		fmt.Printf("Rejected %s (%s). Its file is already gone.\n", key, c.Reason)
 	default:

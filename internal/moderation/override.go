@@ -27,8 +27,8 @@ var ErrImageGone = errors.New("the image's file has expired")
 
 // Overrides changes moderation decisions by hand, for the operator CLI.
 // Each one is recorded as a review, which takes its rejection off the
-// list Rejections returns. An action that succeeded but whose review
-// failed to record is recorded by running it again.
+// list Rejections returns. An uphold or approve that succeeded but whose
+// review failed to record is recorded by running it again.
 type Overrides struct {
 	s3      s3API
 	images  *Images
@@ -125,12 +125,14 @@ var expiryDatePattern = regexp.MustCompile(`expiry-date="([^"]+)"`)
 // Reject takes down an approved image: it marks it rejected with reason
 // and tags it to expire like any other rejection, keeping any other tags.
 // The lifecycle rule counts from upload, so an older image is deleted at
-// its next run: a takedown is a decision already reviewed. already reports
-// an image already rejected, whose reason is left unchanged, and gone a
+// its next run: a takedown is a decision already reviewed. gone reports a
 // file already deleted, which needs no tag.
 //
-// The status is written before the tag, so a pending image is never
-// tagged; a failed tag is fixed by running Reject again.
+// already reports an image that was already rejected: its reason is left
+// as it was and no review is recorded, so a rejection awaiting review
+// isn't cleared by mistake (Uphold is for that). The status is written
+// before the tag, so a pending image is never tagged, and a failed tag is
+// fixed by running Reject again; a failed review record is not.
 func (o *Overrides) Reject(ctx context.Context, key, reason string) (already, gone bool, err error) {
 	if strings.TrimSpace(reason) == "" {
 		return false, false, errors.New("a rejection reason can't be blank")
@@ -146,7 +148,10 @@ func (o *Overrides) Reject(ctx context.Context, key, reason string) (already, go
 	if gone, err = o.addRejectedTag(ctx, key); err != nil {
 		return false, false, err
 	}
-	return already, gone, o.reviews.Record(ctx, key, ActionRejected, reason)
+	if already {
+		return true, gone, nil
+	}
+	return false, gone, o.reviews.Record(ctx, key, ActionRejected, reason)
 }
 
 // addRejectedTag adds the rejected tag to key's tags. gone reports that

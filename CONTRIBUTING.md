@@ -74,7 +74,7 @@ Restore always **creates new** items (new server-generated IDs), recording an ol
 There's no admin UI for image moderation. `cmd/kbdb-moderation` reviews and overrides decisions in one environment's stack, run through these tasks with an admin AWS profile (`AWS_PROFILE=kbdb-dev-admin`, etc.). `env` defaults to `dev-$(whoami)`, as for `deploy`.
 
 ```sh
-mise run moderation-rejections [env] [--since 7d]   # rejections awaiting review (--all: every rejection and takedown, and how it was reviewed)
+mise run moderation-rejections [env] [--since 30d]  # rejections awaiting review (--all: every rejection and takedown, and how it was reviewed)
 mise run moderation-view [env] <key>                # open the image in a browser, even a rejected one
 mise run moderation-uphold [env] <key>              # the rejection stands; takes it off the list
 mise run moderation-approve [env] <key>             # override a rejection; the image no longer expires
@@ -85,7 +85,7 @@ mise run moderation-reject [env] <key> [reason]     # take down an approved imag
 
 A manual reject tags the file to expire like the moderation function's rejections, but the lifecycle rule counts from upload, so an image older than the expiry period is deleted at the rule's next nightly run: treat a takedown as final. Download links the API handed out before the takedown keep working until they expire, within an hour; a presigned URL can't be revoked.
 
-`moderation-rejections` is the review queue: work through it with `view`, then `uphold` or `approve`. Each of `uphold`, `approve` and `reject` writes a review line to the moderation function's log group (stream `operator-reviews`), and a rejection with a later review drops off the list. `--all` lists every rejection and takedown in the window, with its latest review, which is also the record of what was decided and when. The logs are kept 60 days (so `--since` goes up to `60d`), longer than any rejected file, which expires after 30. If recording a review fails after the action succeeded, the action stands; run the same command again to record it.
+`moderation-rejections` is the review queue: work through it with `view`, then `uphold` or `approve`. Each of `uphold`, `approve` and `reject` writes a review line to the moderation function's log group (stream `operator-reviews`), and a rejection with a later review drops off the list, as does one whose image its owner has since deleted or replaced. Reject on an image that's already rejected changes and records nothing; use `uphold` for a rejection awaiting review. `--all` lists every rejection and takedown in the window, with its latest review, which is also the record of what was decided and when. The logs are kept 60 days (so `--since` goes up to `60d`), longer than any rejected file, which expires after 30. If recording a review fails after the action succeeded, the action stands; for uphold and approve, run the same command again to record it. A takedown whose record failed isn't recorded by a rerun, so it's missing from `--all`.
 
 ## Deploying to AWS
 

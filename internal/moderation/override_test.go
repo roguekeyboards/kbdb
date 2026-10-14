@@ -299,7 +299,6 @@ func (s *OverridesSuite) TestReject_AlreadyRejected() {
 	s.stored(testKey, repository.ImageStatusRejected)
 	s.tags(tag("moderation", "rejected"))
 	s.tagged()
-	s.recorded(ActionRejected, "manual")
 
 	already, _, err := s.overrides.Reject(s.T().Context(), testKey, reason)
 	s.Require().NoError(err)
