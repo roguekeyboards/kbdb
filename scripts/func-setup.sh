@@ -109,6 +109,9 @@ aws s3 cp "$OIDC_DIR/jwks.json" \
   "s3://$OIDC_BUCKET/jwks.json" \
   --content-type application/json >/dev/null
 
+# ApiReservedConcurrency is set only because floci can't deploy its empty
+# default: it resolves the AWS::NoValue to "" and fails to parse it as an
+# integer. Drop it once floci omits the property instead.
 sam deploy \
   --stack-name "$STACK" \
   --no-confirm-changeset --no-fail-on-empty-changeset \
@@ -121,7 +124,8 @@ sam deploy \
     "OidcAudience=$AUDIENCE" \
     "IdpConsentPublicToken=public-token-test-local-kbdb" \
     "LogoutReturnOrigins=http://localhost:5173" \
-    "DailyUploadLimit=1000000"
+    "DailyUploadLimit=1000000" \
+    "ApiReservedConcurrency=50"
 
 out() {
   aws cloudformation describe-stacks --stack-name "$STACK" \

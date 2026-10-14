@@ -110,24 +110,45 @@ Parameters:
     Default: ''
     AllowedPattern: '^$|^[0-9]+(\.[0-9]+)?$'
     Description: >-
-      Steady-state requests per second for every HttpApi route. Throttled
-      requests aren't billed, so this caps API and Lambda cost. Applied only
-      when ThrottleBurstLimit is set too; empty, the default, leaves the
-      account-level limit (so parallel functional tests aren't throttled).
+      Steady-state requests per second for each HttpApi route (each route
+      has its own limit; ApiReservedConcurrency caps the API as a whole).
+      Throttled requests aren't billed. Set together with
+      ThrottleBurstLimit; empty, the default, leaves the account-level limit
+      (so parallel functional tests aren't throttled).
   ThrottleBurstLimit:
     Type: String
     Default: ''
     AllowedPattern: '^$|^[0-9]+$'
     Description: >-
-      Burst capacity for every HttpApi route. See ThrottleRateLimit.
+      Burst capacity for each HttpApi route. See ThrottleRateLimit.
+  ApiReservedConcurrency:
+    Type: String
+    Default: ''
+    AllowedPattern: '^$|^[0-9]+$'
+    Description: >-
+      Most ApiFunction invocations running at once, across every route, which
+      bounds API cost however requests are spread over routes. Reserved out
+      of the account's Lambda concurrency, which must keep 10 unreserved.
+      Empty, the default, leaves the function unreserved.
+
+Rules:
+  ThrottleSetTogether:
+    Assertions:
+      - Assert: !Or
+          - !And
+            - !Equals [!Ref ThrottleRateLimit, '']
+            - !Equals [!Ref ThrottleBurstLimit, '']
+          - !And
+            - !Not [!Equals [!Ref ThrottleRateLimit, '']]
+            - !Not [!Equals [!Ref ThrottleBurstLimit, '']]
+        AssertDescription: Set ThrottleRateLimit and ThrottleBurstLimit together, or neither.
 
 Conditions:
   HasCustomDomain: !Not [!Equals [!Ref CustomDomainName, '']]
   HasAlarmEmail: !Not [!Equals [!Ref AlarmEmail, '']]
   ProtectData: !Equals [!Ref ProtectData, 'true']
-  HasThrottle: !And
-    - !Not [!Equals [!Ref ThrottleRateLimit, '']]
-    - !Not [!Equals [!Ref ThrottleBurstLimit, '']]
+  HasThrottle: !Not [!Equals [!Ref ThrottleRateLimit, '']]
+  HasApiReservedConcurrency: !Not [!Equals [!Ref ApiReservedConcurrency, '']]
 
 Resources:
   # Holds user-uploaded images (build photos, keycap kit renders). Private -
@@ -630,6 +651,10 @@ Resources:
     Properties:
       FunctionName: !Sub kbdb-api-${AWS::StackName}
       PackageType: Image
+      ReservedConcurrentExecutions: !If
+        - HasApiReservedConcurrency
+        - !Ref ApiReservedConcurrency
+        - !Ref AWS::NoValue
       Architectures:
         - arm64
       Environment:
