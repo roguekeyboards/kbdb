@@ -68,7 +68,7 @@ var _ = Describe("Setting a profile's avatar", func() {
 						Expect(json.NewDecoder(resp.Body).Decode(&created)).To(Succeed())
 						Expect(created.UploadURL).NotTo(BeEmpty())
 
-						By("uploading arbitrary bytes to the presigned PUT URL")
+						By("uploading a PNG to the presigned PUT URL")
 						imageBytes := api.TestImageBytes
 						putResp, err := api.DoPresigned(ctx, http.MethodPut, created.UploadURL, approvedImageContentType, bytes.NewReader(imageBytes))
 						Expect(err).NotTo(HaveOccurred())

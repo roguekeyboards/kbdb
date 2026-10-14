@@ -23,7 +23,7 @@ type DynamoTable struct {
 }
 
 // NewDynamoTable returns a DynamoTable for tableName, using
-// support.DynamoDBEndpointURL() (LocalStack locally, real AWS endpoint
+// support.DynamoDBEndpointURL() (floci locally, real AWS endpoint
 // resolution against a real deployed stack in CI - see that function's doc
 // comment).
 func NewDynamoTable(ctx context.Context, tableName string) *DynamoTable {

@@ -198,7 +198,4 @@ jobs:
           KBDB_PROFILE_USERNAME_TABLE_NAME: ${{ steps.stack-outputs.outputs.profile-username-table-name }}
           KBDB_UPLOAD_COUNTER_TABLE_NAME: ${{ steps.stack-outputs.outputs.upload-counter-table-name }}
           KBDB_IMAGES_BUCKET_NAME: ${{ steps.stack-outputs.outputs.images-bucket-name }}
-          # Explicitly empty (not omitted) - func-test.sh only falls back to
-          # its LocalStack default for a genuinely unset variable.
-          KBDB_DYNAMODB_ENDPOINT_URL: ""
         run: mise run func-test

@@ -206,7 +206,6 @@ mise/*.local.toml
 ### Project-specific (kbdb) ###
 # Additional env file patterns beyond the Go template's .env
 .env.*
-!.env.example
 
 # AWS SAM build artifacts
 .aws-sam/

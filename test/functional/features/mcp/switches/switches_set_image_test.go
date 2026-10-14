@@ -61,7 +61,7 @@ var _ = Describe("Setting a switch's image over MCP", func() {
 						out := decodeSetImageOutput(result)
 						Expect(out.UploadURL).NotTo(BeEmpty())
 
-						By("uploading arbitrary bytes to the presigned PUT URL")
+						By("uploading a PNG to the presigned PUT URL")
 						imageBytes := api.TestImageBytes
 						putResp, putErr := api.DoPresigned(ctx, http.MethodPut, out.UploadURL, approvedImageContentType, bytes.NewReader(imageBytes))
 						Expect(putErr).NotTo(HaveOccurred())

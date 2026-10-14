@@ -40,9 +40,9 @@ type Config struct {
 	// internal/uploadlimit.
 	DailyUploadLimit int64 `env:"DAILY_UPLOAD_LIMIT" required:""`
 
-	// Empty in real deployments; set locally to point at LocalStack.
+	// Empty in real deployments; set locally to point at an emulator.
 	DynamoDBEndpointURL string `env:"DYNAMODB_ENDPOINT_URL"`
 
-	// Empty in real deployments; set locally to point at LocalStack.
+	// Empty in real deployments; set locally to point at an emulator.
 	S3EndpointURL string `env:"S3_ENDPOINT_URL"`
 }

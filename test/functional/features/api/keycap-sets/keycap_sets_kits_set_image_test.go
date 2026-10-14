@@ -75,7 +75,7 @@ var _ = Describe("Setting a keycap kit's image", func() {
 						Expect(json.NewDecoder(resp.Body).Decode(&created)).To(Succeed())
 						Expect(created.UploadURL).NotTo(BeEmpty())
 
-						By("uploading arbitrary bytes to the presigned PUT URL")
+						By("uploading a PNG to the presigned PUT URL")
 						imageBytes := api.TestImageBytes
 						putResp, err := api.DoPresigned(ctx, http.MethodPut, created.UploadURL, "image/png", bytes.NewReader(imageBytes))
 						Expect(err).NotTo(HaveOccurred())

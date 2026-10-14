@@ -122,7 +122,7 @@ var _ = Describe("Deleting a keycap kit's image", func() {
 						Expect(err).NotTo(HaveOccurred())
 						// Real S3 returns 403 (not 404) for GetObject against a
 						// missing key when the caller lacks s3:ListBucket, to
-						// avoid leaking object existence; LocalStack returns 404.
+						// avoid leaking object existence; floci returns 404.
 						Expect(getImageResp.StatusCode).To(BeElementOf(http.StatusNotFound, http.StatusForbidden))
 					})
 				})
