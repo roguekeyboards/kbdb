@@ -13,7 +13,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/rogueserenity/kbdb/test/functional/support"
 	"github.com/rogueserenity/kbdb/test/functional/support/api"
 	"github.com/rogueserenity/kbdb/test/functional/support/db"
 )
@@ -93,7 +92,7 @@ var _ = Describe("Adding an image to a keyboard", func() {
 						Expect(created.ImageID).NotTo(BeEmpty())
 						Expect(created.UploadURL).NotTo(BeEmpty())
 
-						By("uploading arbitrary bytes to the presigned PUT URL")
+						By("uploading a PNG to the presigned PUT URL")
 						imageBytes := api.TestImageBytes
 						putResp, err := api.DoPresigned(ctx, http.MethodPut, created.UploadURL, approvedImageContentType, bytes.NewReader(imageBytes))
 						Expect(err).NotTo(HaveOccurred())
@@ -170,10 +169,6 @@ var _ = Describe("Adding an image to a keyboard", func() {
 				var uploadURL string
 
 				BeforeEach(func(ctx SpecContext) {
-					if !support.IsCI() {
-						Skip("only CI's real S3 validates presigned signatures; the local emulator doesn't")
-					}
-
 					addResp, err := client.AddImage(ctx, ownerID, keyboardID, ownerToken, api.ImageUploadBody(approvedImageContentType))
 					Expect(err).NotTo(HaveOccurred())
 					defer func() { _ = addResp.Body.Close() }()

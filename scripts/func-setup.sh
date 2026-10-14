@@ -130,11 +130,7 @@ out() {
 
 API_ID=$(aws apigatewayv2 get-apis --query 'Items[0].ApiId' --output text)
 
-# floci drops ImagesBucket's NotificationConfiguration on deploy (#503), so
-# set it directly. Remove once floci applies it.
 IMAGES_BUCKET=$(out ImagesBucketName)
-aws s3api put-bucket-notification-configuration --bucket "$IMAGES_BUCKET" \
-  --notification-configuration "{\"LambdaFunctionConfigurations\":[{\"LambdaFunctionArn\":\"$(out ModerateFunctionArn)\",\"Events\":[\"s3:ObjectCreated:*\"]}]}"
 
 # docker-compose.floci.yml mounts this directory and points floci's
 # AI_MOCK_CONFIG at mock.json in it; the functional suite writes canned

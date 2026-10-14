@@ -63,7 +63,7 @@ var _ = Describe("Setting a profile's avatar over MCP", func() {
 						out := decodeSetProfileImageOutput(result)
 						Expect(out.UploadURL).NotTo(BeEmpty())
 
-						By("uploading arbitrary bytes to the presigned PUT URL")
+						By("uploading a PNG to the presigned PUT URL")
 						imageBytes := api.TestImageBytes
 						putResp, putErr := api.DoPresigned(ctx, http.MethodPut, out.UploadURL, approvedImageContentType, bytes.NewReader(imageBytes))
 						Expect(putErr).NotTo(HaveOccurred())

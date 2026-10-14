@@ -31,6 +31,16 @@ services:
       # Canned Rekognition responses the functional suite writes, keyed by
       # "<bucket>/<key>". floci re-reads the file when it changes.
       - AI_MOCK_CONFIG=/ai-mock/mock.json
+      # Check SigV4 signatures, so a presigned PUT whose body length differs
+      # from the signed Content-Length is refused here as it is on AWS.
+      - FLOCI_AUTH_VALIDATE_SIGNATURES=true
+      # floci revokes a Lambda's execution-role credentials when it stops the
+      # container, and it stops surplus containers as soon as the per-function
+      # warm pool is full. Under parallel Ginkgo runs that kills presigned PUT
+      # URLs a few ms after the API hands them out (403 SignatureDoesNotMatch).
+      # A pool well above the -p process count keeps every container alive for
+      # the run.
+      - FLOCI_SERVICES_LAMBDA_WARM_POOL_MAX_PER_FUNCTION=32
     # Replaces the image's default CMD (the image's entrypoint still runs it).
     # The trust store holds the JDK's public roots plus func-setup's CA;
     # floci's JWT client and the CA bundle it injects into Lambda containers
