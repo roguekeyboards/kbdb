@@ -13,7 +13,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/aws/smithy-go"
 
 	"github.com/rogueserenity/kbdb/internal/imagekey"
 	"github.com/rogueserenity/kbdb/internal/repository"
@@ -27,16 +26,34 @@ var ErrNotCurrent = errors.New("no item holds this image")
 var ErrImageGone = errors.New("the image's file has expired")
 
 // Overrides changes moderation decisions by hand, for the operator CLI.
+// Each one is recorded as a review, which takes its rejection off the
+// list Rejections returns. An action that succeeded but whose review
+// failed to record is recorded by running it again.
 type Overrides struct {
-	s3     s3API
-	images *Images
-	bucket string
-	now    func() time.Time
+	s3      s3API
+	images  *Images
+	reviews *ReviewLog
+	bucket  string
+	now     func() time.Time
 }
 
 // NewOverrides returns Overrides for the images in bucket.
-func NewOverrides(s3Client *s3.Client, images *Images, bucket string) *Overrides {
-	return &Overrides{s3: s3Client, images: images, bucket: bucket, now: time.Now}
+func NewOverrides(s3Client *s3.Client, images *Images, reviews *ReviewLog, bucket string) *Overrides {
+	return &Overrides{s3: s3Client, images: images, reviews: reviews, bucket: bucket, now: time.Now}
+}
+
+// Uphold records that a rejection was reviewed and stands. It changes
+// nothing else: the image stays rejected and its file still expires.
+func (o *Overrides) Uphold(ctx context.Context, key string) error {
+	ref, err := imagekey.Parse(key)
+	if err != nil {
+		return err
+	}
+	rejected := repository.ImageStatusRejected
+	if _, err := o.currentStatus(ctx, ref, key, rejected, rejected); err != nil {
+		return err
+	}
+	return o.reviews.Record(ctx, key, ActionUpheld, "")
 }
 
 // Approve marks a rejected image approved and removes the tag that would
@@ -65,11 +82,13 @@ func (o *Overrides) Approve(ctx context.Context, key string) (already, untagged 
 	if untagged, err = o.untagRejected(ctx, key); err != nil {
 		return false, false, err
 	}
-	if status == to {
-		return true, untagged, nil
+	already = status == to
+	if !already {
+		if already, err = o.override(ctx, ref, key, from, to, nil); err != nil {
+			return false, false, err
+		}
 	}
-	already, err = o.override(ctx, ref, key, from, to, nil)
-	return already, untagged, err
+	return already, untagged, o.reviews.Record(ctx, key, ActionApproved, "")
 }
 
 // checkNotExpired fails when key's file is gone or past the expiry date S3
@@ -124,8 +143,10 @@ func (o *Overrides) Reject(ctx context.Context, key, reason string) (already, go
 	if err != nil {
 		return false, false, err
 	}
-	gone, err = o.addRejectedTag(ctx, key)
-	return already, gone, err
+	if gone, err = o.addRejectedTag(ctx, key); err != nil {
+		return false, false, err
+	}
+	return already, gone, o.reviews.Record(ctx, key, ActionRejected, reason)
 }
 
 // addRejectedTag adds the rejected tag to key's tags. gone reports that
@@ -153,8 +174,7 @@ func (o *Overrides) addRejectedTag(ctx context.Context, key string) (gone bool, 
 // isNoSuchKey reports S3's NoSuchKey, which the object tagging calls
 // return as a plain API error rather than *s3types.NoSuchKey.
 func isNoSuchKey(err error) bool {
-	apiErr, ok := errors.AsType[smithy.APIError](err)
-	return ok && apiErr.ErrorCode() == "NoSuchKey"
+	return isAPIError(err, "NoSuchKey")
 }
 
 // untagRejected removes the rejected tag from key, keeping any others.

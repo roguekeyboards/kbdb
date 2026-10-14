@@ -27,8 +27,9 @@ type CLI struct {
 	Stack  string `required:"" help:"CloudFormation stack name, e.g. kbdb-dev-jay."`
 	Region string `env:"AWS_REGION" help:"AWS region of the stack."`
 
-	Rejections RejectionsCmd `cmd:"" help:"List the moderation function's recent rejections. Manual rejections aren't listed."`
+	Rejections RejectionsCmd `cmd:"" help:"List the moderation function's rejections still awaiting review, or with --all every rejection and takedown and how it was reviewed."`
 	View       ViewCmd       `cmd:"" help:"Open an image in the browser, whatever its status."`
+	Uphold     UpholdCmd     `cmd:"" help:"Record that a rejection was reviewed and stands. The image stays rejected and still expires."`
 	Approve    ApproveCmd    `cmd:"" help:"Override a rejection: mark the image approved and stop it expiring."`
 	Reject     RejectCmd     `cmd:"" help:"Take down an approved image: mark it rejected and tag it to expire. The expiry counts from upload, so an older image is deleted within a day."`
 }
@@ -36,6 +37,7 @@ type CLI struct {
 // RejectionsCmd lists rejections from the moderation function's logs.
 type RejectionsCmd struct {
 	Since string `default:"7d" help:"How far back to look: a number of days (7d) or a Go duration (12h)."`
+	All   bool   `help:"Also list reviewed rejections and takedowns, with how each was reviewed."`
 }
 
 func (c *RejectionsCmd) Run(ctx context.Context, st *stack) error {
@@ -43,25 +45,36 @@ func (c *RejectionsCmd) Run(ctx context.Context, st *stack) error {
 	if err != nil {
 		return err
 	}
-	rs, truncated, err := moderation.Rejections(ctx, cloudwatchlogs.NewFromConfig(st.cfg), st.logGroup, time.Now().Add(-since))
+	rs, truncated, err := moderation.Rejections(ctx, cloudwatchlogs.NewFromConfig(st.cfg), st.logGroup, time.Now().Add(-since), c.All)
 	if err != nil {
 		return err
 	}
 	if len(rs) == 0 {
-		fmt.Printf("No rejections in the last %s.\n", c.Since)
+		if c.All {
+			fmt.Printf("No rejections in the last %s.\n", c.Since)
+		} else {
+			fmt.Printf("No rejections awaiting review in the last %s.\n", c.Since)
+		}
 		return nil
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	_, _ = fmt.Fprintln(w, "TIME\tENTITY\tOWNER\tREASON\tCONFIDENCE\tKEY")
+	header := "TIME\tENTITY\tOWNER\tREASON\tCONFIDENCE\tKEY"
+	if c.All {
+		header = "TIME\tENTITY\tOWNER\tREASON\tCONFIDENCE\tREVIEW\tKEY"
+	}
+	_, _ = fmt.Fprintln(w, header)
 	for _, r := range rs {
 		ref, _ := imagekey.Parse(r.Key)
 		confidence := "-"
 		if r.Confidence > 0 {
 			confidence = strconv.FormatFloat(float64(r.Confidence), 'f', 1, 32)
 		}
-		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
-			r.Time.Local().Format(time.DateTime), ref.Entity, ref.OwnerID, r.Reason, confidence, r.Key)
+		row := []string{r.Time.Local().Format(time.DateTime), string(ref.Entity), ref.OwnerID, r.Reason, confidence}
+		if c.All {
+			row = append(row, reviewColumn(r))
+		}
+		_, _ = fmt.Fprintln(w, strings.Join(append(row, r.Key), "\t"))
 	}
 	if err := w.Flush(); err != nil {
 		return err
@@ -70,6 +83,19 @@ func (c *RejectionsCmd) Run(ctx context.Context, st *stack) error {
 		fmt.Printf("The query hit its %d-line limit, so older rejections may be missing; narrow --since to see them.\n", moderation.RejectionsLimit)
 	}
 	return nil
+}
+
+// reviewColumn describes how r was reviewed.
+func reviewColumn(r moderation.Rejection) string {
+	switch {
+	case r.Review == nil:
+		return "awaiting review"
+	case r.Manual && r.Review.Action == moderation.ActionRejected:
+		return "takedown"
+	case r.Manual:
+		return "takedown, then " + r.Review.Action + " " + r.Review.Time.Local().Format(time.DateTime)
+	}
+	return r.Review.Action + " " + r.Review.Time.Local().Format(time.DateTime)
 }
 
 // logRetention is ModerateFunctionLogGroup's RetentionInDays in
@@ -121,6 +147,23 @@ func (c *ViewCmd) Run(ctx context.Context, st *stack) error {
 	}
 	fmt.Printf("Opening the image in your browser. The link works for %s:\n%s\n", viewURLLifetime, req.URL)
 	openBrowser(ctx, req.URL)
+	return nil
+}
+
+// UpholdCmd records that a rejection stands.
+type UpholdCmd struct {
+	Key string `arg:"" help:"The rejected image's object key, or any link to it."`
+}
+
+func (c *UpholdCmd) Run(ctx context.Context, st *stack) error {
+	key, err := keyArg(c.Key, st.bucket)
+	if err != nil {
+		return err
+	}
+	if err := st.overrides().Uphold(ctx, key); err != nil {
+		return err
+	}
+	fmt.Printf("Upheld the rejection of %s.\n", key)
 	return nil
 }
 

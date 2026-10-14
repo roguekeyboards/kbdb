@@ -47,6 +47,89 @@ func (_m *MockLogsAPI) EXPECT() *MockLogsAPI_Expecter {
 	return &MockLogsAPI_Expecter{mock: &_m.Mock}
 }
 
+// CreateLogStream provides a mock function for the type MockLogsAPI
+func (_mock *MockLogsAPI) CreateLogStream(ctx context.Context, in *cloudwatchlogs.CreateLogStreamInput, opts ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.CreateLogStreamOutput, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, in, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, in)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateLogStream")
+	}
+
+	var r0 *cloudwatchlogs.CreateLogStreamOutput
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.CreateLogStreamInput, ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.CreateLogStreamOutput, error)); ok {
+		return returnFunc(ctx, in, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.CreateLogStreamInput, ...func(*cloudwatchlogs.Options)) *cloudwatchlogs.CreateLogStreamOutput); ok {
+		r0 = returnFunc(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.CreateLogStreamOutput)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.CreateLogStreamInput, ...func(*cloudwatchlogs.Options)) error); ok {
+		r1 = returnFunc(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockLogsAPI_CreateLogStream_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateLogStream'
+type MockLogsAPI_CreateLogStream_Call struct {
+	*mock.Call
+}
+
+// CreateLogStream is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in *cloudwatchlogs.CreateLogStreamInput
+//   - opts ...func(*cloudwatchlogs.Options)
+func (_e *MockLogsAPI_Expecter) CreateLogStream(ctx any, in any, opts ...any) *MockLogsAPI_CreateLogStream_Call {
+	return &MockLogsAPI_CreateLogStream_Call{Call: _e.mock.On("CreateLogStream",
+		append([]any{ctx, in}, opts...)...)}
+}
+
+func (_c *MockLogsAPI_CreateLogStream_Call) Run(run func(ctx context.Context, in *cloudwatchlogs.CreateLogStreamInput, opts ...func(*cloudwatchlogs.Options))) *MockLogsAPI_CreateLogStream_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudwatchlogs.CreateLogStreamInput
+		if args[1] != nil {
+			arg1 = args[1].(*cloudwatchlogs.CreateLogStreamInput)
+		}
+		var arg2 []func(*cloudwatchlogs.Options)
+		var variadicArgs []func(*cloudwatchlogs.Options)
+		if len(args) > 2 {
+			variadicArgs = args[2].([]func(*cloudwatchlogs.Options))
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockLogsAPI_CreateLogStream_Call) Return(createLogStreamOutput *cloudwatchlogs.CreateLogStreamOutput, err error) *MockLogsAPI_CreateLogStream_Call {
+	_c.Call.Return(createLogStreamOutput, err)
+	return _c
+}
+
+func (_c *MockLogsAPI_CreateLogStream_Call) RunAndReturn(run func(ctx context.Context, in *cloudwatchlogs.CreateLogStreamInput, opts ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.CreateLogStreamOutput, error)) *MockLogsAPI_CreateLogStream_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetQueryResults provides a mock function for the type MockLogsAPI
 func (_mock *MockLogsAPI) GetQueryResults(ctx context.Context, in *cloudwatchlogs.GetQueryResultsInput, opts ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.GetQueryResultsOutput, error) {
 	var tmpRet mock.Arguments
@@ -126,6 +209,89 @@ func (_c *MockLogsAPI_GetQueryResults_Call) Return(getQueryResultsOutput *cloudw
 }
 
 func (_c *MockLogsAPI_GetQueryResults_Call) RunAndReturn(run func(ctx context.Context, in *cloudwatchlogs.GetQueryResultsInput, opts ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.GetQueryResultsOutput, error)) *MockLogsAPI_GetQueryResults_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// PutLogEvents provides a mock function for the type MockLogsAPI
+func (_mock *MockLogsAPI) PutLogEvents(ctx context.Context, in *cloudwatchlogs.PutLogEventsInput, opts ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.PutLogEventsOutput, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, in, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, in)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for PutLogEvents")
+	}
+
+	var r0 *cloudwatchlogs.PutLogEventsOutput
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.PutLogEventsInput, ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.PutLogEventsOutput, error)); ok {
+		return returnFunc(ctx, in, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *cloudwatchlogs.PutLogEventsInput, ...func(*cloudwatchlogs.Options)) *cloudwatchlogs.PutLogEventsOutput); ok {
+		r0 = returnFunc(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudwatchlogs.PutLogEventsOutput)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *cloudwatchlogs.PutLogEventsInput, ...func(*cloudwatchlogs.Options)) error); ok {
+		r1 = returnFunc(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockLogsAPI_PutLogEvents_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PutLogEvents'
+type MockLogsAPI_PutLogEvents_Call struct {
+	*mock.Call
+}
+
+// PutLogEvents is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in *cloudwatchlogs.PutLogEventsInput
+//   - opts ...func(*cloudwatchlogs.Options)
+func (_e *MockLogsAPI_Expecter) PutLogEvents(ctx any, in any, opts ...any) *MockLogsAPI_PutLogEvents_Call {
+	return &MockLogsAPI_PutLogEvents_Call{Call: _e.mock.On("PutLogEvents",
+		append([]any{ctx, in}, opts...)...)}
+}
+
+func (_c *MockLogsAPI_PutLogEvents_Call) Run(run func(ctx context.Context, in *cloudwatchlogs.PutLogEventsInput, opts ...func(*cloudwatchlogs.Options))) *MockLogsAPI_PutLogEvents_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *cloudwatchlogs.PutLogEventsInput
+		if args[1] != nil {
+			arg1 = args[1].(*cloudwatchlogs.PutLogEventsInput)
+		}
+		var arg2 []func(*cloudwatchlogs.Options)
+		var variadicArgs []func(*cloudwatchlogs.Options)
+		if len(args) > 2 {
+			variadicArgs = args[2].([]func(*cloudwatchlogs.Options))
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockLogsAPI_PutLogEvents_Call) Return(putLogEventsOutput *cloudwatchlogs.PutLogEventsOutput, err error) *MockLogsAPI_PutLogEvents_Call {
+	_c.Call.Return(putLogEventsOutput, err)
+	return _c
+}
+
+func (_c *MockLogsAPI_PutLogEvents_Call) RunAndReturn(run func(ctx context.Context, in *cloudwatchlogs.PutLogEventsInput, opts ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.PutLogEventsOutput, error)) *MockLogsAPI_PutLogEvents_Call {
 	_c.Call.Return(run)
 	return _c
 }

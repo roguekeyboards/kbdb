@@ -1,12 +1,14 @@
 package moderation
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go"
@@ -21,6 +23,7 @@ import (
 
 type OverridesSuite struct {
 	suite.Suite
+	logs      *mocks.MockLogsAPI
 	s3        *mocks.MockS3API
 	switches  *repomocks.MockSwitchRepository
 	overrides *Overrides
@@ -33,7 +36,19 @@ func TestOverridesSuite(t *testing.T) {
 func (s *OverridesSuite) SetupTest() {
 	s.s3 = mocks.NewMockS3API(s.T())
 	s.switches = repomocks.NewMockSwitchRepository(s.T())
-	s.overrides = &Overrides{s3: s.s3, images: &Images{Switches: s.switches}, bucket: testBucket, now: time.Now}
+	s.logs = mocks.NewMockLogsAPI(s.T())
+	reviews := &ReviewLog{logs: s.logs, logGroup: testLogGroup, now: time.Now}
+	s.overrides = &Overrides{s3: s.s3, images: &Images{Switches: s.switches}, reviews: reviews, bucket: testBucket, now: time.Now}
+}
+
+// recorded expects one review line for testKey.
+func (s *OverridesSuite) recorded(action, reason string) {
+	s.logs.EXPECT().CreateLogStream(mock.Anything, mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil)
+	s.logs.EXPECT().PutLogEvents(mock.Anything, mock.MatchedBy(func(in *cloudwatchlogs.PutLogEventsInput) bool {
+		var r Review
+		s.Require().NoError(json.Unmarshal([]byte(aws.ToString(in.LogEvents[0].Message)), &r))
+		return r.Key == testKey && r.Action == action && r.Reason == reason && r.Msg == reviewMsg
+	})).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil)
 }
 
 func (s *OverridesSuite) setStatus(from, to repository.ImageStatus, reason *string, ok bool) {
@@ -84,6 +99,7 @@ func (s *OverridesSuite) TestApprove_Rejected() {
 	s.stored(testKey, repository.ImageStatusRejected)
 	s.untagged()
 	s.setStatus(repository.ImageStatusRejected, repository.ImageStatusApproved, nil, true)
+	s.recorded(ActionApproved, "")
 
 	already, untagged, err := s.overrides.Approve(s.T().Context(), testKey)
 	s.Require().NoError(err)
@@ -95,6 +111,7 @@ func (s *OverridesSuite) TestApprove_AlreadyApproved() {
 	s.exists()
 	s.stored(testKey, repository.ImageStatusApproved)
 	s.tags()
+	s.recorded(ActionApproved, "")
 
 	already, untagged, err := s.overrides.Approve(s.T().Context(), testKey)
 	s.Require().NoError(err)
@@ -107,6 +124,7 @@ func (s *OverridesSuite) TestApprove_AlreadyApprovedStillTagged() {
 	s.exists()
 	s.stored(testKey, repository.ImageStatusApproved)
 	s.untagged()
+	s.recorded(ActionApproved, "")
 
 	already, untagged, err := s.overrides.Approve(s.T().Context(), testKey)
 	s.Require().NoError(err)
@@ -163,6 +181,7 @@ func (s *OverridesSuite) TestApprove_KeepsOtherTags() {
 		return aws.ToString(in.Key) == testKey && len(tags) == 1 && aws.ToString(tags[0].Key) == "team"
 	})).Return(&s3.PutObjectTaggingOutput{}, nil)
 	s.setStatus(repository.ImageStatusRejected, repository.ImageStatusApproved, nil, true)
+	s.recorded(ActionApproved, "")
 
 	_, untagged, err := s.overrides.Approve(s.T().Context(), testKey)
 	s.Require().NoError(err)
@@ -196,6 +215,7 @@ func (s *OverridesSuite) TestApprove_FileExpiresLater() {
 	}, nil)
 	s.untagged()
 	s.setStatus(repository.ImageStatusRejected, repository.ImageStatusApproved, nil, true)
+	s.recorded(ActionApproved, "")
 
 	_, _, err := s.overrides.Approve(s.T().Context(), testKey)
 	s.Require().NoError(err)
@@ -227,11 +247,45 @@ func (s *OverridesSuite) TestApprove_UnknownKey() {
 	s.Require().ErrorIs(err, imagekey.ErrUnknownKey)
 }
 
+func (s *OverridesSuite) TestUphold() {
+	s.stored(testKey, repository.ImageStatusRejected)
+	s.recorded(ActionUpheld, "")
+
+	s.Require().NoError(s.overrides.Uphold(s.T().Context(), testKey))
+}
+
+func (s *OverridesSuite) TestUphold_NotRejected() {
+	s.stored(testKey, repository.ImageStatusApproved)
+
+	s.Require().ErrorContains(s.overrides.Uphold(s.T().Context(), testKey), "is approved, not rejected")
+}
+
+func (s *OverridesSuite) TestUphold_NotCurrent() {
+	s.stored("switches/alice/sw1/image/up2", repository.ImageStatusRejected)
+
+	s.Require().ErrorIs(s.overrides.Uphold(s.T().Context(), testKey), ErrNotCurrent)
+}
+
+// The approval stands; running approve again finds it already approved
+// and records the review then.
+func (s *OverridesSuite) TestApprove_RecordFails() {
+	s.exists()
+	s.stored(testKey, repository.ImageStatusRejected)
+	s.untagged()
+	s.setStatus(repository.ImageStatusRejected, repository.ImageStatusApproved, nil, true)
+	s.logs.EXPECT().CreateLogStream(mock.Anything, mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil)
+	s.logs.EXPECT().PutLogEvents(mock.Anything, mock.Anything).Return(nil, errors.New("boom"))
+
+	_, _, err := s.overrides.Approve(s.T().Context(), testKey)
+	s.Require().ErrorContains(err, "recording the review")
+}
+
 func (s *OverridesSuite) TestReject_Approved() {
 	reason := "manual"
 	s.setStatus(repository.ImageStatusApproved, repository.ImageStatusRejected, &reason, true)
 	s.tags()
 	s.tagged()
+	s.recorded(ActionRejected, "manual")
 
 	already, gone, err := s.overrides.Reject(s.T().Context(), testKey, reason)
 	s.Require().NoError(err)
@@ -245,6 +299,7 @@ func (s *OverridesSuite) TestReject_AlreadyRejected() {
 	s.stored(testKey, repository.ImageStatusRejected)
 	s.tags(tag("moderation", "rejected"))
 	s.tagged()
+	s.recorded(ActionRejected, "manual")
 
 	already, _, err := s.overrides.Reject(s.T().Context(), testKey, reason)
 	s.Require().NoError(err)
@@ -260,6 +315,7 @@ func (s *OverridesSuite) TestReject_KeepsOtherTags() {
 		return len(tags) == 2 && aws.ToString(tags[0].Key) == "team" &&
 			aws.ToString(tags[1].Key) == "moderation" && aws.ToString(tags[1].Value) == "rejected"
 	})).Return(&s3.PutObjectTaggingOutput{}, nil)
+	s.recorded(ActionRejected, "manual")
 
 	_, _, err := s.overrides.Reject(s.T().Context(), testKey, reason)
 	s.Require().NoError(err)
@@ -290,6 +346,7 @@ func (s *OverridesSuite) TestReject_FileGone() {
 	s.setStatus(repository.ImageStatusApproved, repository.ImageStatusRejected, &reason, true)
 	s.s3.EXPECT().GetObjectTagging(mock.Anything, mock.Anything).
 		Return(nil, fmt.Errorf("operation error S3: GetObjectTagging: %w", &smithy.GenericAPIError{Code: "NoSuchKey"}))
+	s.recorded(ActionRejected, "manual")
 
 	_, gone, err := s.overrides.Reject(s.T().Context(), testKey, reason)
 	s.Require().NoError(err)

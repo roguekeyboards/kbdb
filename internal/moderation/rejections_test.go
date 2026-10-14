@@ -65,7 +65,7 @@ func (s *RejectionsSuite) TestParsesDecisionLines() {
 		row(`{"time":"2026-10-11T09:00:00Z","msg":"moderated image","key":"profiles/bob/avatar/up2","decision":"rejected","reason":"unprocessable","error":"bad image"}`),
 	)
 
-	rs, truncated, err := Rejections(s.T().Context(), s.logs, testLogGroup, start)
+	rs, truncated, err := Rejections(s.T().Context(), s.logs, testLogGroup, start, false)
 	s.Require().NoError(err)
 	s.False(truncated)
 	s.Equal([]Rejection{
@@ -82,7 +82,7 @@ func (s *RejectionsSuite) TestKeepsNewestPerKey() {
 		row(`{"time":"2026-10-12T10:00:00Z","key":"profiles/bob/avatar/up2","reason":"unprocessable"}`),
 	)
 
-	rs, _, err := Rejections(s.T().Context(), s.logs, testLogGroup, start)
+	rs, _, err := Rejections(s.T().Context(), s.logs, testLogGroup, start, false)
 	s.Require().NoError(err)
 	s.Equal([]Rejection{
 		{Time: time.Date(2026, 10, 12, 10, 0, 5, 0, time.UTC), Key: "profiles/bob/avatar/up2", Reason: "unprocessable"},
@@ -100,10 +100,88 @@ func (s *RejectionsSuite) TestTruncated() {
 	}
 	s.results(logtypes.QueryStatusComplete, rows...)
 
-	rs, truncated, err := Rejections(s.T().Context(), s.logs, testLogGroup, start)
+	rs, truncated, err := Rejections(s.T().Context(), s.logs, testLogGroup, start, false)
 	s.Require().NoError(err)
 	s.True(truncated)
 	s.Len(rs, 1)
+}
+
+// Results are newest first, so a review line comes before the decision
+// line it reviews.
+func (s *RejectionsSuite) reviewedResults(start time.Time) {
+	s.started(start)
+	s.results(logtypes.QueryStatusComplete,
+		row(`{"time":"2026-10-13T12:00:00Z","msg":"operator review","key":"builds/carol/b1/images/i1","action":"rejected","reason":"spam"}`),
+		row(`{"time":"2026-10-13T11:00:00Z","msg":"operator review","key":"switches/alice/sw1/image/up1","action":"approved"}`),
+		row(`{"time":"2026-10-12T10:00:00Z","msg":"moderated image","key":"switches/alice/sw1/image/up1","decision":"rejected","reason":"Explicit"}`),
+		row(`{"time":"2026-10-11T09:00:00Z","msg":"moderated image","key":"profiles/bob/avatar/up2","decision":"rejected","reason":"unprocessable"}`),
+	)
+}
+
+func (s *RejectionsSuite) TestHidesReviewed() {
+	start := time.Now()
+	s.reviewedResults(start)
+
+	rs, _, err := Rejections(s.T().Context(), s.logs, testLogGroup, start, false)
+	s.Require().NoError(err)
+	s.Equal([]Rejection{
+		{Time: time.Date(2026, 10, 11, 9, 0, 0, 0, time.UTC), Key: "profiles/bob/avatar/up2", Reason: "unprocessable"},
+	}, rs)
+}
+
+func (s *RejectionsSuite) TestAllIncludesReviewedAndTakedowns() {
+	start := time.Now()
+	s.reviewedResults(start)
+
+	rs, _, err := Rejections(s.T().Context(), s.logs, testLogGroup, start, true)
+	s.Require().NoError(err)
+	s.Equal([]Rejection{
+		{
+			Time: time.Date(2026, 10, 13, 12, 0, 0, 0, time.UTC), Key: "builds/carol/b1/images/i1", Reason: "spam", Manual: true,
+			Review: &Review{Time: time.Date(2026, 10, 13, 12, 0, 0, 0, time.UTC), Msg: "operator review", Key: "builds/carol/b1/images/i1", Action: ActionRejected, Reason: "spam"},
+		},
+		{
+			Time: time.Date(2026, 10, 12, 10, 0, 0, 0, time.UTC), Key: "switches/alice/sw1/image/up1", Reason: "Explicit",
+			Review: &Review{Time: time.Date(2026, 10, 13, 11, 0, 0, 0, time.UTC), Msg: "operator review", Key: "switches/alice/sw1/image/up1", Action: ActionApproved},
+		},
+		{Time: time.Date(2026, 10, 11, 9, 0, 0, 0, time.UTC), Key: "profiles/bob/avatar/up2", Reason: "unprocessable"},
+	}, rs)
+}
+
+// Only the latest review counts: a rejection upheld and later approved
+// shows as approved.
+func (s *RejectionsSuite) TestLatestReviewWins() {
+	start := time.Now()
+	s.started(start)
+	s.results(logtypes.QueryStatusComplete,
+		row(`{"time":"2026-10-13T12:00:00Z","msg":"operator review","key":"profiles/bob/avatar/up2","action":"approved"}`),
+		row(`{"time":"2026-10-12T12:00:00Z","msg":"operator review","key":"profiles/bob/avatar/up2","action":"upheld"}`),
+		row(`{"time":"2026-10-11T09:00:00Z","msg":"moderated image","key":"profiles/bob/avatar/up2","decision":"rejected","reason":"Explicit"}`),
+	)
+
+	rs, _, err := Rejections(s.T().Context(), s.logs, testLogGroup, start, true)
+	s.Require().NoError(err)
+	s.Require().Len(rs, 1)
+	s.Equal(ActionApproved, rs[0].Review.Action)
+}
+
+// A takedown later reversed stays in the history, with the approval as
+// its review.
+func (s *RejectionsSuite) TestReversedTakedown() {
+	start := time.Now()
+	s.started(start)
+	s.results(logtypes.QueryStatusComplete,
+		row(`{"time":"2026-10-13T12:00:00Z","msg":"operator review","key":"builds/carol/b1/images/i1","action":"approved"}`),
+		row(`{"time":"2026-10-12T12:00:00Z","msg":"operator review","key":"builds/carol/b1/images/i1","action":"rejected","reason":"spam"}`),
+	)
+
+	rs, _, err := Rejections(s.T().Context(), s.logs, testLogGroup, start, true)
+	s.Require().NoError(err)
+	s.Require().Len(rs, 1)
+	s.True(rs[0].Manual)
+	s.Equal("spam", rs[0].Reason)
+	s.Equal(time.Date(2026, 10, 12, 12, 0, 0, 0, time.UTC), rs[0].Time)
+	s.Equal(ActionApproved, rs[0].Review.Action)
 }
 
 func (s *RejectionsSuite) TestQueryFailed() {
@@ -111,14 +189,14 @@ func (s *RejectionsSuite) TestQueryFailed() {
 	s.started(start)
 	s.results(logtypes.QueryStatusFailed)
 
-	_, _, err := Rejections(s.T().Context(), s.logs, testLogGroup, start)
+	_, _, err := Rejections(s.T().Context(), s.logs, testLogGroup, start, false)
 	s.Require().ErrorContains(err, "ended Failed")
 }
 
 func (s *RejectionsSuite) TestStartFails() {
 	s.logs.EXPECT().StartQuery(mock.Anything, mock.Anything).Return(nil, errors.New("boom"))
 
-	_, _, err := Rejections(s.T().Context(), s.logs, testLogGroup, time.Now())
+	_, _, err := Rejections(s.T().Context(), s.logs, testLogGroup, time.Now(), false)
 	s.Require().ErrorContains(err, "boom")
 }
 
@@ -130,7 +208,7 @@ func (s *RejectionsSuite) TestSkipsMalformedLine() {
 		row(`{"time":"2026-10-11T09:00:00Z","key":"profiles/carol/avatar/up3","reason":"unprocessable"}`),
 	)
 
-	rs, _, err := Rejections(s.T().Context(), s.logs, testLogGroup, start)
+	rs, _, err := Rejections(s.T().Context(), s.logs, testLogGroup, start, false)
 	s.Require().NoError(err)
 	s.Equal([]Rejection{
 		{Time: time.Date(2026, 10, 11, 9, 0, 0, 0, time.UTC), Key: "profiles/carol/avatar/up3", Reason: "unprocessable"},

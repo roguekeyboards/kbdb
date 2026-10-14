@@ -6,6 +6,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
@@ -60,5 +61,6 @@ func resolveStack(ctx context.Context, cfg aws.Config, name string) (*stack, err
 }
 
 func (st *stack) overrides() *moderation.Overrides {
-	return moderation.NewOverrides(s3.NewFromConfig(st.cfg), st.images, st.bucket)
+	reviews := moderation.NewReviewLog(cloudwatchlogs.NewFromConfig(st.cfg), st.logGroup)
+	return moderation.NewOverrides(s3.NewFromConfig(st.cfg), st.images, reviews, st.bucket)
 }
