@@ -97,10 +97,37 @@ Parameters:
     Description: >-
       Address the alarm topic emails (confirm the subscription by hand
       once). Empty, the default, creates no topic and no alarms.
+  ProtectData:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: >-
+      'true' turns on deletion protection and point-in-time recovery for
+      every table holding user data. For prod; dev and CI stacks are torn
+      down all the time, so it's off by default.
+  ThrottleRateLimit:
+    Type: String
+    Default: ''
+    AllowedPattern: '^$|^[0-9]+(\.[0-9]+)?$'
+    Description: >-
+      Steady-state requests per second for every HttpApi route. Throttled
+      requests aren't billed, so this caps API and Lambda cost. Applied only
+      when ThrottleBurstLimit is set too; empty, the default, leaves the
+      account-level limit (so parallel functional tests aren't throttled).
+  ThrottleBurstLimit:
+    Type: String
+    Default: ''
+    AllowedPattern: '^$|^[0-9]+$'
+    Description: >-
+      Burst capacity for every HttpApi route. See ThrottleRateLimit.
 
 Conditions:
   HasCustomDomain: !Not [!Equals [!Ref CustomDomainName, '']]
   HasAlarmEmail: !Not [!Equals [!Ref AlarmEmail, '']]
+  ProtectData: !Equals [!Ref ProtectData, 'true']
+  HasThrottle: !And
+    - !Not [!Equals [!Ref ThrottleRateLimit, '']]
+    - !Not [!Equals [!Ref ThrottleBurstLimit, '']]
 
 Resources:
   # Holds user-uploaded images (build photos, keycap kit renders). Private -
@@ -205,6 +232,11 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: !If [ProtectData, true, !Ref AWS::NoValue]
+      PointInTimeRecoverySpecification: !If
+        - ProtectData
+        - PointInTimeRecoveryEnabled: true
+        - !Ref AWS::NoValue
       AttributeDefinitions:
         - AttributeName: user_id
           AttributeType: S
@@ -221,6 +253,11 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: !If [ProtectData, true, !Ref AWS::NoValue]
+      PointInTimeRecoverySpecification: !If
+        - ProtectData
+        - PointInTimeRecoveryEnabled: true
+        - !Ref AWS::NoValue
       AttributeDefinitions:
         - AttributeName: user_id
           AttributeType: S
@@ -237,6 +274,11 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: !If [ProtectData, true, !Ref AWS::NoValue]
+      PointInTimeRecoverySpecification: !If
+        - ProtectData
+        - PointInTimeRecoveryEnabled: true
+        - !Ref AWS::NoValue
       AttributeDefinitions:
         - AttributeName: user_id
           AttributeType: S
@@ -260,6 +302,11 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: !If [ProtectData, true, !Ref AWS::NoValue]
+      PointInTimeRecoverySpecification: !If
+        - ProtectData
+        - PointInTimeRecoveryEnabled: true
+        - !Ref AWS::NoValue
       AttributeDefinitions:
         - AttributeName: user_id
           AttributeType: S
@@ -313,6 +360,11 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: !If [ProtectData, true, !Ref AWS::NoValue]
+      PointInTimeRecoverySpecification: !If
+        - ProtectData
+        - PointInTimeRecoveryEnabled: true
+        - !Ref AWS::NoValue
       AttributeDefinitions:
         - AttributeName: user_id
           AttributeType: S
@@ -354,6 +406,11 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: !If [ProtectData, true, !Ref AWS::NoValue]
+      PointInTimeRecoverySpecification: !If
+        - ProtectData
+        - PointInTimeRecoveryEnabled: true
+        - !Ref AWS::NoValue
       AttributeDefinitions:
         - AttributeName: username
           AttributeType: S
@@ -517,6 +574,44 @@ Resources:
       Dimensions:
         - Name: FunctionName
           Value: !Ref ModerateFunction
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref AlarmTopic
+
+  ApiFunctionErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasAlarmEmail
+    Properties:
+      AlarmDescription: The API function returned errors
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref ApiFunction
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref AlarmTopic
+
+  HttpApi5xxAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasAlarmEmail
+    Properties:
+      AlarmDescription: The HTTP API returned 5xx responses
+      Namespace: AWS/ApiGateway
+      MetricName: 5xx
+      Dimensions:
+        - Name: ApiId
+          Value: !Ref HttpApi
       Statistic: Sum
       Period: 300
       EvaluationPeriods: 1
@@ -1108,6 +1203,11 @@ Resources:
                 - !Ref OidcAudience
             IdentitySource: $request.header.Authorization
         DefaultAuthorizer: OidcAuthorizer
+      DefaultRouteSettings: !If
+        - HasThrottle
+        - ThrottlingRateLimit: !Ref ThrottleRateLimit
+          ThrottlingBurstLimit: !Ref ThrottleBurstLimit
+        - !Ref AWS::NoValue
       AccessLogSettings:
         DestinationArn: !GetAtt HttpApiAccessLogGroup.Arn
         Format: >-
