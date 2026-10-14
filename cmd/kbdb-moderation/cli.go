@@ -12,7 +12,9 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
+	"github.com/aws/aws-sdk-go-v2/service/lambda"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	"github.com/rogueserenity/kbdb/internal/imagekey"
@@ -31,6 +33,10 @@ type CLI struct {
 	View       ViewCmd       `cmd:"" help:"Open an image in the browser, whatever its status."`
 	Uphold     UpholdCmd     `cmd:"" help:"Record that a rejection was reviewed and stands. The image stays rejected and still expires."`
 	Approve    ApproveCmd    `cmd:"" help:"Override a rejection: mark the image approved and stop it expiring."`
+	Pause      PauseCmd      `cmd:"" help:"Stop moderating new uploads: they stay pending, and their events retry for up to 6 hours."`
+	Resume     ResumeCmd     `cmd:"" help:"Start moderating again, and report the dead-letter queue's size."`
+	DLQ        DLQCmd        `cmd:"" name:"dlq" help:"List the events the moderation function failed on, without removing them."`
+	Redrive    RedriveCmd    `cmd:"" help:"Rerun the moderation function on dead-lettered events, removing each one that succeeds. Stops at the first failure."`
 	Reject     RejectCmd     `cmd:"" help:"Take down an approved image: mark it rejected and tag it to expire. The expiry counts from upload, so an older image is deleted within a day."`
 }
 
@@ -244,6 +250,96 @@ func keyArg(arg, bucket string) (string, error) {
 	}
 	key := strings.TrimPrefix(u.Path, "/")
 	return strings.TrimPrefix(key, bucket+"/"), nil
+}
+
+// PauseCmd sets the moderation function's reserved concurrency to 0.
+// template.yaml doesn't set it, so a deploy doesn't undo a pause.
+type PauseCmd struct{}
+
+func (c *PauseCmd) Run(ctx context.Context, st *stack) error {
+	_, err := lambda.NewFromConfig(st.cfg).PutFunctionConcurrency(ctx, &lambda.PutFunctionConcurrencyInput{
+		FunctionName:                 &st.function,
+		ReservedConcurrentExecutions: aws.Int32(0),
+	})
+	if err != nil {
+		return fmt.Errorf("pausing %s: %w", st.function, err)
+	}
+	fmt.Println("Paused. New uploads stay pending; their events retry for up to 6 hours, so resume within that to catch up without a redrive.")
+	return nil
+}
+
+// ResumeCmd removes the moderation function's reserved concurrency.
+type ResumeCmd struct{}
+
+func (c *ResumeCmd) Run(ctx context.Context, st *stack) error {
+	_, err := lambda.NewFromConfig(st.cfg).DeleteFunctionConcurrency(ctx, &lambda.DeleteFunctionConcurrencyInput{
+		FunctionName: &st.function,
+	})
+	if err != nil {
+		return fmt.Errorf("resuming %s: %w", st.function, err)
+	}
+	fmt.Print("Resumed.")
+	n, err := st.dlq().Count(ctx)
+	if err != nil {
+		fmt.Println()
+		return err
+	}
+	fmt.Printf(" The dead-letter queue holds %d event(s)", n)
+	if n > 0 {
+		fmt.Print("; list them with moderation-dlq and rerun them with moderation-redrive")
+	}
+	fmt.Println(".")
+	return nil
+}
+
+// DLQCmd lists the dead-letter queue.
+type DLQCmd struct{}
+
+func (c *DLQCmd) Run(ctx context.Context, st *stack) error {
+	evs, err := st.dlq().List(ctx)
+	if err != nil {
+		return err
+	}
+	if len(evs) == 0 {
+		fmt.Println("The dead-letter queue is empty.")
+		return nil
+	}
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	_, _ = fmt.Fprintln(w, "TIME\tCONDITION\tATTEMPTS\tKEY\tERROR")
+	for _, ev := range evs {
+		for _, key := range ev.Keys {
+			_, _ = fmt.Fprintf(w, "%s\t%s\t%d\t%s\t%s\n",
+				ev.Time.Local().Format(time.DateTime), ev.Condition, ev.Attempts, key, ev.Error)
+		}
+	}
+	return w.Flush()
+}
+
+// RedriveCmd reruns dead-lettered events.
+type RedriveCmd struct {
+	Key string `help:"Only redrive the event for this image key, or a link to it."`
+}
+
+func (c *RedriveCmd) Run(ctx context.Context, st *stack) error {
+	key := ""
+	if c.Key != "" {
+		var err error
+		if key, err = keyArg(c.Key, st.bucket); err != nil {
+			return err
+		}
+	}
+	n := 0
+	err := st.dlq().Redrive(ctx, key, func(ev moderation.FailedEvent) {
+		n++
+		fmt.Printf("Redrove %s.\n", strings.Join(ev.Keys, ", "))
+	})
+	if err != nil {
+		return fmt.Errorf("stopped after %d: %w", n, err)
+	}
+	if n == 0 {
+		fmt.Println("Nothing to redrive.")
+	}
+	return nil
 }
 
 // openBrowser best-effort opens url in the system browser. Failures are
