@@ -97,10 +97,58 @@ Parameters:
     Description: >-
       Address the alarm topic emails (confirm the subscription by hand
       once). Empty, the default, creates no topic and no alarms.
+  ProtectData:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: >-
+      'true' turns on deletion protection and point-in-time recovery for
+      every table holding user data. For prod; dev and CI stacks are torn
+      down all the time, so it's off by default.
+  ThrottleRateLimit:
+    Type: String
+    Default: ''
+    AllowedPattern: '^$|^[0-9]+(\.[0-9]+)?$'
+    Description: >-
+      Steady-state requests per second for each HttpApi route (each route
+      has its own limit; ApiReservedConcurrency caps the API as a whole).
+      Throttled requests aren't billed. Set together with
+      ThrottleBurstLimit; empty, the default, leaves the account-level limit
+      (so parallel functional tests aren't throttled).
+  ThrottleBurstLimit:
+    Type: String
+    Default: ''
+    AllowedPattern: '^$|^[0-9]+$'
+    Description: >-
+      Burst capacity for each HttpApi route. See ThrottleRateLimit.
+  ApiReservedConcurrency:
+    Type: String
+    Default: ''
+    AllowedPattern: '^$|^[0-9]+$'
+    Description: >-
+      Most ApiFunction invocations running at once, across every route, which
+      bounds API cost however requests are spread over routes. Reserved out
+      of the account's Lambda concurrency, which must keep 10 unreserved.
+      Empty, the default, leaves the function unreserved.
+
+Rules:
+  ThrottleSetTogether:
+    Assertions:
+      - Assert: !Or
+          - !And
+            - !Equals [!Ref ThrottleRateLimit, '']
+            - !Equals [!Ref ThrottleBurstLimit, '']
+          - !And
+            - !Not [!Equals [!Ref ThrottleRateLimit, '']]
+            - !Not [!Equals [!Ref ThrottleBurstLimit, '']]
+        AssertDescription: Set ThrottleRateLimit and ThrottleBurstLimit together, or neither.
 
 Conditions:
   HasCustomDomain: !Not [!Equals [!Ref CustomDomainName, '']]
   HasAlarmEmail: !Not [!Equals [!Ref AlarmEmail, '']]
+  HasDataProtection: !Equals [!Ref ProtectData, 'true']
+  HasThrottle: !Not [!Equals [!Ref ThrottleRateLimit, '']]
+  HasApiReservedConcurrency: !Not [!Equals [!Ref ApiReservedConcurrency, '']]
 
 Resources:
   # Holds user-uploaded images (build photos, keycap kit renders). Private -
@@ -205,6 +253,11 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: !If [HasDataProtection, true, !Ref AWS::NoValue]
+      PointInTimeRecoverySpecification: !If
+        - HasDataProtection
+        - PointInTimeRecoveryEnabled: true
+        - !Ref AWS::NoValue
       AttributeDefinitions:
         - AttributeName: user_id
           AttributeType: S
@@ -221,6 +274,11 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: !If [HasDataProtection, true, !Ref AWS::NoValue]
+      PointInTimeRecoverySpecification: !If
+        - HasDataProtection
+        - PointInTimeRecoveryEnabled: true
+        - !Ref AWS::NoValue
       AttributeDefinitions:
         - AttributeName: user_id
           AttributeType: S
@@ -237,6 +295,11 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: !If [HasDataProtection, true, !Ref AWS::NoValue]
+      PointInTimeRecoverySpecification: !If
+        - HasDataProtection
+        - PointInTimeRecoveryEnabled: true
+        - !Ref AWS::NoValue
       AttributeDefinitions:
         - AttributeName: user_id
           AttributeType: S
@@ -260,6 +323,11 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: !If [HasDataProtection, true, !Ref AWS::NoValue]
+      PointInTimeRecoverySpecification: !If
+        - HasDataProtection
+        - PointInTimeRecoveryEnabled: true
+        - !Ref AWS::NoValue
       AttributeDefinitions:
         - AttributeName: user_id
           AttributeType: S
@@ -313,6 +381,11 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: !If [HasDataProtection, true, !Ref AWS::NoValue]
+      PointInTimeRecoverySpecification: !If
+        - HasDataProtection
+        - PointInTimeRecoveryEnabled: true
+        - !Ref AWS::NoValue
       AttributeDefinitions:
         - AttributeName: user_id
           AttributeType: S
@@ -354,6 +427,11 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: !If [HasDataProtection, true, !Ref AWS::NoValue]
+      PointInTimeRecoverySpecification: !If
+        - HasDataProtection
+        - PointInTimeRecoveryEnabled: true
+        - !Ref AWS::NoValue
       AttributeDefinitions:
         - AttributeName: username
           AttributeType: S
@@ -526,6 +604,44 @@ Resources:
       AlarmActions:
         - !Ref AlarmTopic
 
+  ApiFunctionErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasAlarmEmail
+    Properties:
+      AlarmDescription: The API function returned errors
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref ApiFunction
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref AlarmTopic
+
+  HttpApi5xxAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasAlarmEmail
+    Properties:
+      AlarmDescription: The HTTP API returned 5xx responses
+      Namespace: AWS/ApiGateway
+      MetricName: 5xx
+      Dimensions:
+        - Name: ApiId
+          Value: !Ref HttpApi
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref AlarmTopic
+
   # Single Lambda function for all routes (REST entities + MCP), not split
   # by protocol or by entity - see plan rationale. Packaged as a container
   # image (aws-lambda-web-adapter sidecar) rather than a zip - see
@@ -535,6 +651,10 @@ Resources:
     Properties:
       FunctionName: !Sub kbdb-api-${AWS::StackName}
       PackageType: Image
+      ReservedConcurrentExecutions: !If
+        - HasApiReservedConcurrency
+        - !Ref ApiReservedConcurrency
+        - !Ref AWS::NoValue
       Architectures:
         - arm64
       Environment:
@@ -1108,6 +1228,11 @@ Resources:
                 - !Ref OidcAudience
             IdentitySource: $request.header.Authorization
         DefaultAuthorizer: OidcAuthorizer
+      DefaultRouteSettings: !If
+        - HasThrottle
+        - ThrottlingRateLimit: !Ref ThrottleRateLimit
+          ThrottlingBurstLimit: !Ref ThrottleBurstLimit
+        - !Ref AWS::NoValue
       AccessLogSettings:
         DestinationArn: !GetAtt HttpApiAccessLogGroup.Arn
         Format: >-
