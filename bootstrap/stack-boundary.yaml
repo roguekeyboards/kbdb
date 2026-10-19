@@ -1,0 +1,79 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  One-time-per-account bootstrap (kbdb-dev, kbdb-ci, kbdb-prod, and floci via
+  scripts/func-setup.sh): the permissions boundary template.yaml puts on
+  every role it creates. A role's permissions are what both its own policies
+  and this boundary allow, so a template change can't grant the stack's
+  roles anything outside it - in prod that bounds a malicious change merged
+  to main, since the deploy role can only create or change roles that carry
+  this boundary.
+
+  It lives outside template.yaml because the deploy role would otherwise be
+  able to edit it. Its resources are kbdb-* patterns, so one boundary covers
+  every stack in the account (kbdb-dev-<name>, kbdb-pr-<N>, kbdb-prod).
+
+  An app change that needs a new permission updates this template in every
+  account before it merges, kbdb-ci first: CI deploys under the boundary, so
+  the PR's functional tests fail until CI's copy allows it.
+
+Resources:
+  StackBoundary:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: kbdb-stack-boundary
+      Description: Maximum permissions for the roles template.yaml creates
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          # AWSLambdaBasicExecutionRole, which SAM attaches to each
+          # function's role.
+          - Sid: FunctionLogs
+            Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource:
+              - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-*
+              - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-*:*
+          - Sid: Tables
+            Effect: Allow
+            Action:
+              - dynamodb:Query
+              - dynamodb:GetItem
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+              - dynamodb:DeleteItem
+              - dynamodb:TransactWriteItems
+            Resource:
+              - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/kbdb-*
+              - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/kbdb-*/index/*
+          # ApiFunction's uploads, reads and deletes (and the presigned URLs
+          # it signs), the moderation function's tagging, and
+          # PresignSigningRole's GETs.
+          - Sid: Images
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:DeleteObject
+              - s3:PutObjectTagging
+            Resource: !Sub arn:aws:s3:::kbdb-images-${AWS::AccountId}-*/*
+          - Sid: Moderation
+            Effect: Allow
+            Action: rekognition:DetectModerationLabels
+            Resource: '*'
+          # The moderation function's OnFailure destination; SAM grants it to
+          # the function's role.
+          - Sid: ModerationDlq
+            Effect: Allow
+            Action: sqs:SendMessage
+            Resource: !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:kbdb-*
+          - Sid: AssumePresignSigningRole
+            Effect: Allow
+            Action: sts:AssumeRole
+            Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/kbdb-*-PresignSigningRole-*
+
+Outputs:
+  StackBoundaryArn:
+    Value: !Ref StackBoundary

@@ -13,6 +13,10 @@ Description: >
   tables or the images bucket: a deploy that would replace one of them
   fails instead.
 
+  Every role it creates or changes must carry kbdb-stack-boundary
+  (bootstrap/stack-boundary.yaml), which caps what template.yaml can grant
+  them.
+
 Resources:
   GitHubOidcProvider:
     Type: AWS::IAM::OIDCProvider
@@ -129,7 +133,6 @@ Resources:
               - Sid: StackRoles
                 Effect: Allow
                 Action:
-                  - iam:CreateRole
                   - iam:DeleteRole
                   - iam:GetRole
                   - iam:UpdateRole
@@ -137,14 +140,35 @@ Resources:
                   - iam:UpdateAssumeRolePolicy
                   - iam:TagRole
                   - iam:UntagRole
-                  - iam:PutRolePolicy
                   - iam:GetRolePolicy
-                  - iam:DeleteRolePolicy
                   - iam:ListRolePolicies
-                  - iam:AttachRolePolicy
-                  - iam:DetachRolePolicy
                   - iam:ListAttachedRolePolicies
                 Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/kbdb-prod-*
+              # Whatever a template grants a stack role, kbdb-stack-boundary
+              # (bootstrap/stack-boundary.yaml) caps it: these only apply to
+              # roles that carry it, and nothing here can remove it.
+              - Sid: StackRolesWithBoundary
+                Effect: Allow
+                Action:
+                  - iam:CreateRole
+                  - iam:PutRolePermissionsBoundary
+                  - iam:PutRolePolicy
+                  - iam:DeleteRolePolicy
+                  - iam:DetachRolePolicy
+                Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/kbdb-prod-*
+                Condition:
+                  StringEquals:
+                    iam:PermissionsBoundary: !Sub arn:aws:iam::${AWS::AccountId}:policy/kbdb-stack-boundary
+              # The one managed policy SAM attaches to function roles.
+              - Sid: AttachBasicExecutionRole
+                Effect: Allow
+                Action: iam:AttachRolePolicy
+                Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/kbdb-prod-*
+                Condition:
+                  StringEquals:
+                    iam:PermissionsBoundary: !Sub arn:aws:iam::${AWS::AccountId}:policy/kbdb-stack-boundary
+                  ArnEquals:
+                    iam:PolicyARN: arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
               - Sid: PassStackRolesToLambda
                 Effect: Allow
                 Action: iam:PassRole
