@@ -3,6 +3,10 @@ name: Release
 on:
   push:
     branches: [main]
+  # Recovers a push GitHub never delivered (#545's merge started no runs):
+  # gh workflow run release.yml. semantic-release releases every commit since
+  # the last tag, so a late run loses nothing.
+  workflow_dispatch:
 
 concurrency:
   group: release
