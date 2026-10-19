@@ -1,0 +1,13 @@
+Copyright (c) 2026 Jay. All rights reserved.
+
+The mykeebs name, logo, icons and other artwork in this directory - tokens.json,
+everything in dist/, and the @rogueserenity/mykeebs-brand npm package built
+from them - are not covered by kbdb's MIT license. They may be used to refer
+to mykeebs, and by mykeebs' own software, but not as the name or logo of
+anything else.
+
+The code that generates them (the .go files under brand/) is covered by
+kbdb's MIT license, in ../LICENSE.
+
+fonts/JetBrainsMono-ExtraBold.ttf is JetBrains Mono, licensed under the SIL
+Open Font License 1.1 - see fonts/OFL.txt.

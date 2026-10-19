@@ -39,4 +39,4 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for local setup, running the app agains
 
 ## License
 
-MIT — see [`LICENSE`](LICENSE).
+MIT — see [`LICENSE`](LICENSE). The mykeebs name, logo and artwork in [`brand/`](brand/) are not covered; see [`brand/LICENSE`](brand/LICENSE).

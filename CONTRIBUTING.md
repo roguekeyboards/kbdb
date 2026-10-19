@@ -17,7 +17,7 @@ mise activate  # add to your shell profile so `go`, `sam`, `aws`, etc. resolve d
 mise run lint             # golangci-lint + actionlint + shellcheck
 mise run test             # unit tests
 mise run build            # sam build
-mise run gen              # regenerate mocks, OpenAPI types, and go.mod/go.sum after changing an interface or api/openapi.yaml
+mise run gen              # regenerate mocks, OpenAPI types, brand/dist, and go.mod/go.sum after changing an interface, api/openapi.yaml or brand/
 mise run check-generated  # run gen and fail if it changed anything (what CI runs)
 ```
 
