@@ -2,7 +2,7 @@
 
 What to do when something goes wrong in production, and how to do the rare jobs that only happen in prod.
 
-**This is a living document.** Whenever prod surprises us, add what we learned: a new section if it's a new kind of job, and an entry in the [incident log](#incident-log) either way. A procedure that turned out to be wrong gets fixed here, not just in someone's memory.
+**This is a living document.** Whenever prod surprises us, add how to handle it next time: a new section if it's a new kind of problem, or a step in the section it belongs to. A procedure that turned out to be wrong gets fixed here, not just in someone's memory.
 
 ## What prod is
 
@@ -47,7 +47,7 @@ Use `/aws/lambda/kbdb-moderate-kbdb-prod` for the moderation function. Every req
 
 | Alarm | What it means | Where to start |
 |---|---|---|
-| `ApiFunctionErrorsAlarm` | The API function crashed or timed out on a request. Normal error responses (4xx, or a 5xx the code returns on purpose) don't count. | Search the logs for `ERROR` and `Status: timeout`. A timeout lasts exactly 10 seconds, the function's limit. |
+| `ApiFunctionErrorsAlarm` | The API function crashed or timed out on a request. Normal error responses (4xx, or a 5xx the code returns on purpose) don't count. | Search the logs for `ERROR` and `Status: timeout`. A timeout lasts exactly 10 seconds, the function's limit. A `POST /mcp` that times out is a request the client expected the server to hold open, which Lambda can't: check what the MCP server advertises (#549) before suspecting the tools. |
 | `HttpApi5xxAlarm` | API Gateway returned a 5xx to a caller. It usually fires together with the one above. | Same as above. If it fires alone, the function is returning a 5xx itself: look for `"status":5` in the logs. |
 | `ModerateFunctionErrorsAlarm` | The moderation function failed on an upload. Lambda retries it. | The moderation function's logs. If retries keep failing, the event ends up in the dead-letter queue (next row). |
 | `ModerationDLQAlarm` | An upload failed moderation on every retry, so the image stays pending. | [Failed images](moderation.md#failed-images) in the moderation guide: list the queue, fix the cause, redrive. |
@@ -211,25 +211,3 @@ bin/kbdb-migrate dump --issuer https://auth.mykeebs.info --base-url https://api.
 5. Stop the GitHub deploys by deleting the `kbdb-prod-oidc` stack, and delete the `api.mykeebs.info` CNAME in Cloudflare.
 6. The remaining bootstrap stacks (`kbdb-bootstrap`, the artifact bucket, and `kbdb-stack-boundary`) cost nothing to keep. Delete them only if the account itself is going away.
 
-## Incident log
-
-Newest first. Add an entry whenever prod surprises us, even if the fix was quick: what we saw, why it happened, what fixed it, and what to do if it happens again.
-
-### 2026-10-19: every MCP connect set off both API alarms
-
-- **Seen:** `ApiFunctionErrorsAlarm` and `HttpApi5xxAlarm` fired right after Claude Code connected to prod's MCP server. The logs showed `POST /mcp` requests running to the 10-second timeout, four per connect. Dev had done the same on every connect; it just has no alarms.
-- **Cause:** the MCP server told clients its tool list could change, so clients opened a long-lived request to listen for changes. Lambda can't hold a request open, so each one timed out.
-- **Fix:** #549 (`v1.57.2`) stopped advertising tool-list changes.
-- **If it happens again:** a `POST /mcp` that lasts exactly 10 seconds is a held-open request. Check what the server advertises before suspecting the tools themselves.
-
-### 2026-10-19: migrating data into prod hit the throttle and lost two images
-
-- **Seen:** `kbdb-migrate restore` kept exiting on HTTP 429. After re-running it to completion, `verify` found two keycap kits with no image.
-- **Cause:** prod's throttle (5 requests a second) is lower than a restore's request rate. When a 429 landed between creating a kit and uploading its image, re-runs skipped that kit's image.
-- **Fix:** #548 made re-runs finish missing images. #547 tracks retrying on 429 instead of exiting.
-
-### 2026-10-19: a merge to `main` never released
-
-- **Seen:** #545 merged, but no `Release` run started, so nothing deployed.
-- **Cause:** GitHub never delivered the push event.
-- **Fix:** #546 added a manual trigger: `gh workflow run release.yml` (see [A merge didn't produce a release](#a-merge-didnt-produce-a-release)).
