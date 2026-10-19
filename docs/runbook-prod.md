@@ -184,7 +184,7 @@ bin/kbdb-migrate login --issuer https://auth.mykeebs.info
 bin/kbdb-migrate dump --issuer https://auth.mykeebs.info --base-url https://api.mykeebs.info --out ./prod-dump
 ```
 
-`restore` into prod gets stopped by prod's API throttling (5 requests a second): it exits on the first HTTP 429. Run it again and it picks up where it stopped; repeat until it finishes, then run `verify`. #547 will make it retry by itself. See [`kbdb-migrate`](../CONTRIBUTING.md#backing-up--moving-a-users-data-kbdb-migrate) for the full tool.
+After a `restore`, run `verify`. See [`kbdb-migrate`](../CONTRIBUTING.md#backing-up--moving-a-users-data-kbdb-migrate) for the full tool.
 
 ## Decommissioning prod
 

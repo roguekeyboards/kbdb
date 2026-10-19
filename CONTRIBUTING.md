@@ -67,7 +67,7 @@ bin/kbdb-migrate verify --issuer <target issuer> --base-url <target base url> --
 
 **Moving data between two accounts on the same issuer** (step 1 and step 3 are different people): the second `login` opens the browser with the first account's IdP session still live, so it lands on the consent screen already "Signed in" as the wrong account. Click **"Not you? Use a different account"** on that page to drop the session and sign in as the target account.
 
-Restore always **creates new** items (new server-generated IDs), recording an old→new `id-map.json` in the dump directory; builds are restored last with their keyboard/switch/keycap-kit references remapped through that map, and a re-run resumes from wherever a failure stopped. Against prod, `restore` exits whenever it hits the API's throttle (HTTP 429); run it again until it finishes (#547 will make it retry by itself).
+Restore always **creates new** items (new server-generated IDs), recording an old→new `id-map.json` in the dump directory; builds are restored last with their keyboard/switch/keycap-kit references remapped through that map, and a re-run resumes from wherever a failure stopped.
 
 ## Reviewing moderation decisions (`kbdb-moderation`)
 
