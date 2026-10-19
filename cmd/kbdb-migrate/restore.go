@@ -17,7 +17,8 @@ import (
 // Run executes the restore.
 //
 // Restore is resume-safe at the granularity of id-map.json entries: a re-run
-// skips any entity or image already recorded there. The one unavoidable gap is
+// skips any entity or image already recorded there. Single-slot images (switch,
+// kit) aren't recorded, so a re-run checks the restored item for them instead. The one unavoidable gap is
 // a crash in the window between a successful create/upload and the id-map save
 // that records it — a re-run then repeats that single operation. For the
 // single-slot image endpoints (switch, kit, avatar) the repeat is harmless
@@ -234,11 +235,14 @@ func restoreSwitches(ctx context.Context, client *apiClient, dumpDir string, m *
 		fmt.Printf("switches (%d)...\n", total)
 	}
 	for i, oldID := range oldIDs {
-		if _, done := m.Switches[oldID]; done {
+		itemDir := filepath.Join(dumpDir, "switches", oldID)
+		if mapped, done := m.Switches[oldID]; done {
 			skipResume("switches", i+1, total, oldID)
+			if err := finishSwitchImage(ctx, client, itemDir, mapped.NewID); err != nil {
+				return fmt.Errorf("switch %s image: %w", mapped.NewID, err)
+			}
 			continue
 		}
-		itemDir := filepath.Join(dumpDir, "switches", oldID)
 
 		var full api.Switch
 		if err := readJSONFile(filepath.Join(itemDir, "item.json"), &full); err != nil {
@@ -337,8 +341,30 @@ func restoreKeycapSets(ctx context.Context, client *apiClient, dumpDir string, m
 		if full.Kits != nil {
 			kits = *full.Kits
 		}
+		var restoredSet []byte
 		for _, kit := range kits {
-			if _, done := mapped.Kits[kit.KitId]; done {
+			kitDir := filepath.Join(setDir, "kits", kit.KitId)
+			if newKitID, done := mapped.Kits[kit.KitId]; done {
+				if !hasSingleImage(kitDir, "image") {
+					continue
+				}
+				if restoredSet == nil {
+					body, err := client.getRaw(ctx, client.userPath("keycap-sets/"+mapped.NewID))
+					if err != nil {
+						return fmt.Errorf("re-fetching keycap set %s to check kit images: %w", mapped.NewID, err)
+					}
+					restoredSet = body
+				}
+				url, err := kitImageURL(restoredSet, newKitID)
+				if err != nil {
+					return err
+				}
+				if url != "" {
+					continue
+				}
+				if err := restoreKitImage(ctx, client, kitDir, mapped.NewID, newKitID); err != nil {
+					return fmt.Errorf("keycap set %s kit %s image: %w", mapped.NewID, newKitID, err)
+				}
 				continue
 			}
 			kitInput := api.KeycapKitInput{
@@ -360,7 +386,6 @@ func restoreKeycapSets(ctx context.Context, client *apiClient, dumpDir string, m
 			}
 			fmt.Printf("    kit %q -> %s\n", kit.Name, createdKit.KitId)
 
-			kitDir := filepath.Join(setDir, "kits", kit.KitId)
 			if err := restoreKitImage(ctx, client, kitDir, mapped.NewID, createdKit.KitId); err != nil {
 				return fmt.Errorf("keycap set %s kit %s image: %w", mapped.NewID, createdKit.KitId, err)
 			}
@@ -628,6 +653,29 @@ func restoreSwitchImage(ctx context.Context, client *apiClient, itemDir, switchI
 		return fmt.Errorf("re-fetching switch %s to verify image: %w", switchID, err)
 	}
 	return verifyURLHash(ctx, topLevelImageURL(body), entry.SHA256)
+}
+
+// finishSwitchImage uploads an already-restored switch's image if the dump has
+// one and the switch doesn't: a failure between the create and the upload
+// leaves the switch mapped but imageless.
+func finishSwitchImage(ctx context.Context, client *apiClient, itemDir, switchID string) error {
+	if !hasSingleImage(itemDir, "image") {
+		return nil
+	}
+	body, err := client.getRaw(ctx, client.userPath("switches/"+switchID))
+	if err != nil {
+		return fmt.Errorf("re-fetching switch %s to check its image: %w", switchID, err)
+	}
+	if topLevelImageURL(body) != "" {
+		return nil
+	}
+	return restoreSwitchImage(ctx, client, itemDir, switchID)
+}
+
+// hasSingleImage reports whether dir holds a dumped single-slot image.
+func hasSingleImage(dir, name string) bool {
+	_, err := os.Stat(filepath.Join(dir, name+".manifest.json"))
+	return err == nil
 }
 
 // restoreKitImage restores kitDir/image.<ext> onto one kit of a keycap set,
