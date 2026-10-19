@@ -14,16 +14,10 @@ import (
 	"github.com/rogueserenity/kbdb/internal/handlers/api"
 )
 
-// Run executes the restore.
-//
-// Restore is resume-safe at the granularity of id-map.json entries: a re-run
-// skips any entity or image already recorded there. Single-slot images (switch,
-// kit) aren't recorded, so a re-run checks the restored item for them instead. The one unavoidable gap is
-// a crash in the window between a successful create/upload and the id-map save
-// that records it — a re-run then repeats that single operation. For the
-// single-slot image endpoints (switch, kit, avatar) the repeat is harmless
-// (they replace, not append); for a top-level create it would produce one
-// duplicate item, consistent with restore's always-create-new contract.
+// Run executes the restore. A re-run resumes: it skips whatever id-map.json
+// records, and re-uploads a single-slot image (switch, kit) the restored item
+// is missing. A crash between a create and its id-map save leaves one
+// duplicate item.
 func (c *RestoreCmd) Run(ctx context.Context) error {
 	token, err := resolveToken(c.Token, c.Issuer)
 	if err != nil {
