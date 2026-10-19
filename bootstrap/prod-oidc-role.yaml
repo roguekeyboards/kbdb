@@ -38,10 +38,9 @@ Resources:
             Condition:
               StringEquals:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
-              # deploy-prod.yml running on a tag ref, whether from a release
-              # event or a workflow_dispatch on that tag. Only the release App
-              # can create v* tags (tag ruleset), and no other workflow that
-              # runs on a tag can assume this role.
+              # deploy-prod.yml running on a release's tag. Only the release
+              # App can create v* tags (tag ruleset), and no other workflow
+              # that runs on a tag can assume this role.
               StringLike:
                 token.actions.githubusercontent.com:sub: repo:rogueserenity/kbdb:ref:refs/tags/v*
                 token.actions.githubusercontent.com:job_workflow_ref: rogueserenity/kbdb/.github/workflows/deploy-prod.yml@refs/tags/v*
