@@ -1315,8 +1315,8 @@ Outputs:
   ApiCustomDomainTarget:
     Description: >-
       Only present when CustomDomainName is set. Cloudflare CNAME target for
-      the custom domain (api.<name>.mykeebs.dev, etc.) - point a DNS-only
-      (not proxied) CNAME record at this value.
+      the custom domain (api.mykeebs.info, api.<name>.mykeebs.dev) - point a
+      DNS-only (not proxied) CNAME record at this value.
     Condition: HasCustomDomain
     Value: !GetAtt ApiCustomDomain.RegionalDomainName
   ImagesBucketName:
