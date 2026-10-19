@@ -63,7 +63,7 @@ bin/kbdb-migrate restore --issuer <target issuer> --base-url <target base url> -
 bin/kbdb-migrate verify --issuer <target issuer> --base-url <target base url> --in ./dump
 ```
 
-`login` runs a standard OAuth 2.0 authorization-code + PKCE flow and binds a **fixed** localhost port (`8765`) for the redirect, because IdP redirect URIs are exact-match. For a **dev** Stytch project this is already provisioned (redirect `http://localhost:8765/authorize.html`, SDK domain `http://localhost:8765`, and dynamic client registration is enabled so no client ID is needed). kbdb's **prod** (Stytch Live) project has the same redirect and SDK domain, kept there on purpose so the tool works against prod, and dynamic client registration too. An IdP without dynamic registration needs an OAuth client provisioned by hand, passed with `--client-id` (or `KBDB_OIDC_CLIENT_ID`). The token is cached under `~/.config/kbdb-migrate/` keyed by issuer host; `dump`/`restore`/`verify` find that cached token only through `--issuer` (or `KBDB_OIDC_ISSUER_BASE_URL`), or take one directly with `--token` / `KBDB_AUTH_TOKEN`.
+`login` runs a standard OAuth 2.0 authorization-code + PKCE flow and binds a **fixed** localhost port (`8765`) for the redirect, because IdP redirect URIs are exact-match. Both kbdb Stytch projects (dev and Live) allow the redirect `http://localhost:8765/authorize.html` and SDK domain `http://localhost:8765`, and have dynamic client registration, so no client ID is needed. An IdP without dynamic registration needs `--client-id` (or `KBDB_OIDC_CLIENT_ID`). The token is cached under `~/.config/kbdb-migrate/` keyed by issuer host; `dump`/`restore`/`verify` find that cached token only through `--issuer` (or `KBDB_OIDC_ISSUER_BASE_URL`), or take one directly with `--token` / `KBDB_AUTH_TOKEN`.
 
 **Moving data between two accounts on the same issuer** (step 1 and step 3 are different people): the second `login` opens the browser with the first account's IdP session still live, so it lands on the consent screen already "Signed in" as the wrong account. Click **"Not you? Use a different account"** on that page to drop the session and sign in as the target account.
 
@@ -89,7 +89,7 @@ Put every template parameter in the section's `parameter_overrides`. Passing `--
 
 Before changing anything, each task checks that your active AWS credentials belong to the account in the section's `s3_bucket` (`kbdb-sam-artifacts-<account-id>`) and stops if not. `teardown` refuses `prod` outright.
 
-**Prod is different:** after its first deploy, only GitHub Actions deploys it, from release tags (see [How a change reaches prod](docs/runbook-prod.md#how-a-change-reaches-prod)). Don't run `deploy prod` by hand. The [prod runbook](docs/runbook-prod.md) covers alarms, failed deploys, restoring data and the rest of running prod.
+**Prod** is deployed only by GitHub Actions, from releases; don't run `deploy prod` by hand. See the [prod runbook](docs/runbook-prod.md).
 
 You just need an active, authenticated AWS session — any profile works, there's no required profile name. This project's own maintainer setup happens to use a profile named `AWS_PROFILE=kbdb-dev-admin` (see [AWS accounts](#aws-accounts) below), but that's just this project's convention, not a requirement. **If you're forking this repo**, use any profile authenticated to your own AWS account, with either admin access or the [scoped dev policy](#giving-a-developer-scoped-access-no-admin-needed) attached.
 
@@ -148,7 +148,7 @@ Four accounts, one SSO session (`aws configure sso` once, then `aws sso login --
 | `mgmt-admin` | `rogueserenity-management` | Administrative only, no workloads |
 | `kbdb-dev-admin` | `kbdb-dev` | Hosts each developer's own stack |
 | `kbdb-ci-admin` | `kbdb-ci` | CI's per-PR stacks |
-| `kbdb-prod-admin` | `kbdb-prod` | Production (`api.mykeebs.info`), deployed only by GitHub Actions from release tags |
+| `kbdb-prod-admin` | `kbdb-prod` | Production (`api.mykeebs.info`) |
 
 There's no default AWS profile — commands will fail with `NoCredentials` unless `AWS_PROFILE` is set.
 
@@ -168,14 +168,14 @@ After all bootstraps, ordinary `sam deploy` calls (and, for `kbdb-ci`, CI's own 
 
 #### Setting up `kbdb-prod`
 
-Prod needs a few more one-time steps, after steps 1, 2 and 7 above. They're written down so prod can be rebuilt; you shouldn't need them otherwise.
+After steps 1, 2 and 7 above:
 
-1. **Raise the Lambda concurrency quota.** A new account can run only 10 functions at once, less than the 15 that `ApiReservedConcurrency` reserves for the API. Request 1000 in Service Quotas (Lambda → Concurrent executions); approval comes by email.
+1. **Raise the Lambda concurrency quota.** A new account's limit of 10 is below the API's `ApiReservedConcurrency` of 15. Request 1000 in Service Quotas (Lambda → Concurrent executions).
 2. **Certificate for `api.mykeebs.info`**, the same way as for a [custom domain](#custom-domain-apiyour-namemykeebsdev): request it in `us-east-2`, add ACM's validation CNAME to the `mykeebs.info` Cloudflare zone (DNS only), and wait for it to be issued. Its ARN goes in `CustomDomainCertificateArn`.
-3. **The `[prod]` section of `samconfig.toml`** holds every prod parameter: the Stytch Live issuer, audience and public token, the `https://mykeebs.info` origins, the domain and certificate, `ProtectData=true`, the throttle and concurrency limits, and the alarm and budget emails.
-4. **First deploy, by hand:** `AWS_PROFILE=kbdb-prod-admin mise run setup prod`. Every later deploy comes from a release.
+3. **Fill in the `[prod]` section of `samconfig.toml`.**
+4. **First deploy, by hand:** `AWS_PROFILE=kbdb-prod-admin mise run setup prod`.
 5. **Point `api.mykeebs.info` at the API:** create a CNAME in the `mykeebs.info` zone (DNS only) to the stack's `ApiCustomDomainTarget` output.
-6. **Confirm the two email subscriptions.** The alarm address gets an AWS Notifications confirmation email: open its link in a private window. The budget address gets a verification email from AWS User Notifications, which only works while you're signed in to the `kbdb-prod` account in the console.
+6. **Confirm the two email subscriptions.** The budget one's link only works while you're signed in to the `kbdb-prod` console.
 
 #### ECR repo for `kbdb-ci`
 
