@@ -32,6 +32,32 @@ parameter_overrides = """\
   CustomDomainCertificateArn=arn:aws:acm:us-east-2:992234857260:certificate/1831f13e-7a40-4c83-91e7-c93c254e2807\
   """
 
+[prod.deploy.parameters]
+stack_name = "kbdb-prod"
+s3_bucket = "kbdb-sam-artifacts-416860882648"
+image_repositories = [
+  "ApiFunction=416860882648.dkr.ecr.us-east-2.amazonaws.com/kbdb-api-kbdb-prod",
+  "ModerateFunction=416860882648.dkr.ecr.us-east-2.amazonaws.com/kbdb-api-kbdb-prod",
+]
+region = "us-east-2"
+capabilities = "CAPABILITY_IAM"
+confirm_changeset = false
+fail_on_empty_changeset = false
+parameter_overrides = """\
+  OidcIssuerBaseUrl=https://auth.mykeebs.info \
+  OidcAudience=project-live-35306870-482a-497d-b0b8-3a884a3071e1 \
+  IdpConsentPublicToken=public-token-live-a617925c-c858-4b41-bc96-d4c869e3e3f8 \
+  CorsAllowOrigins=https://mykeebs.info \
+  LogoutReturnOrigins=https://mykeebs.info \
+  CustomDomainName=api.mykeebs.info \
+  CustomDomainCertificateArn=arn:aws:acm:us-east-2:416860882648:certificate/f5ba7297-6386-4221-b101-4687ef89f0d0 \
+  ProtectData=true \
+  ThrottleRateLimit=5 \
+  ThrottleBurstLimit=50 \
+  ApiReservedConcurrency=15 \
+  AlarmEmail=kbdb-alerts-prd@mykeebs.com\
+  """
+
 # CI deploys per-PR stacks into the separate kbdb-ci account (475976462467),
 # selected via `sam build/deploy --config-env ci`. stack_name,
 # image_repositories and parameter_overrides are deliberately NOT set here -
