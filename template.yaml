@@ -97,6 +97,10 @@ Parameters:
     Description: >-
       Address the alarm topic emails (confirm the subscription by hand
       once). Empty, the default, creates no topic and no alarms.
+  BudgetEmail:
+    Type: String
+    Default: aws-budget@rogueserenity.dev
+    Description: Address CostBudget emails at 80% and 100% of the budget.
   ProtectData:
     Type: String
     Default: 'false'
@@ -1295,14 +1299,14 @@ Resources:
             Threshold: 80
           Subscribers:
             - SubscriptionType: EMAIL
-              Address: aws-budget@rogueserenity.dev
+              Address: !Ref BudgetEmail
         - Notification:
             NotificationType: ACTUAL
             ComparisonOperator: GREATER_THAN
             Threshold: 100
           Subscribers:
             - SubscriptionType: EMAIL
-              Address: aws-budget@rogueserenity.dev
+              Address: !Ref BudgetEmail
 
 Outputs:
   ApiUrl:
