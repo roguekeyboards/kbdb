@@ -1,0 +1,61 @@
+name: Deploy Prod
+
+# Every release deploys its tag. A manual run, started on an existing v* tag
+# ("Use workflow from" → Tags), rolls back or redeploys that tag.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  API_BASE_URL: https://api.mykeebs.info
+
+jobs:
+  deploy:
+    name: Deploy
+    # The deploy role only trusts v* tag refs, so a run from a branch would
+    # fail at OIDC anyway; this fails it before building.
+    if: startsWith(github.ref, 'refs/tags/v')
+    # Native arm64, matching the functions' architecture (see ci.yml).
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Configure AWS credentials (kbdb-prod, OIDC)
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.PROD_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-2
+          role-session-name: deploy-prod-${{ github.ref_name }}
+
+      - name: Set up mise
+        uses: jdx/mise-action@9b200bcecbfd6303e69a4a261b2e09e3757440a7 # v5.2.0
+
+      - name: Log in to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@03f1aad4c6c7ffd436567f42f9384779290529bd # v2.1.7
+
+      - name: Log in to Amazon ECR Public
+        uses: aws-actions/amazon-ecr-login@03f1aad4c6c7ffd436567f42f9384779290529bd # v2.1.7
+        with:
+          registry-type: public
+
+      - name: Deploy
+        run: mise run deploy prod
+
+      - name: Smoke test
+        run: |
+          curl --fail --silent --show-error --retry 5 --retry-all-errors \
+            --output /dev/null "$API_BASE_URL/v1/lookups"
+          curl --fail --silent --show-error --retry 5 --retry-all-errors \
+            "$API_BASE_URL/.well-known/oauth-protected-resource" \
+            | grep --fixed-strings --quiet '"https://auth.mykeebs.info"'
+          curl --fail --silent --show-error --retry 5 --retry-all-errors \
+            --output /dev/null "$API_BASE_URL/authorize"
