@@ -204,3 +204,80 @@ func (s *RestoreSuite) TestRestoreKeyboards_ResumeSkipsPartsAlreadyMapped() {
 	s.Equal([]string{"POST /v1/users/u-1/keyboards/kb-new/plates"}, calls)
 	s.Equal(map[string]string{"plate-a": "new-a", "plate-b": "new-b"}, m.Keyboards["kb-old"].Plates)
 }
+
+// writeKitDump writes a one-set, one-kit dump whose kit has an image, and
+// returns the dump dir and the image bytes.
+func (s *RestoreSuite) writeKitDump() (string, []byte) {
+	dumpDir := s.T().TempDir()
+	setDir := filepath.Join(dumpDir, "keycap-sets", "set-old")
+	kitDir := filepath.Join(setDir, "kits", "kit-old")
+	s.Require().NoError(os.MkdirAll(kitDir, 0o750))
+	s.Require().NoError(os.WriteFile(filepath.Join(setDir, "item.json"), []byte(
+		`{"id":"set-old","name":"Botanical","visibility":"private","kits":[{"kit_id":"kit-old","name":"Aesthetic"}]}`,
+	), 0o600))
+	img := []byte("kit image bytes")
+	s.Require().NoError(os.WriteFile(filepath.Join(kitDir, "image.webp"), img, 0o600))
+	manifest, err := json.Marshal(imageManifestEntry{
+		Filename: "image.webp", ContentType: "image/webp", Bytes: len(img), SHA256: sha256Hex(img),
+	})
+	s.Require().NoError(err)
+	s.Require().NoError(os.WriteFile(filepath.Join(kitDir, "image.manifest.json"), manifest, 0o600))
+	return dumpDir, img
+}
+
+// kitServer serves the restored set, with its kit's image present once
+// uploaded (or from the start when hasImage), and records each request.
+func (s *RestoreSuite) kitServer(img []byte, hasImage bool, calls *[]string) *httptest.Server {
+	var srv *httptest.Server
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		*calls = append(*calls, r.Method+" "+r.URL.Path)
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/v1/users/u-1/keycap-sets/set-new":
+			image := ""
+			if hasImage {
+				image = fmt.Sprintf(`,"image":{"url":%q}`, srv.URL+"/blob")
+			}
+			_, _ = fmt.Fprintf(w, `{"id":"set-new","kits":[{"kit_id":"kit-new"%s}]}`, image)
+		case r.Method == http.MethodPost:
+			_, _ = fmt.Fprintf(w, `{"upload_url":%q}`, srv.URL+"/blob")
+		case r.Method == http.MethodPut:
+			hasImage = true
+		case r.Method == http.MethodGet && r.URL.Path == "/blob":
+			_, _ = w.Write(img)
+		}
+	}))
+	return srv
+}
+
+func (s *RestoreSuite) TestRestoreKeycapSets_ResumeUploadsMissingKitImage() {
+	dumpDir, img := s.writeKitDump()
+	var calls []string
+	srv := s.kitServer(img, false, &calls)
+	defer srv.Close()
+
+	client := &apiClient{baseURL: srv.URL, subject: "u-1", http: srv.Client()}
+	m := newIDMap(s.T().TempDir(), "u-1")
+	m.KeycapSets["set-old"] = &mappedKeycaps{NewID: "set-new", Kits: map[string]string{"kit-old": "kit-new"}}
+
+	err := restoreKeycapSets(context.Background(), client, dumpDir, m)
+
+	s.Require().NoError(err)
+	s.Contains(calls, "POST /v1/users/u-1/keycap-sets/set-new/kits/kit-new/image")
+	s.Contains(calls, "PUT /blob")
+}
+
+func (s *RestoreSuite) TestRestoreKeycapSets_ResumeSkipsKitImageAlreadyPresent() {
+	dumpDir, img := s.writeKitDump()
+	var calls []string
+	srv := s.kitServer(img, true, &calls)
+	defer srv.Close()
+
+	client := &apiClient{baseURL: srv.URL, subject: "u-1", http: srv.Client()}
+	m := newIDMap(s.T().TempDir(), "u-1")
+	m.KeycapSets["set-old"] = &mappedKeycaps{NewID: "set-new", Kits: map[string]string{"kit-old": "kit-new"}}
+
+	err := restoreKeycapSets(context.Background(), client, dumpDir, m)
+
+	s.Require().NoError(err)
+	s.Equal([]string{"GET /v1/users/u-1/keycap-sets/set-new"}, calls)
+}
