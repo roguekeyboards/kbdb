@@ -44,7 +44,7 @@ Most iteration just needs `mise run func-test` again — Go code and test change
 
 ## Backing up / moving a user's data (`kbdb-migrate`)
 
-`cmd/kbdb-migrate` is a standalone CLI that dumps every entity a user owns (keyboards, switches, keycap sets, builds) plus every S3 image to a local directory, and restores such a dump into another environment through the same public REST API. Use it to take a verifiable backup before a data-model change, or to move a user's data between environments. It uses **no AWS credentials** — image bytes move over presigned URLs — and never touches lookups (`scripts/sync-lookups.sh` owns those; the dump captures `lookups/lookups.json` for diffing only). It also skips the **profile**: the username is globally unique and identity-bound, so it can't be recreated under a different account — set profiles up per account by hand.
+`cmd/kbdb-migrate` is a standalone CLI that dumps every entity a user owns (keyboards, switches, keycap sets, builds) plus every S3 image to a local directory, and restores such a dump into another environment through the same public REST API. Use it to take a verifiable backup before a data-model change, or to move a user's data between environments. It uses **no AWS credentials** — image bytes move over presigned URLs — and never touches lookups (they're a static catalog built into the API; the dump captures `lookups/lookups.json` for diffing only). It also skips the **profile**: the username is globally unique and identity-bound, so it can't be recreated under a different account — set profiles up per account by hand.
 
 ```sh
 mise run migrate-build          # -> bin/kbdb-migrate
@@ -63,7 +63,7 @@ bin/kbdb-migrate restore --issuer <target issuer> --base-url <target base url> -
 bin/kbdb-migrate verify --issuer <target issuer> --base-url <target base url> --in ./dump
 ```
 
-`login` runs a standard OAuth 2.0 authorization-code + PKCE flow and binds a **fixed** localhost port (`8765`) for the redirect, because IdP redirect URIs are exact-match. For a **dev** Stytch project this is already provisioned (redirect `http://localhost:8765/authorize.html`, SDK domain `http://localhost:8765`, and dynamic client registration is enabled so no client ID is needed). For a **prod** (Stytch Live) project, someone must first add that redirect URI and SDK domain in the Stytch dashboard and provision an OAuth client, then pass `--client-id` (or set `KBDB_OIDC_CLIENT_ID`). The token is cached under `~/.config/kbdb-migrate/` keyed by issuer host; `dump`/`restore`/`verify` find that cached token only through `--issuer` (or `KBDB_OIDC_ISSUER_BASE_URL`), or take one directly with `--token` / `KBDB_AUTH_TOKEN`.
+`login` runs a standard OAuth 2.0 authorization-code + PKCE flow and binds a **fixed** localhost port (`8765`) for the redirect, because IdP redirect URIs are exact-match. Both kbdb Stytch projects (dev and Live) allow the redirect `http://localhost:8765/authorize.html` and SDK domain `http://localhost:8765`, and have dynamic client registration, so no client ID is needed. An IdP without dynamic registration needs `--client-id` (or `KBDB_OIDC_CLIENT_ID`). The token is cached under `~/.config/kbdb-migrate/` keyed by issuer host; `dump`/`restore`/`verify` find that cached token only through `--issuer` (or `KBDB_OIDC_ISSUER_BASE_URL`), or take one directly with `--token` / `KBDB_AUTH_TOKEN`.
 
 **Moving data between two accounts on the same issuer** (step 1 and step 3 are different people): the second `login` opens the browser with the first account's IdP session still live, so it lands on the consent screen already "Signed in" as the wrong account. Click **"Not you? Use a different account"** on that page to drop the session and sign in as the target account.
 
@@ -88,6 +88,8 @@ mise run teardown [env]  # delete the stack, the ECR repo stack and the repo its
 Put every template parameter in the section's `parameter_overrides`. Passing `--parameter-overrides` on the command line replaces that list wholesale rather than merging with it, so the scripts never do.
 
 Before changing anything, each task checks that your active AWS credentials belong to the account in the section's `s3_bucket` (`kbdb-sam-artifacts-<account-id>`) and stops if not. `teardown` refuses `prod` outright.
+
+**Prod** is deployed only by GitHub Actions, from releases; don't run `deploy prod` by hand. See the [prod runbook](docs/runbook-prod.md).
 
 You just need an active, authenticated AWS session — any profile works, there's no required profile name. This project's own maintainer setup happens to use a profile named `AWS_PROFILE=kbdb-dev-admin` (see [AWS accounts](#aws-accounts) below), but that's just this project's convention, not a requirement. **If you're forking this repo**, use any profile authenticated to your own AWS account, with either admin access or the [scoped dev policy](#giving-a-developer-scoped-access-no-admin-needed) attached.
 
@@ -139,13 +141,14 @@ Each developer who wants this does it once for their own name:
 
 ### AWS accounts
 
-Three accounts, one SSO session (`aws configure sso` once, then `aws sso login --profile <profile>` to refresh):
+Four accounts, one SSO session (`aws configure sso` once, then `aws sso login --sso-session kbdb` to refresh):
 
 | Profile | Account | Purpose |
 |---|---|---|
 | `mgmt-admin` | `rogueserenity-management` | Administrative only, no workloads |
 | `kbdb-dev-admin` | `kbdb-dev` | Hosts each developer's own stack |
 | `kbdb-ci-admin` | `kbdb-ci` | CI's per-PR stacks |
+| `kbdb-prod-admin` | `kbdb-prod` | Production (`api.mykeebs.info`) |
 
 There's no default AWS profile — commands will fail with `NoCredentials` unless `AWS_PROFILE` is set.
 
@@ -162,6 +165,17 @@ New AWS account, never deployed to before? One-time steps, done once per account
 7. **(`kbdb-prod` only) GitHub Actions deploy role**, which `deploy-prod.yml` assumes to deploy each release tag: `aws cloudformation deploy --template-file bootstrap/prod-oidc-role.yaml --stack-name kbdb-prod-oidc --capabilities CAPABILITY_NAMED_IAM --profile kbdb-prod-admin`. Then set its `GitHubActionsProdDeployRoleArn` output as the `PROD_DEPLOY_ROLE_ARN` repo variable.
 
 After all bootstraps, ordinary `sam deploy` calls (and, for `kbdb-ci`, CI's own workflow) work.
+
+#### Setting up `kbdb-prod`
+
+After steps 1, 2 and 7 above:
+
+1. **Raise the Lambda concurrency quota.** A new account's limit of 10 is below the API's `ApiReservedConcurrency` of 15. Request 1000 in Service Quotas (Lambda → Concurrent executions).
+2. **Certificate for `api.mykeebs.info`**, the same way as for a [custom domain](#custom-domain-apiyour-namemykeebsdev): request it in `us-east-2`, add ACM's validation CNAME to the `mykeebs.info` Cloudflare zone (DNS only), and wait for it to be issued. Its ARN goes in `CustomDomainCertificateArn`.
+3. **Fill in the `[prod]` section of `samconfig.toml`.**
+4. **First deploy, by hand:** `AWS_PROFILE=kbdb-prod-admin mise run setup prod`.
+5. **Point `api.mykeebs.info` at the API:** create a CNAME in the `mykeebs.info` zone (DNS only) to the stack's `ApiCustomDomainTarget` output.
+6. **Confirm the two email subscriptions.** The budget one's link only works while you're signed in to the `kbdb-prod` console.
 
 #### ECR repo for `kbdb-ci`
 
