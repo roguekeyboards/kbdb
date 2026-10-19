@@ -25,6 +25,7 @@ type apiClient struct {
 	token   string
 	subject string
 	http    *http.Client
+	retry   throttleRetry
 }
 
 // newAPIClient builds a client for baseURL authenticating as token's subject.
@@ -38,6 +39,7 @@ func newAPIClient(baseURL, token string) (*apiClient, error) {
 		token:   token,
 		subject: sub,
 		http:    &http.Client{Timeout: 60 * time.Second},
+		retry:   defaultThrottleRetry,
 	}, nil
 }
 
@@ -82,7 +84,7 @@ func (c *apiClient) doJSON(ctx context.Context, method, path string, reqBody, re
 	}
 	req.Header.Set("Authorization", "Bearer "+c.token)
 
-	resp, err := c.http.Do(req)
+	resp, err := c.send(req)
 	if err != nil {
 		return fmt.Errorf("calling %s %s: %w", method, path, err)
 	}
@@ -112,7 +114,7 @@ func (c *apiClient) getRaw(ctx context.Context, path string) ([]byte, error) {
 	}
 	req.Header.Set("Authorization", "Bearer "+c.token)
 
-	resp, err := c.http.Do(req)
+	resp, err := c.send(req)
 	if err != nil {
 		return nil, fmt.Errorf("calling GET %s: %w", path, err)
 	}

@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -92,6 +94,79 @@ func (s *ClientSuite) TestDoJSON_Non2xxReturnsAPIError() {
 	var apiErr *apiError
 	s.Require().True(asAPIError(err, &apiErr))
 	s.Equal(http.StatusConflict, apiErr.Status)
+}
+
+func (s *ClientSuite) throttlingServer(throttles int, contentType string, calls *int, bodies *[]string) *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		*calls++
+		body, _ := io.ReadAll(r.Body)
+		*bodies = append(*bodies, string(body))
+		if *calls <= throttles {
+			w.Header().Set("Content-Type", contentType)
+			w.WriteHeader(http.StatusTooManyRequests)
+			_, _ = w.Write([]byte(`{"message":"Too Many Requests"}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"id":"k1"}`))
+	}))
+}
+
+func (s *ClientSuite) fastRetryClient(baseURL string) *apiClient {
+	c := s.testClient(baseURL)
+	c.retry = throttleRetry{maxAttempts: 3, baseDelay: time.Millisecond, maxDelay: time.Millisecond}
+	return c
+}
+
+func (s *ClientSuite) TestDoJSON_RetriesThrottleWithTheSameBody() {
+	var calls int
+	var bodies []string
+	srv := s.throttlingServer(2, "application/json", &calls, &bodies)
+	defer srv.Close()
+
+	var out struct{ ID string }
+	err := s.fastRetryClient(srv.URL).doJSON(context.Background(), http.MethodPost, "/v1/users/user_test/keyboards", map[string]string{"name": "x"}, &out)
+	s.Require().NoError(err)
+	s.Equal("k1", out.ID)
+	s.Equal(3, calls)
+	s.Equal([]string{`{"name":"x"}`, `{"name":"x"}`, `{"name":"x"}`}, bodies)
+}
+
+func (s *ClientSuite) TestDoJSON_GivesUpAfterMaxAttempts() {
+	var calls int
+	var bodies []string
+	srv := s.throttlingServer(3, "application/json", &calls, &bodies)
+	defer srv.Close()
+
+	err := s.fastRetryClient(srv.URL).doJSON(context.Background(), http.MethodGet, "/v1/users/user_test/keyboards", nil, nil)
+	var apiErr *apiError
+	s.Require().True(asAPIError(err, &apiErr))
+	s.Equal(http.StatusTooManyRequests, apiErr.Status)
+	s.Equal(3, calls)
+}
+
+func (s *ClientSuite) TestDoJSON_DoesNotRetryUploadLimit() {
+	var calls int
+	var bodies []string
+	srv := s.throttlingServer(1, "application/problem+json", &calls, &bodies)
+	defer srv.Close()
+
+	err := s.fastRetryClient(srv.URL).doJSON(context.Background(), http.MethodPost, "/v1/users/user_test/keyboards/k1/images", nil, nil)
+	var apiErr *apiError
+	s.Require().True(asAPIError(err, &apiErr))
+	s.Equal(http.StatusTooManyRequests, apiErr.Status)
+	s.Equal(1, calls)
+}
+
+func (s *ClientSuite) TestGetRaw_RetriesThrottle() {
+	var calls int
+	var bodies []string
+	srv := s.throttlingServer(1, "application/json", &calls, &bodies)
+	defer srv.Close()
+
+	raw, err := s.fastRetryClient(srv.URL).getRaw(context.Background(), "/v1/lookups")
+	s.Require().NoError(err)
+	s.JSONEq(`{"id":"k1"}`, string(raw))
+	s.Equal(2, calls)
 }
 
 func rawItems(objs ...string) []json.RawMessage {
