@@ -18,7 +18,7 @@ file = "scripts/lint.sh"
 
 [tasks.gen]
 alias = "g"
-description = "Regenerate mocks, OpenAPI types, and go.mod/go.sum"
+description = "Regenerate mocks, OpenAPI types, brand/dist, and go.mod/go.sum"
 file = "scripts/gen.sh"
 
 [tasks.check-generated]
