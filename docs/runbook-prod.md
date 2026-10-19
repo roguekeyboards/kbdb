@@ -9,14 +9,13 @@ What to do when something goes wrong in production, and how to do the rare jobs 
 | | |
 |---|---|
 | API | `https://api.mykeebs.info` |
-| Web UI | `https://mykeebs.info` (the separate `mykeebs-web` repo) |
 | AWS account | `kbdb-prod` (`416860882648`), region `us-east-2` |
 | Stack | `kbdb-prod`, defined by the `[prod]` section of `samconfig.toml` |
 | Identity provider | the Stytch **Live** project, issuer `https://auth.mykeebs.info` |
 | Alarm emails | `kbdb-alerts-prd@mykeebs.com` |
 | Budget emails | `kbdb-budget-prd@mykeebs.com` |
 
-Prod is deployed only by `.github/workflows/deploy-prod.yml`, which runs for every published release. Nobody deploys it by hand.
+Prod is deployed only by `deploy-prod.yml`, for every published release.
 
 ## Before you start
 
@@ -27,11 +26,9 @@ aws sso login --sso-session kbdb
 export AWS_PROFILE=kbdb-prod-admin AWS_REGION=us-east-2
 ```
 
-The deploy role GitHub Actions uses is deliberately limited: it can't delete the stack, a table or the images bucket, and it can't read or write any data. Anything here that does one of those needs the admin profile.
-
 ## When an alarm email arrives
 
-Each alarm fires when its metric is above zero for one 5-minute period, and returns to OK by itself after a quiet period. An alarm that's back to OK still deserves a look: something failed.
+An alarm that's already back to OK still means something failed.
 
 To see what the API function logged around a time (change the start and end to bracket the alarm's timestamp, which is in UTC):
 
@@ -43,25 +40,25 @@ aws logs filter-log-events --log-group-name /aws/lambda/kbdb-api-kbdb-prod \
   jq -r '.events[] | "\(.timestamp/1000 | strftime("%H:%M:%S")) \(.message)"'
 ```
 
-Use `/aws/lambda/kbdb-moderate-kbdb-prod` for the moderation function. Every request logs a `request started` and a `request finished` line with its method, path and status, so a failed request is easy to spot by its path.
+Use `/aws/lambda/kbdb-moderate-kbdb-prod` for the moderation function.
 
 | Alarm | What it means | Where to start |
 |---|---|---|
-| `ApiFunctionErrorsAlarm` | The API function crashed or timed out on a request. Normal error responses (4xx, or a 5xx the code returns on purpose) don't count. | Search the logs for `ERROR` and `Status: timeout`. A timeout lasts exactly 10 seconds, the function's limit. |
+| `ApiFunctionErrorsAlarm` | The API function crashed or timed out on a request. Normal error responses (4xx, or a 5xx the code returns on purpose) don't count. | Search the logs for `ERROR` and `Status: timeout`. |
 | `HttpApi5xxAlarm` | API Gateway returned a 5xx to a caller. It usually fires together with the one above. | Same as above. If it fires alone, the function is returning a 5xx itself: look for `"status":5` in the logs. |
 | `ModerateFunctionErrorsAlarm` | The moderation function failed on an upload. Lambda retries it. | The moderation function's logs. If retries keep failing, the event ends up in the dead-letter queue (next row). |
 | `ModerationDLQAlarm` | An upload failed moderation on every retry, so the image stays pending. | [Failed images](moderation.md#failed-images) in the moderation guide: list the queue, fix the cause, redrive. |
 
 ## When a budget email arrives
 
-The stack's budget is $10 a month, with emails at 80% and 100% of actual spend. Prod normally costs pennies, so a budget email means something is being used far more than it should be.
+The budget is $10 a month, emailing at 80% and 100%. Prod normally costs pennies.
 
-1. **Find what's costing money:** Cost Explorer in the `kbdb-prod` console, grouped by service, daily. (Each Cost Explorer API call costs $0.01, so prefer the console.)
-2. **If it's Rekognition**, someone is uploading a lot of images: pause moderation (`mise run moderation-pause prod`; see the [moderation guide](moderation.md#pausing-moderation)). The daily upload limit (`DailyUploadLimit`, 500 by default) already caps this.
-3. **If it's S3 data transfer**, someone is downloading images heavily through presigned links. Use the image switch below.
-4. **If you need to stop spending right now**, use one of the emergency switches below. Both are changes made by hand outside the template, so undo them by hand when you're done, and check they're still in place after any deploy that happens meanwhile.
+1. **Find what's costing money:** Cost Explorer in the `kbdb-prod` console, grouped by service, daily.
+2. **If it's Rekognition**: pause moderation (`mise run moderation-pause prod`; see the [moderation guide](moderation.md#pausing-moderation)).
+3. **If it's S3 data transfer**: use the image switch below.
+4. **If you need to stop spending right now**, use one of the emergency switches below. Both are made outside the template: undo them by hand, and check they're still in place after any deploy.
 
-Emergency switches (until #440 automates the image one):
+Emergency switches:
 
 ```sh
 # Stop all API traffic: every request fails until you undo it.
@@ -89,26 +86,24 @@ aws iam delete-role-policy --role-name "$ROLE" --policy-name emergency-deny-imag
 ### How a change reaches prod
 
 1. A PR merges to `main`.
-2. `release.yml` runs semantic-release. A `fix` or `feat` commit cuts a new version tag and GitHub Release; other types (`chore`, `docs`, `ci`, `test`, `refactor`) don't.
-3. Publishing the release starts `deploy-prod.yml`, which deploys that tag to the `kbdb-prod` stack and then smoke-tests the API.
-
-So a change that should reach prod must be a `fix` or `feat` (see [Conventions](../CONTRIBUTING.md#conventions)).
+2. `release.yml` cuts a release if the merge has a `fix` or `feat` commit.
+3. The release starts `deploy-prod.yml`, which deploys it and smoke-tests the API.
 
 ### A release broke something
 
-**We never roll back.** Merge a fix; its release deploys forward like any other. That keeps prod always running a released version of `main`, and it means nobody has to remember what was rolled back.
+Never roll back. Merge a fix and let it release.
 
 ### A deploy failed
 
 Open the failed `Deploy Prod` run in GitHub Actions.
 
-- **If it failed for a transient reason** (an AWS hiccup, a timeout pulling an image, a smoke test that hit a cold start), click **Re-run failed jobs**. There's deliberately no manual trigger for this workflow.
+- **If it failed for a transient reason** (an AWS hiccup, a timeout pulling an image, a smoke test that hit a cold start), click **Re-run failed jobs**.
 - **If it failed because of the change itself**, CloudFormation has already rolled the stack back to the previous version, so prod is still serving. Fix forward with a new release.
 - **If the stack is stuck**, see the next section.
 
 ### The stack is stuck in `UPDATE_ROLLBACK_FAILED`
 
-This happens when a release that added a resource the deploy role can't remove (a table, for example) fails and CloudFormation can't roll back. Prod keeps serving the previous version, but no release can deploy until you fix it.
+A failed release that added something the deploy role can't delete (a table, say) leaves the stack here. Prod keeps serving, but nothing deploys until it's fixed.
 
 1. Find the resource that couldn't be rolled back:
    ```sh
@@ -127,13 +122,11 @@ This happens when a release that added a resource the deploy role can't remove (
 
 ### A merge didn't produce a release
 
-GitHub occasionally drops a push event, so `release.yml` never starts. Check the Actions tab for a `Release` run on the merge commit. If there isn't one:
+If there's no `Release` run for the merge commit in the Actions tab:
 
 ```sh
 gh workflow run release.yml
 ```
-
-It releases every releasable commit since the last tag, so running it late loses nothing.
 
 ## Data
 
@@ -141,7 +134,7 @@ The user-data tables have deletion protection and point-in-time recovery (PITR) 
 
 ### Restoring a table to an earlier point in time
 
-PITR can restore a table as it was at any second in the last 35 days, but only into a **new** table. The API reads the stack's own table, so restoring means copying data back into it.
+PITR restores a table as it was at any second in the last 35 days, but only into a **new** table, so you copy the data back from it.
 
 1. Find the live table's name (`SwitchTableName`, `KeyboardTableName`, `KeycapSetTableName`, `BuildTableName`, `ProfileTableName` or `ProfileUsernameTableName`):
    ```sh
@@ -168,15 +161,15 @@ PITR can restore a table as it was at any second in the last 35 days, but only i
    aws dynamodb delete-table --table-name "$LIVE-restore"
    ```
 
-Images aren't part of the restore. An item restored from before an image was deleted points to a file that no longer exists, and that image shows as missing.
+Images aren't restored: an item that points to a since-deleted image shows it as missing.
 
 ### Backing up images
 
-The only copy of an image is in the images bucket. To keep an offline copy of one account's data, images included, take a `kbdb-migrate dump` of it now and then (see the next section). The dump is a directory you can keep anywhere.
+A `kbdb-migrate dump` (next section) is the only backup of an account's images.
 
 ### Running `kbdb-migrate` against prod
 
-The Stytch Live project keeps the redirect URL `http://localhost:8765/authorize.html` and the SDK domain `http://localhost:8765` permanently, so `kbdb-migrate login` works against prod. Live has dynamic client registration on, so no client ID is needed.
+`kbdb-migrate login` works against prod because the Stytch Live project allows `http://localhost:8765`. Don't remove it.
 
 ```sh
 mise run migrate-build
