@@ -154,6 +154,9 @@ Resources:
                   - iam:GetRolePolicy
                   - iam:TagRole
                   - iam:UntagRole
+                  # Sets bootstrap/stack-boundary.yaml's boundary on a role
+                  # that predates it in template.yaml.
+                  - iam:PutRolePermissionsBoundary
                 Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/kbdb-pr-*
               - Sid: ArtifactBucket
                 Effect: Allow

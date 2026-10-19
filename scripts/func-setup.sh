@@ -109,6 +109,13 @@ aws s3 cp "$OIDC_DIR/jwks.json" \
   "s3://$OIDC_BUCKET/jwks.json" \
   --content-type application/json >/dev/null
 
+# template.yaml's roles reference this boundary, and creating one fails if
+# the policy doesn't exist yet.
+aws cloudformation deploy --template-file bootstrap/stack-boundary.yaml \
+  --stack-name kbdb-stack-boundary \
+  --capabilities CAPABILITY_NAMED_IAM \
+  --no-fail-on-empty-changeset >/dev/null
+
 # ApiReservedConcurrency is set only because floci can't deploy its empty
 # default: it resolves the AWS::NoValue to "" and fails to parse it as an
 # integer. Drop it once floci omits the property instead.
@@ -123,6 +130,7 @@ sam deploy \
     "OidcIssuerBaseUrl=$ISSUER" \
     "OidcAudience=$AUDIENCE" \
     "IdpConsentPublicToken=public-token-test-local-kbdb" \
+    "CorsAllowOrigins=http://localhost:5173" \
     "LogoutReturnOrigins=http://localhost:5173" \
     "DailyUploadLimit=1000000" \
     "ApiReservedConcurrency=50"

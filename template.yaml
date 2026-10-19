@@ -10,6 +10,9 @@ Globals:
   Function:
     Timeout: 10
     MemorySize: 128
+    # bootstrap/stack-boundary.yaml, deployed to every account before any
+    # stack. PresignSigningRole sets the same boundary.
+    PermissionsBoundary: !Sub arn:aws:iam::${AWS::AccountId}:policy/kbdb-stack-boundary
 
 Parameters:
   OidcIssuerBaseUrl:
@@ -210,6 +213,7 @@ Resources:
   PresignSigningRole:
     Type: AWS::IAM::Role
     Properties:
+      PermissionsBoundary: !Sub arn:aws:iam::${AWS::AccountId}:policy/kbdb-stack-boundary
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
