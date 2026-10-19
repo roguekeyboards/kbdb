@@ -77,7 +77,13 @@ func New(
 	verifier *auth.Verifier,
 	issuerURL, version string,
 ) Handlers {
-	mcpServer := newServer(version)
+	// No listChanged: the SDK's default advertises it, inviting clients to
+	// open a subscriptions/listen POST the server holds open, and Lambda
+	// buffers responses, so that POST can only end in a timeout. The tool
+	// list never changes at runtime anyway.
+	mcpServer := sdkmcp.NewServer(&sdkmcp.Implementation{Name: "kbdb", Version: version}, &sdkmcp.ServerOptions{
+		Capabilities: &sdkmcp.ServerCapabilities{Tools: &sdkmcp.ToolCapabilities{}},
+	})
 	mcpServer.AddReceivingMiddleware(identityMiddleware())
 
 	registerTools(mcpServer, switchRepo, switchImageStore, keyboardRepo, keyboardImageStore, keycapSetRepo, imageStore, buildRepo, buildImageStore, profileRepo, profileImageStore, uploads)
@@ -100,16 +106,6 @@ func New(
 		RootMetadataPath: RootMetadataPath,
 		Metadata:         metadataHandler(issuerURL),
 	}
-}
-
-// newServer advertises tools without listChanged. The SDK's default
-// advertises it, inviting clients to open a subscriptions/listen POST the
-// server holds open; Lambda buffers responses, so that POST can only end in a
-// timeout. The tool list never changes at runtime anyway.
-func newServer(version string) *sdkmcp.Server {
-	return sdkmcp.NewServer(&sdkmcp.Implementation{Name: "kbdb", Version: version}, &sdkmcp.ServerOptions{
-		Capabilities: &sdkmcp.ServerCapabilities{Tools: &sdkmcp.ToolCapabilities{}},
-	})
 }
 
 // errNoTokenInfo guards against a request ever reaching the tool dispatch
