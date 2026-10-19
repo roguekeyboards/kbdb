@@ -26,9 +26,9 @@
 //
 // # What it does not do
 //
-// It never touches lookups. Lookup seeding has its own path
-// (scripts/sync-lookups.sh); dump captures lookups/lookups.json for reference
-// and diffing only, and restore ignores it.
+// It never touches lookups, which are a static catalog built into the API;
+// dump captures lookups/lookups.json for reference and diffing only, and
+// restore ignores it.
 //
 // It does not dump or restore the profile. A profile's username is globally
 // unique and identity-bound: moving data between two accounts means both
