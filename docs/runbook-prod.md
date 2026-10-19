@@ -47,7 +47,7 @@ Use `/aws/lambda/kbdb-moderate-kbdb-prod` for the moderation function. Every req
 
 | Alarm | What it means | Where to start |
 |---|---|---|
-| `ApiFunctionErrorsAlarm` | The API function crashed or timed out on a request. Normal error responses (4xx, or a 5xx the code returns on purpose) don't count. | Search the logs for `ERROR` and `Status: timeout`. A timeout lasts exactly 10 seconds, the function's limit. A `POST /mcp` that times out is a request the client expected the server to hold open, which Lambda can't: check what the MCP server advertises (#549) before suspecting the tools. |
+| `ApiFunctionErrorsAlarm` | The API function crashed or timed out on a request. Normal error responses (4xx, or a 5xx the code returns on purpose) don't count. | Search the logs for `ERROR` and `Status: timeout`. A timeout lasts exactly 10 seconds, the function's limit. |
 | `HttpApi5xxAlarm` | API Gateway returned a 5xx to a caller. It usually fires together with the one above. | Same as above. If it fires alone, the function is returning a 5xx itself: look for `"status":5` in the logs. |
 | `ModerateFunctionErrorsAlarm` | The moderation function failed on an upload. Lambda retries it. | The moderation function's logs. If retries keep failing, the event ends up in the dead-letter queue (next row). |
 | `ModerationDLQAlarm` | An upload failed moderation on every retry, so the image stays pending. | [Failed images](moderation.md#failed-images) in the moderation guide: list the queue, fix the cause, redrive. |
@@ -127,7 +127,7 @@ This happens when a release that added a resource the deploy role can't remove (
 
 ### A merge didn't produce a release
 
-GitHub occasionally drops a push event, so `release.yml` never starts (it happened with #545). Check the Actions tab for a `Release` run on the merge commit. If there isn't one:
+GitHub occasionally drops a push event, so `release.yml` never starts. Check the Actions tab for a `Release` run on the merge commit. If there isn't one:
 
 ```sh
 gh workflow run release.yml
