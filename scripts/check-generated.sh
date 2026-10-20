@@ -8,7 +8,7 @@ scripts/gen.sh
 # matches a CI-generated one byte for byte. brand/internal/assets' tests
 # compare them pixel by pixel within a tolerance instead. Its text files
 # (SVG, CSS) are deterministic and checked here like everything else.
-if ! git diff --exit-code --stat -- go.mod go.sum '**/mocks/*.go' internal/handlers/api/api.gen.go \
+if ! git diff --exit-code --stat -- go.mod go.sum '**/mocks/*.go' internal/handlers/api/api.gen.go api/gateway.gen.yaml \
   'brand/dist/*.svg' 'brand/dist/*.css'; then
   echo
   echo "Generated files are out of date - run the commands above locally and commit the result." >&2

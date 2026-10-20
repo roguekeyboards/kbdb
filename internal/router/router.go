@@ -206,8 +206,8 @@ func New(
 	// API Gateway's native authorizer - see that middleware's doc comment
 	// for why (a spec-compliant 401 needs a WWW-Authenticate header naming
 	// the RFC 9728 metadata URL, which the gateway's own fixed rejection
-	// response can't carry). template.yaml's McpEvent is Authorizer: NONE
-	// accordingly. Not wrapped in validate: api/openapi.yaml only covers
+	// response can't carry). internal/gatewayroutes gives /mcp no gateway
+	// authorizer accordingly. Not wrapped in validate: api/openapi.yaml only covers
 	// the REST surface.
 	mcpHandlers := mcp.New(switchRepo, switchImageStore, keyboardRepo, keyboardImageStore, keycapSetRepo, imageStore, buildRepo, buildImageStore, profileRepo, profileImageStore, uploads, verifier, issuerURL, version)
 	mux.Handle("/mcp", mcpHandlers.Streamable)

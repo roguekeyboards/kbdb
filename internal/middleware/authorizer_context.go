@@ -25,7 +25,7 @@ type authorizerRequestContext struct {
 // authorizerSubject extracts the "sub" claim API Gateway's native JWT
 // authorizer already verified, from the X-Amzn-Request-Context header
 // aws-lambda-web-adapter forwards. Returns ("", false) if the header is
-// absent (e.g. a route with Authorizer: NONE, or local dev outside
+// absent (e.g. a route with no gateway authorizer, or local dev outside
 // sam local start-api/API Gateway entirely) or doesn't contain a sub claim -
 // both are valid, non-error states the caller must handle, not something
 // this function itself decides is wrong.

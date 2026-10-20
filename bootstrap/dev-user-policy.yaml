@@ -47,8 +47,11 @@ Resources:
             Effect: Allow
             Action: cloudformation:CreateChangeSet
             # template.yaml's Transform: AWS::Serverless-2016-10-31 requires
-            # this separate, account-owned (not stack-scoped) ARN.
-            Resource: !Sub arn:aws:cloudformation:${AWS::Region}:aws:transform/Serverless-2016-10-31
+            # this separate, account-owned (not stack-scoped) ARN, and its
+            # AWS::Include (api/gateway.gen.yaml) another.
+            Resource:
+              - !Sub arn:aws:cloudformation:${AWS::Region}:aws:transform/Serverless-2016-10-31
+              - !Sub arn:aws:cloudformation:${AWS::Region}:aws:transform/Include
           - Sid: BudgetsScoped
             Effect: Allow
             Action:
