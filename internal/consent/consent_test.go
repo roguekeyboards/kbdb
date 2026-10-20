@@ -62,6 +62,17 @@ func (s *HandlerSuite) TestGet_EmbedsBranding() {
 	assertBranded(s.Assert(), rec.Body.String(), "mykeebs — Sign in")
 }
 
+func (s *HandlerSuite) TestGet_LinksPrivacyAndTerms() {
+	req := httptest.NewRequestWithContext(s.T().Context(), http.MethodGet, "/authorize", nil)
+	rec := httptest.NewRecorder()
+
+	Handler("public-token-test-abc123", "https://auth.example.com").ServeHTTP(rec, req)
+
+	s.Equal(http.StatusOK, rec.Code)
+	s.Contains(rec.Body.String(), `href="/privacy"`)
+	s.Contains(rec.Body.String(), `href="/terms"`)
+}
+
 func (s *HandlerSuite) TestNonGet_MethodNotAllowed() {
 	req := httptest.NewRequestWithContext(s.T().Context(), http.MethodPost, "/authorize", nil)
 	rec := httptest.NewRecorder()

@@ -41,6 +41,9 @@ var extraRoutes = []Route{
 	// ANY so a non-GET request reaches the handler's own 405 instead of a 404.
 	{Method: "ANY", Path: "/authorize"},
 	{Method: "ANY", Path: "/logout"},
+	// The privacy policy and terms are public (internal/legal).
+	{Method: "ANY", Path: "/privacy"},
+	{Method: "ANY", Path: "/terms"},
 }
 
 const bearerScheme = "BearerAuth"

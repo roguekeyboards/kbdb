@@ -1,0 +1,52 @@
+{{/*
+  Names the processors this deployment actually uses (Stytch, AWS,
+  Cloudflare, Discord) and the retention periods set in template.yaml, so it
+  has to change when either does.
+*/}}
+{{define "title"}}Privacy Policy{{end}}
+{{define "content"}}
+<p class="updated">Last updated: November 1, 2026</p>
+
+<p>mykeebs is a place to keep track of your mechanical keyboards, switches, keycaps and builds. This policy covers all of mykeebs: the website, the API, and AI assistants connected through MCP. It's run by Rogue Keyboards. Questions or requests: <a href="mailto:support@mykeebs.com">support@mykeebs.com</a>.</p>
+
+<h2>What we collect</h2>
+<p><strong>When you sign in.</strong> You sign in with Discord. Discord tells us your Discord user ID, username and email address. Sign-in is handled by Stytch, which keeps this information for us.</p>
+<p><strong>What you add.</strong> Your profile (username, preferences, avatar) and everything you put in your collection: keyboards, switches, keycap sets, builds, prices you paid, and photos.</p>
+<p><strong>Logs.</strong> Our servers log each request, including your IP address and user ID. We use these to fix problems and stop abuse.</p>
+
+<h2>Who can see it</h2>
+<p>Your items are private unless you choose to make them public. Prices you paid are shown to others only if you allow it in your preferences.</p>
+
+<h2>Photo checks</h2>
+<p>Every photo you upload is checked automatically by Amazon Rekognition for inappropriate content. Photos that fail are hidden. We keep a rejected photo for 30 days, in case it was a mistake, then delete it.</p>
+
+<h2>Who else handles your data</h2>
+<p>We don't sell your data, show ads, or use third-party analytics. These services run parts of mykeebs for us:</p>
+<ul>
+  <li><strong>Amazon Web Services:</strong> stores your data and photos, in the United States.</li>
+  <li><strong>Stytch:</strong> handles sign-in.</li>
+  <li><strong>Cloudflare:</strong> hosts the website and routes traffic.</li>
+  <li><strong>Discord:</strong> only to sign you in.</li>
+</ul>
+
+<h2>Your browser</h2>
+<p>The website keeps your sign-in in your browser's local storage, and the sign-in page uses Stytch's cookies to remember your session. Nothing else is stored, and nothing is used to track you.</p>
+
+<h2>How long we keep it</h2>
+<ul>
+  <li>Your profile and collection: until you delete them.</li>
+  <li>Your sign-in record at Stytch: until 30 days after you delete your account.</li>
+  <li>Server logs: 14 days.</li>
+  <li>Photo check records: 60 days.</li>
+  <li>Backups: deleted data can stay in backups for up to 35 days.</li>
+</ul>
+
+<h2>Deleting your data</h2>
+<p>You can edit or delete any item or photo yourself at any time. You can also delete your whole account yourself. This removes your profile, your collection and all your photos right away. Your sign-in record at Stytch is removed within 30 days. Copies in backups are gone within 35 days.</p>
+
+<h2>Children</h2>
+<p>mykeebs is not for anyone under 13.</p>
+
+<h2>Changes</h2>
+<p>If we change this policy, we'll update the date above. For big changes, we'll post a notice on the site first.</p>
+{{end}}
