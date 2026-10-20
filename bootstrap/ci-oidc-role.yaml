@@ -267,12 +267,18 @@ Resources:
                   - logs:DeleteLogGroup
                   - logs:PutRetentionPolicy
                   - logs:TagResource
+                  # template.yaml's AccountDeleteNoticeFailedFilter.
+                  - logs:PutMetricFilter
+                  - logs:DeleteMetricFilter
+                  - logs:DescribeMetricFilters
                 Resource:
                   - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-api-kbdb-pr-*
                   - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-moderate-kbdb-pr-*
                   - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/apigateway/kbdb-api-kbdb-pr-*
-              # template.yaml's ModerationDLQ. CloudFormation names it
-              # <StackName>-ModerationDLQ-<random>.
+              # template.yaml's ModerationDLQ, named
+              # <StackName>-ModerationDLQ-<random>, and the queue the
+              # functional tests subscribe to the alarm topic
+              # (test/functional/support/notices).
               - Sid: SqsScoped
                 Effect: Allow
                 Action:
@@ -283,7 +289,36 @@ Resources:
                   - sqs:TagQueue
                   - sqs:UntagQueue
                   - sqs:ListQueueTags
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
                 Resource: !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:kbdb-pr-*
+              # template.yaml's AlarmTopic and alarms. Subscribe and
+              # Unsubscribe are also the functional tests' own queue.
+              - Sid: AlarmTopic
+                Effect: Allow
+                Action:
+                  - sns:CreateTopic
+                  - sns:DeleteTopic
+                  - sns:GetTopicAttributes
+                  - sns:SetTopicAttributes
+                  - sns:Subscribe
+                  - sns:Unsubscribe
+                  - sns:ListSubscriptionsByTopic
+                  - sns:GetDataProtectionPolicy
+                  - sns:ListTagsForResource
+                  - sns:TagResource
+                  - sns:UntagResource
+                Resource: !Sub arn:aws:sns:${AWS::Region}:${AWS::AccountId}:kbdb-pr-*
+              - Sid: Alarms
+                Effect: Allow
+                Action:
+                  - cloudwatch:PutMetricAlarm
+                  - cloudwatch:DescribeAlarms
+                  - cloudwatch:DeleteAlarms
+                  - cloudwatch:ListTagsForResource
+                  - cloudwatch:TagResource
+                  - cloudwatch:UntagResource
+                Resource: !Sub arn:aws:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:kbdb-pr-*
               - Sid: LogsDelivery
                 Effect: Allow
                 Action:

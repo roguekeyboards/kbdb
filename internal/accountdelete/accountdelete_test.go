@@ -1,14 +1,19 @@
 package accountdelete_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/rogueserenity/kbdb/internal/accountdelete"
+	admocks "github.com/rogueserenity/kbdb/internal/accountdelete/mocks"
+	kbdbctx "github.com/rogueserenity/kbdb/internal/ctx"
+	"github.com/rogueserenity/kbdb/internal/log"
 	"github.com/rogueserenity/kbdb/internal/repository"
 	"github.com/rogueserenity/kbdb/internal/repository/mocks"
 )
@@ -22,7 +27,9 @@ type DeleteSuite struct {
 	switches  *mocks.MockSwitchRepository
 	sets      *mocks.MockKeycapSetRepository
 	profiles  *mocks.MockProfileRepository
+	notices   *admocks.MockNotifier
 	account   accountdelete.Account
+	logs      bytes.Buffer
 
 	order []string
 }
@@ -38,6 +45,7 @@ func (s *DeleteSuite) SetupTest() {
 	s.switches = mocks.NewMockSwitchRepository(s.T())
 	s.sets = mocks.NewMockKeycapSetRepository(s.T())
 	s.profiles = mocks.NewMockProfileRepository(s.T())
+	s.notices = admocks.NewMockNotifier(s.T())
 	s.account = accountdelete.Account{
 		Images:     s.images,
 		Builds:     s.builds,
@@ -45,8 +53,25 @@ func (s *DeleteSuite) SetupTest() {
 		Switches:   s.switches,
 		KeycapSets: s.sets,
 		Profiles:   s.profiles,
+		Notices:    s.notices,
 	}
 	s.order = nil
+	s.logs.Reset()
+}
+
+// ctx is alice's request context, logging to s.logs.
+func (s *DeleteSuite) ctx() context.Context {
+	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	return log.WithLogger(ctx, slog.New(slog.NewTextHandler(&s.logs, nil)))
+}
+
+func (s *DeleteSuite) expectAllDeleted() {
+	s.builds.EXPECT().DeleteAll(mock.Anything).Return(nil)
+	s.keyboards.EXPECT().DeleteAll(mock.Anything).Return(nil)
+	s.switches.EXPECT().DeleteAll(mock.Anything).Return(nil)
+	s.sets.EXPECT().DeleteAll(mock.Anything).Return(nil)
+	s.images.EXPECT().DeleteAll(mock.Anything).Return(nil)
+	s.profiles.EXPECT().Delete(mock.Anything).Return(nil)
 }
 
 func (s *DeleteSuite) record(step string) func(context.Context) {
@@ -60,10 +85,44 @@ func (s *DeleteSuite) TestDeletesTablesThenImagesThenProfile() {
 	s.switches.EXPECT().DeleteAll(mock.Anything).Run(s.record("switches")).Return(nil)
 	s.sets.EXPECT().DeleteAll(mock.Anything).Run(s.record("keycap sets")).Return(nil)
 	s.profiles.EXPECT().Delete(mock.Anything).Run(s.record("profile")).Return(nil)
+	s.notices.EXPECT().Notify(mock.Anything, "alice").
+		Run(func(context.Context, string) { s.order = append(s.order, "notice") }).Return(nil)
 
-	s.Require().NoError(s.account.Delete(s.T().Context()))
+	s.Require().NoError(s.account.Delete(s.ctx()))
 
-	s.Equal([]string{"builds", "keyboards", "switches", "keycap sets", "images", "profile"}, s.order)
+	s.Equal([]string{"builds", "keyboards", "switches", "keycap sets", "images", "profile", "notice"}, s.order)
+}
+
+func (s *DeleteSuite) TestNoticeFails_LoggedNotReturned() {
+	s.expectAllDeleted()
+	s.notices.EXPECT().Notify(mock.Anything, "alice").Return(errors.New("sns down"))
+
+	s.Require().NoError(s.account.Delete(s.ctx()))
+
+	s.Contains(s.logs.String(), accountdelete.NoticeFailed)
+	s.Contains(s.logs.String(), "owner_id=alice")
+}
+
+func (s *DeleteSuite) TestCallerGone_NoticeStillSent() {
+	ctx, cancel := context.WithCancel(s.ctx())
+	s.builds.EXPECT().DeleteAll(mock.Anything).Return(nil)
+	s.keyboards.EXPECT().DeleteAll(mock.Anything).Return(nil)
+	s.switches.EXPECT().DeleteAll(mock.Anything).Return(nil)
+	s.sets.EXPECT().DeleteAll(mock.Anything).Return(nil)
+	s.images.EXPECT().DeleteAll(mock.Anything).Return(nil)
+	s.profiles.EXPECT().Delete(mock.Anything).Run(func(context.Context) { cancel() }).Return(nil)
+	s.notices.EXPECT().
+		Notify(mock.MatchedBy(func(ctx context.Context) bool { return ctx.Err() == nil }), "alice").
+		Return(nil)
+
+	s.Require().NoError(s.account.Delete(ctx))
+}
+
+func (s *DeleteSuite) TestNoNotifier_NoNotice() {
+	s.expectAllDeleted()
+	s.account.Notices = nil
+
+	s.Require().NoError(s.account.Delete(s.ctx()))
 }
 
 func (s *DeleteSuite) TestImageDeleteFails_ProfileKept() {
@@ -73,14 +132,14 @@ func (s *DeleteSuite) TestImageDeleteFails_ProfileKept() {
 	s.sets.EXPECT().DeleteAll(mock.Anything).Return(nil)
 	s.images.EXPECT().DeleteAll(mock.Anything).Return(errors.New("s3 down"))
 
-	s.Require().Error(s.account.Delete(s.T().Context()))
+	s.Require().Error(s.account.Delete(s.ctx()))
 }
 
 func (s *DeleteSuite) TestItemDeleteFails_ImagesAndProfileKept() {
 	s.builds.EXPECT().DeleteAll(mock.Anything).Return(nil)
 	s.keyboards.EXPECT().DeleteAll(mock.Anything).Return(errors.New("dynamo down"))
 
-	s.Require().Error(s.account.Delete(s.T().Context()))
+	s.Require().Error(s.account.Delete(s.ctx()))
 }
 
 func (s *DeleteSuite) TestProfileConflict_Matchable() {
@@ -91,5 +150,6 @@ func (s *DeleteSuite) TestProfileConflict_Matchable() {
 	s.sets.EXPECT().DeleteAll(mock.Anything).Return(nil)
 	s.profiles.EXPECT().Delete(mock.Anything).Return(repository.ErrMutationConflict)
 
-	s.ErrorIs(s.account.Delete(s.T().Context()), repository.ErrMutationConflict)
+	s.Require().ErrorIs(s.account.Delete(s.ctx()), repository.ErrMutationConflict)
+	s.notices.AssertNotCalled(s.T(), "Notify", mock.Anything, mock.Anything)
 }

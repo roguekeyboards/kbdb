@@ -237,6 +237,10 @@ Resources:
                   - logs:ListTagsForResource
                   - logs:TagResource
                   - logs:UntagResource
+                  # template.yaml's AccountDeleteNoticeFailedFilter.
+                  - logs:PutMetricFilter
+                  - logs:DeleteMetricFilter
+                  - logs:DescribeMetricFilters
                 Resource:
                   - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-api-kbdb-prod
                   - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-api-kbdb-prod:*

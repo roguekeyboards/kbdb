@@ -48,6 +48,16 @@ Use `/aws/lambda/kbdb-moderate-kbdb-prod` for the moderation function.
 | `HttpApi5xxAlarm` | API Gateway returned a 5xx to a caller. It usually fires together with the one above. | Same as above. If it fires alone, the function is returning a 5xx itself: look for `"status":5` in the logs. |
 | `ModerateFunctionErrorsAlarm` | The moderation function failed on an upload. Lambda retries it. | The moderation function's logs. If retries keep failing, the event ends up in the dead-letter queue (next row). |
 | `ModerationDLQAlarm` | An upload failed moderation on every retry, so the image stays pending. | [Failed images](moderation.md#failed-images) in the moderation guide: list the queue, fix the cause, redrive. |
+| `AccountDeleteNoticeFailedAlarm` | Someone deleted their account, but the notice below didn't send. | Search the API logs for `account delete notice failed`; the line's `owner_id` is the user to remove. Then follow [When an account is deleted](#when-an-account-is-deleted). The logs are kept 14 days. |
+
+## When an account is deleted
+
+Deleting a profile deletes the whole account in kbdb, but not the user's sign-in record at Stytch (Discord ID, username, email): kbdb holds no Stytch secret. Each delete emails the alarm address a notice, "kbdb: account deleted, remove the user from the identity provider", naming the user ID (`user-live-…`). The privacy policy promises removal within 30 days.
+
+1. In the Stytch dashboard for the Live project, open **Users** and search for the user ID.
+2. Delete the user.
+
+If the user signs in again later, Stytch creates a new user with a new ID, so they start with an empty account.
 
 ## When a budget email arrives
 

@@ -19,9 +19,12 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/sns"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 
+	"github.com/rogueserenity/kbdb/internal/accountdelete"
 	"github.com/rogueserenity/kbdb/internal/auth"
+	"github.com/rogueserenity/kbdb/internal/deletenotice"
 	"github.com/rogueserenity/kbdb/internal/repository/dynamo"
 	imagestore "github.com/rogueserenity/kbdb/internal/repository/s3"
 	"github.com/rogueserenity/kbdb/internal/router"
@@ -99,7 +102,12 @@ func main() {
 	profileImageStore := imagestore.NewProfileImageStore(s3Client, presignClient, cfg.ImagesBucketName, presignCreds)
 	ownerImageStore := imagestore.NewOwnerImageStore(s3Client, cfg.ImagesBucketName)
 
-	handler := router.New(verifier, switchRepo, switchImageStore, keyboardRepo, keyboardImageStore, keycapSetRepo, keycapKitImageStore, buildRepo, buildImageStore, profileRepo, profileImageStore, ownerImageStore, uploads, cfg.OIDCIssuerURL, cfg.IDPConsentPublicToken, Version, strings.Split(cfg.LogoutReturnOrigins, ","))
+	var deleteNotices accountdelete.Notifier
+	if cfg.AccountDeleteTopicARN != "" {
+		deleteNotices = deletenotice.NewSNS(sns.NewFromConfig(awsCfg), cfg.AccountDeleteTopicARN)
+	}
+
+	handler := router.New(verifier, switchRepo, switchImageStore, keyboardRepo, keyboardImageStore, keycapSetRepo, keycapKitImageStore, buildRepo, buildImageStore, profileRepo, profileImageStore, ownerImageStore, deleteNotices, uploads, cfg.OIDCIssuerURL, cfg.IDPConsentPublicToken, Version, strings.Split(cfg.LogoutReturnOrigins, ","))
 
 	// ReadHeaderTimeout bounds a slow/malicious client independently of
 	// Lambda's own per-invocation timeout.

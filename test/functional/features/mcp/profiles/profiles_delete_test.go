@@ -1,6 +1,8 @@
 package profiles_test
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -11,6 +13,7 @@ import (
 	"github.com/rogueserenity/kbdb/test/functional/support/account"
 	"github.com/rogueserenity/kbdb/test/functional/support/api"
 	"github.com/rogueserenity/kbdb/test/functional/support/db"
+	"github.com/rogueserenity/kbdb/test/functional/support/notices"
 )
 
 var _ = Describe("Deleting a profile over MCP", func() {
@@ -75,9 +78,16 @@ var _ = Describe("Deleting a profile over MCP", func() {
 	})
 
 	Context("given the caller has a profile and owns one of each item", func() {
-		var items account.Items
+		var (
+			items    account.Items
+			listener *notices.Listener
+		)
 
 		BeforeEach(func(ctx SpecContext) {
+			var listenErr error
+			listener, listenErr = notices.Listen(ctx)
+			DeferCleanup(func(ctx SpecContext) { listener.Close(ctx) })
+			Expect(listenErr).NotTo(HaveOccurred())
 			Expect(db.SeedProfile(ctx, ownerID, db.SeedProfileOptions{
 				Username:     username,
 				Discoverable: true,
@@ -112,6 +122,9 @@ var _ = Describe("Deleting a profile over MCP", func() {
 					Expect(got.IsError).To(BeTrue(), tool)
 				}
 				Expect(items.RemainingStrayImages(ctx)).To(BeEmpty())
+				Eventually(func(ctx SpecContext) (bool, error) {
+					return listener.Received(ctx, ownerID)
+				}).WithContext(ctx).WithTimeout(30 * time.Second).Should(BeTrue())
 			})
 		})
 	})

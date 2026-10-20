@@ -73,6 +73,23 @@ packages:
       s3PresignAPI:
         config:
           structname: 'MockS3PresignAPI'
+  github.com/rogueserenity/kbdb/internal/deletenotice:
+    config:
+      dir: '{{.InterfaceDir}}/mocks'
+      filename: 'mock_{{.InterfaceName}}.go'
+      pkgname: 'mocks'
+      structname: 'MockSNSAPI'
+    interfaces:
+      snsAPI:
+  github.com/rogueserenity/kbdb/internal/accountdelete:
+    config:
+      dir: '{{.InterfaceDir}}/mocks'
+      filename: 'mock_{{.InterfaceName}}.go'
+      pkgname: 'mocks'
+    interfaces:
+      Notifier:
+        config:
+          structname: 'MockNotifier'
   github.com/rogueserenity/kbdb/internal/moderation:
     config:
       dir: '{{.InterfaceDir}}/mocks'
