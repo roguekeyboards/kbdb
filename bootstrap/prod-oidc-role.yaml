@@ -1,21 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: >
-  One-time bootstrap (kbdb-prod only): the GitHub Actions OIDC identity
-  provider and the role deploy-prod.yml assumes to deploy a release tag to
-  the kbdb-prod stack. Deployed by hand with the kbdb-prod-admin profile,
-  like the other bootstrap/*.yaml templates.
-
-  Unlike ci-oidc-role.yaml's role, which creates and deletes short-lived
-  kbdb-pr-* stacks, this one updates one long-lived stack. Its actions come
-  from the CloudFormation resource schemas' handler permissions (aws
-  cloudformation describe-type) for each resource type template.yaml
-  creates, scoped to kbdb-prod's resources. It can't delete the stack, the
-  tables or the images bucket: a deploy that would replace one of them
-  fails instead.
-
-  Every role it creates or changes must carry kbdb-stack-boundary
-  (bootstrap/stack-boundary.yaml), which caps what template.yaml can grant
-  them.
+Description: Bootstrap (kbdb-prod) - GitHub Actions OIDC provider and prod deploy role
 
 Resources:
   GitHubOidcProvider:
@@ -42,9 +26,6 @@ Resources:
             Condition:
               StringEquals:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
-              # deploy-prod.yml running on a release's tag. Only the release
-              # App can create v* tags (tag ruleset), and no other workflow
-              # that runs on a tag can assume this role.
               StringLike:
                 token.actions.githubusercontent.com:sub: repo:rogueserenity/kbdb:ref:refs/tags/v*
                 token.actions.githubusercontent.com:job_workflow_ref: rogueserenity/kbdb/.github/workflows/deploy-prod.yml@refs/tags/v*
@@ -53,8 +34,6 @@ Resources:
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
-              # sam deploy goes through change sets, so no Create/Update/
-              # DeleteStack.
               - Sid: CloudFormationDeploy
                 Effect: Allow
                 Action:
@@ -70,6 +49,13 @@ Resources:
                   - cloudformation:GetTemplate
                   - cloudformation:GetTemplateSummary
                 Resource: !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/kbdb-prod/*
+              # Read-only for bootstrap-check. Never grant writes to these stacks.
+              - Sid: BootstrapTemplates
+                Effect: Allow
+                Action: cloudformation:GetTemplate
+                Resource:
+                  - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/kbdb-stack-boundary/*
+                  - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/kbdb-prod-oidc/*
               - Sid: CloudFormationServerlessTransform
                 Effect: Allow
                 Action: cloudformation:CreateChangeSet
@@ -85,9 +71,6 @@ Resources:
                 Resource:
                   - !Sub arn:aws:s3:::kbdb-sam-artifacts-${AWS::AccountId}
                   - !Sub arn:aws:s3:::kbdb-sam-artifacts-${AWS::AccountId}/*
-              # GetAuthorizationToken can't be scoped to a repo. The public
-              # registry login raises the anonymous pull rate limit for
-              # functions/*/Dockerfile's public.ecr.aws base images.
               - Sid: EcrAuth
                 Effect: Allow
                 Action:
@@ -95,8 +78,6 @@ Resources:
                   - ecr-public:GetAuthorizationToken
                   - sts:GetServiceBearerToken
                 Resource: '*'
-              # Get/SetRepositoryPolicy: Lambda grants itself pull access on
-              # the repo when the caller deploying the function can.
               - Sid: EcrRepo
                 Effect: Allow
                 Action:
@@ -121,8 +102,6 @@ Resources:
                   - !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:kbdb-api-kbdb-prod:*
                   - !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:kbdb-moderate-kbdb-prod
                   - !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:kbdb-moderate-kbdb-prod:*
-              # API IDs are random, so /apis/* can't be narrowed further;
-              # kbdb-prod's is the account's only API.
               - Sid: ApiGateway
                 Effect: Allow
                 Action: apigateway:*
@@ -146,9 +125,6 @@ Resources:
                   - iam:ListRolePolicies
                   - iam:ListAttachedRolePolicies
                 Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/kbdb-prod-*
-              # Whatever a template grants a stack role, kbdb-stack-boundary
-              # (bootstrap/stack-boundary.yaml) caps it: these only apply to
-              # roles that carry it, and nothing here can remove it.
               - Sid: StackRolesWithBoundary
                 Effect: Allow
                 Action:
@@ -161,7 +137,6 @@ Resources:
                 Condition:
                   StringEquals:
                     iam:PermissionsBoundary: !Sub arn:aws:iam::${AWS::AccountId}:policy/kbdb-stack-boundary
-              # The one managed policy SAM attaches to function roles.
               - Sid: AttachBasicExecutionRole
                 Effect: Allow
                 Action: iam:AttachRolePolicy
@@ -178,7 +153,6 @@ Resources:
                 Condition:
                   StringEquals:
                     iam:PassedToService: lambda.amazonaws.com
-              # No DeleteTable or item access.
               - Sid: DynamoDb
                 Effect: Allow
                 Action:
@@ -198,7 +172,6 @@ Resources:
                 Resource:
                   - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/kbdb-prod-*
                   - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/kbdb-prod-*/index/*
-              # No DeleteBucket or object access.
               - Sid: ImagesBucket
                 Effect: Allow
                 Action:
@@ -237,7 +210,6 @@ Resources:
                   - logs:ListTagsForResource
                   - logs:TagResource
                   - logs:UntagResource
-                  # template.yaml's AccountDeleteNoticeFailedFilter.
                   - logs:PutMetricFilter
                   - logs:DeleteMetricFilter
                   - logs:DescribeMetricFilters
@@ -248,10 +220,6 @@ Resources:
                   - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-moderate-kbdb-prod:*
                   - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/apigateway/kbdb-api-kbdb-prod
                   - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/apigateway/kbdb-api-kbdb-prod:*
-              # HTTP API access logging goes through vended log delivery,
-              # whose actions don't take a log group resource. The policy
-              # simulator doesn't allow DescribeIndexPolicies on a log group
-              # ARN either.
               - Sid: LogsUnscoped
                 Effect: Allow
                 Action:
@@ -302,8 +270,6 @@ Resources:
                   - cloudwatch:TagResource
                   - cloudwatch:UntagResource
                 Resource: !Sub arn:aws:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:kbdb-prod-*
-              # Budgets ARNs have no region. CloudFormation names the budget
-              # CostBudget-<region>-<timestamp>-<random>.
               - Sid: Budget
                 Effect: Allow
                 Action:
@@ -314,17 +280,12 @@ Resources:
                   - budgets:TagResource
                   - budgets:UntagResource
                 Resource: !Sub arn:aws:budgets::${AWS::AccountId}:budget/CostBudget-*
-              # Dependent actions of ModifyBudget and ViewBudget; neither
-              # takes a resource.
               - Sid: BudgetDependencies
                 Effect: Allow
                 Action:
                   - iam:CreateServiceLinkedRole
                   - billing:GetBillingViewData
                 Resource: '*'
-              # Budgets delivers email through User Notifications, and
-              # registers a budget's subscriber addresses there with the
-              # deploying caller's permissions.
               - Sid: BudgetEmailContacts
                 Effect: Allow
                 Action:
@@ -333,9 +294,6 @@ Resources:
                   - notifications-contacts:CreateEmailContact
                   - notifications-contacts:SendActivationCode
                 Resource: '*'
-              # Account-level reads CloudFormation makes before creating
-              # roles and functions (seen in CloudTrail on the first
-              # deploy).
               - Sid: AccountReads
                 Effect: Allow
                 Action:

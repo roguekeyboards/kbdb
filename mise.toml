@@ -36,6 +36,10 @@ alias = "b"
 description = "sam build"
 file = "scripts/build.sh"
 
+[tasks.bootstrap-check]
+description = "Fail if an account's bootstrap stacks are behind the repo: mise run bootstrap-check <ci|prod> (needs that account's credentials)"
+file = "scripts/bootstrap-check.sh"
+
 [tasks.setup]
 description = "One-time setup of an environment's ECR repo + stack: mise run setup [env], env defaults to dev-$(whoami) (requires an authenticated AWS profile)"
 file = "scripts/setup.sh"
