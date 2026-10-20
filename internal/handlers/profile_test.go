@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/rogueserenity/kbdb/internal/accountdelete"
 	kbdbctx "github.com/rogueserenity/kbdb/internal/ctx"
 	"github.com/rogueserenity/kbdb/internal/handlers/api"
 	"github.com/rogueserenity/kbdb/internal/problem"
@@ -442,7 +443,7 @@ type DeleteProfileSuite struct {
 	suite.Suite
 
 	mockRepo   *mocks.MockProfileRepository
-	mockImages *mocks.MockProfileImageStore
+	mockImages *mocks.MockOwnerImageStore
 	handler    http.HandlerFunc
 }
 
@@ -452,9 +453,21 @@ func TestDeleteProfileSuite(t *testing.T) {
 
 func (s *DeleteProfileSuite) SetupTest() {
 	s.mockRepo = mocks.NewMockProfileRepository(s.T())
-	s.mockImages = mocks.NewMockProfileImageStore(s.T())
-	s.handler = DeleteProfile(s.mockRepo, s.mockImages)
+	s.mockImages = mocks.NewMockOwnerImageStore(s.T())
+	s.handler = DeleteProfile(accountdelete.Account{
+		Images:     s.mockImages,
+		Builds:     emptyItemStore{},
+		Keyboards:  emptyItemStore{},
+		Switches:   emptyItemStore{},
+		KeycapSets: emptyItemStore{},
+		Profiles:   s.mockRepo,
+	})
 }
+
+// emptyItemStore is an accountdelete.ItemStore with nothing to delete.
+type emptyItemStore struct{}
+
+func (emptyItemStore) DeleteAll(context.Context) error { return nil }
 
 // del builds a DELETE request with ctx caller set to caller (empty for
 // anonymous).
@@ -474,9 +487,8 @@ func (s *DeleteProfileSuite) del(caller string) *httptest.ResponseRecorder {
 	return rec
 }
 
-func (s *DeleteProfileSuite) TestDeletesProfile_204() {
-	s.mockRepo.EXPECT().Get(mock.Anything, "user-alice").
-		Return(&repository.Profile{OwnerID: "user-alice", Username: "alice"}, nil)
+func (s *DeleteProfileSuite) TestDeletesAccount_204() {
+	s.mockImages.EXPECT().DeleteAll(mock.Anything).Return(nil)
 	s.mockRepo.EXPECT().Delete(mock.Anything).Return(nil)
 
 	rec := s.del("user-alice")
@@ -496,59 +508,8 @@ func (s *DeleteProfileSuite) TestAnonymous_404() {
 	s.Equal(http.StatusNotFound, rec.Code)
 }
 
-func (s *DeleteProfileSuite) TestNoProfile_204_Idempotent() {
-	s.mockRepo.EXPECT().Get(mock.Anything, "user-alice").
-		Return(nil, repository.ErrNotFound)
-
-	rec := s.del("user-alice")
-
-	s.Equal(http.StatusNoContent, rec.Code)
-}
-
-func (s *DeleteProfileSuite) TestAvatarDeletedBeforeDBDelete() {
-	key := repository.ProfileImageKey("profiles/user-alice/avatar/up1")
-	s.mockRepo.EXPECT().Get(mock.Anything, "user-alice").
-		Return(&repository.Profile{OwnerID: "user-alice", Username: "alice", AvatarPath: &key}, nil)
-
-	var order []string
-	s.mockImages.EXPECT().Delete(mock.Anything, key).
-		Run(func(context.Context, repository.ProfileImageKey) { order = append(order, "s3") }).
-		Return(nil)
-	s.mockRepo.EXPECT().Delete(mock.Anything).
-		Run(func(context.Context) { order = append(order, "db") }).
-		Return(nil)
-
-	rec := s.del("user-alice")
-
-	s.Equal(http.StatusNoContent, rec.Code)
-	s.Equal([]string{"s3", "db"}, order)
-}
-
-func (s *DeleteProfileSuite) TestAvatarDeleteFails_500_NoDBDelete() {
-	key := repository.ProfileImageKey("profiles/user-alice/avatar/up1")
-	s.mockRepo.EXPECT().Get(mock.Anything, "user-alice").
-		Return(&repository.Profile{OwnerID: "user-alice", Username: "alice", AvatarPath: &key}, nil)
-	s.mockImages.EXPECT().Delete(mock.Anything, key).Return(errors.New("s3 down"))
-
-	rec := s.del("user-alice")
-
-	s.Equal(http.StatusInternalServerError, rec.Code)
-	s.mockRepo.AssertNotCalled(s.T(), "Delete", mock.Anything)
-}
-
-func (s *DeleteProfileSuite) TestGetError_500() {
-	s.mockRepo.EXPECT().Get(mock.Anything, "user-alice").
-		Return(nil, errors.New("dynamo down"))
-
-	rec := s.del("user-alice")
-
-	s.Equal(http.StatusInternalServerError, rec.Code)
-}
-
-func (s *DeleteProfileSuite) TestDeleteError_500() {
-	s.mockRepo.EXPECT().Get(mock.Anything, "user-alice").
-		Return(&repository.Profile{OwnerID: "user-alice", Username: "alice"}, nil)
-	s.mockRepo.EXPECT().Delete(mock.Anything).Return(errors.New("dynamo down"))
+func (s *DeleteProfileSuite) TestDeleteFails_500() {
+	s.mockImages.EXPECT().DeleteAll(mock.Anything).Return(errors.New("s3 down"))
 
 	rec := s.del("user-alice")
 
@@ -556,8 +517,7 @@ func (s *DeleteProfileSuite) TestDeleteError_500() {
 }
 
 func (s *DeleteProfileSuite) TestMutationConflict_409() {
-	s.mockRepo.EXPECT().Get(mock.Anything, "user-alice").
-		Return(&repository.Profile{OwnerID: "user-alice", Username: "alice"}, nil)
+	s.mockImages.EXPECT().DeleteAll(mock.Anything).Return(nil)
 	s.mockRepo.EXPECT().Delete(mock.Anything).Return(repository.ErrMutationConflict)
 
 	rec := s.del("user-alice")

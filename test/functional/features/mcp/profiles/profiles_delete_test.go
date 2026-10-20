@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/rogueserenity/kbdb/test/functional/support"
+	"github.com/rogueserenity/kbdb/test/functional/support/account"
 	"github.com/rogueserenity/kbdb/test/functional/support/api"
 	"github.com/rogueserenity/kbdb/test/functional/support/db"
 )
@@ -69,6 +70,48 @@ var _ = Describe("Deleting a profile over MCP", func() {
 				DeferCleanup(func(ctx SpecContext) {
 					Expect(db.DeleteProfile(ctx, otherID, username)).To(Succeed())
 				})
+			})
+		})
+	})
+
+	Context("given the caller has a profile and owns one of each item", func() {
+		var items account.Items
+
+		BeforeEach(func(ctx SpecContext) {
+			Expect(db.SeedProfile(ctx, ownerID, db.SeedProfileOptions{
+				Username:     username,
+				Discoverable: true,
+			})).To(Succeed())
+			var seedErr error
+			items, seedErr = account.Seed(ctx, ownerID)
+			Expect(seedErr).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func(ctx SpecContext) {
+			_ = db.DeleteProfile(ctx, ownerID, username)
+			items.CleanUp(ctx, ownerID)
+		})
+
+		When("delete_profile is called", func() {
+			BeforeEach(func(ctx SpecContext) {
+				result, err = client.CallTool(ctx, "delete_profile", map[string]any{})
+			})
+
+			It("succeeds and deletes every item and image", func(ctx SpecContext) {
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result.IsError).To(BeFalse())
+
+				for tool, args := range map[string]map[string]any{
+					"get_keyboard":   {"keyboard_id": items.KeyboardID},
+					"get_switch":     {"switch_id": items.SwitchID},
+					"get_keycap_set": {"keycap_set_id": items.KeycapSetID},
+					"get_build":      {"build_id": items.BuildID},
+				} {
+					got, getErr := client.CallTool(ctx, tool, args)
+					Expect(getErr).NotTo(HaveOccurred())
+					Expect(got.IsError).To(BeTrue(), tool)
+				}
+				Expect(items.RemainingStrayImages(ctx)).To(BeEmpty())
 			})
 		})
 	})

@@ -391,6 +391,11 @@ func (r *BuildRepository) Delete(ctx context.Context, id string) error {
 	return fmt.Errorf("deleting build %q owner %q: %w", id, ownerID, repository.ErrMutationConflict)
 }
 
+// DeleteAll implements repository.BuildRepository.
+func (r *BuildRepository) DeleteAll(ctx context.Context) error {
+	return deleteOwnerItems(ctx, r.client, r.tableName)
+}
+
 // AddImage implements repository.BuildRepository. One UpdateItem sets
 // images.<id> = {path, seq}. Seq is time.Now().UnixNano(), so a new image
 // sorts after every existing one without reading the current max (see

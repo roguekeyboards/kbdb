@@ -97,8 +97,9 @@ func main() {
 	keyboardImageStore := imagestore.NewKeyboardImageStore(s3Client, presignClient, cfg.ImagesBucketName, presignCreds)
 	switchImageStore := imagestore.NewSwitchImageStore(s3Client, presignClient, cfg.ImagesBucketName, presignCreds)
 	profileImageStore := imagestore.NewProfileImageStore(s3Client, presignClient, cfg.ImagesBucketName, presignCreds)
+	ownerImageStore := imagestore.NewOwnerImageStore(s3Client, cfg.ImagesBucketName)
 
-	handler := router.New(verifier, switchRepo, switchImageStore, keyboardRepo, keyboardImageStore, keycapSetRepo, keycapKitImageStore, buildRepo, buildImageStore, profileRepo, profileImageStore, uploads, cfg.OIDCIssuerURL, cfg.IDPConsentPublicToken, Version, strings.Split(cfg.LogoutReturnOrigins, ","))
+	handler := router.New(verifier, switchRepo, switchImageStore, keyboardRepo, keyboardImageStore, keycapSetRepo, keycapKitImageStore, buildRepo, buildImageStore, profileRepo, profileImageStore, ownerImageStore, uploads, cfg.OIDCIssuerURL, cfg.IDPConsentPublicToken, Version, strings.Split(cfg.LogoutReturnOrigins, ","))
 
 	// ReadHeaderTimeout bounds a slow/malicious client independently of
 	// Lambda's own per-invocation timeout.

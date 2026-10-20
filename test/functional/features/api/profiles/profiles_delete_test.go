@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/rogueserenity/kbdb/test/functional/support/account"
 	"github.com/rogueserenity/kbdb/test/functional/support/api"
 	"github.com/rogueserenity/kbdb/test/functional/support/db"
 )
@@ -72,6 +73,77 @@ var _ = Describe("Deleting a profile", func() {
 				DeferCleanup(func(ctx SpecContext) {
 					Expect(db.DeleteProfile(ctx, otherID, username)).To(Succeed())
 				})
+			})
+		})
+	})
+
+	Context("given the caller has a profile and owns one of each item", func() {
+		var items account.Items
+
+		BeforeEach(func(ctx SpecContext) {
+			Expect(db.SeedProfile(ctx, ownerID, db.SeedProfileOptions{
+				Username:     username,
+				Discoverable: true,
+			})).To(Succeed())
+			var err error
+			items, err = account.Seed(ctx, ownerID)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func(ctx SpecContext) {
+			_ = db.DeleteProfile(ctx, ownerID, username)
+			items.CleanUp(ctx, ownerID)
+		})
+
+		When("deleting the profile", func() {
+			BeforeEach(func(ctx SpecContext) {
+				var err error
+				resp, err = client.Delete(ctx, ownerID, ownerToken)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("returns 204 and deletes the profile and every item", func(ctx SpecContext) {
+				By("returning 204")
+				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+
+				By("no longer resolving the profile")
+				got, err := client.Get(ctx, ownerID, ownerToken)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(got.StatusCode).To(Equal(http.StatusNotFound))
+
+				By("no longer resolving any of the items")
+				expectItemsGone(ctx, items, ownerID, ownerToken)
+
+				By("deleting image objects no record pointed to")
+				Expect(items.RemainingStrayImages(ctx)).To(BeEmpty())
+			})
+		})
+	})
+
+	Context("given the caller's profile is already gone but they still own items", func() {
+		var items account.Items
+
+		BeforeEach(func(ctx SpecContext) {
+			var err error
+			items, err = account.Seed(ctx, ownerID)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func(ctx SpecContext) {
+			items.CleanUp(ctx, ownerID)
+		})
+
+		When("deleting the profile again", func() {
+			BeforeEach(func(ctx SpecContext) {
+				var err error
+				resp, err = client.Delete(ctx, ownerID, ownerToken)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("returns 204 and deletes the remaining items", func(ctx SpecContext) {
+				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+				expectItemsGone(ctx, items, ownerID, ownerToken)
+				Expect(items.RemainingStrayImages(ctx)).To(BeEmpty())
 			})
 		})
 	})

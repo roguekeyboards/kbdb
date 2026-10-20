@@ -182,6 +182,10 @@ type KeycapSetRepository interface {
 	// before calling Delete. Idempotent: a nonexistent id is not an error.
 	Delete(ctx context.Context, id string) error
 
+	// DeleteAll removes every keycap set the caller owns. Callers clean
+	// up images themselves, before calling DeleteAll. Idempotent.
+	DeleteAll(ctx context.Context) error
+
 	// AddKit adds kit to the set's Kits, keyed by kit.KitID (which must
 	// already be set), with a server-assigned Seq that sorts it after every
 	// existing kit (kit.Seq is ignored), and returns the stored kit, matching Create's shape

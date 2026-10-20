@@ -11,6 +11,7 @@ import (
 	"github.com/getkin/kin-openapi/openapi3filter"
 	nethttpmiddleware "github.com/oapi-codegen/nethttp-middleware"
 
+	"github.com/rogueserenity/kbdb/internal/accountdelete"
 	"github.com/rogueserenity/kbdb/internal/auth"
 	"github.com/rogueserenity/kbdb/internal/consent"
 	"github.com/rogueserenity/kbdb/internal/handlers"
@@ -48,6 +49,7 @@ func New(
 	buildImageStore repository.BuildImageStore,
 	profileRepo repository.ProfileRepository,
 	profileImageStore repository.ProfileImageStore,
+	ownerImageStore repository.OwnerImageStore,
 	uploads *uploadlimit.Limiter,
 	issuerURL, idpConsentPublicToken, version string,
 	logoutReturnOrigins []string,
@@ -68,6 +70,15 @@ func New(
 		KeycapSetRepo:  keycapSetRepo,
 	}
 	pr := repoapi.Profile{Images: profileImageStore, Repo: profileRepo}
+
+	account := accountdelete.Account{
+		Images:     ownerImageStore,
+		Builds:     buildRepo,
+		Keyboards:  keyboardRepo,
+		Switches:   switchRepo,
+		KeycapSets: keycapSetRepo,
+		Profiles:   profileRepo,
+	}
 
 	ownerPrefs := middleware.OwnerPreferences(profileRepo)
 
@@ -189,10 +200,10 @@ func New(
 	mux.Handle("PUT /v1/profile/{identifier}",
 		middleware.RequireAuthorizerIdentity(validate(handlers.UpdateProfile(profileRepo, pr))))
 	// Same path/auth as the POST/PUT - DELETE only. {identifier} must be the
-	// caller's own subject (authz.IsOwner). A leaf delete (nothing
-	// references a Profile), idempotent: no profile is still 204.
+	// caller's own subject (authz.IsOwner). Deletes the whole account, every
+	// item included; idempotent: nothing left is still 204.
 	mux.Handle("DELETE /v1/profile/{identifier}",
-		middleware.RequireAuthorizerIdentity(validate(handlers.DeleteProfile(profileRepo, profileImageStore))))
+		middleware.RequireAuthorizerIdentity(validate(handlers.DeleteProfile(account))))
 	// The public directory: anonymous OK, only discoverable profiles returned.
 	mux.Handle("GET /v1/profiles",
 		middleware.OptionalAuth(verifier)(validate(handlers.ListProfiles(profileRepo, pr))))
@@ -212,7 +223,7 @@ func New(
 	// response can't carry). internal/gatewayroutes gives /mcp no gateway
 	// authorizer accordingly. Not wrapped in validate: api/openapi.yaml only covers
 	// the REST surface.
-	mcpHandlers := mcp.New(switchRepo, switchImageStore, keyboardRepo, keyboardImageStore, keycapSetRepo, imageStore, buildRepo, buildImageStore, profileRepo, profileImageStore, uploads, verifier, issuerURL, version)
+	mcpHandlers := mcp.New(switchRepo, switchImageStore, keyboardRepo, keyboardImageStore, keycapSetRepo, imageStore, buildRepo, buildImageStore, profileRepo, profileImageStore, account, uploads, verifier, issuerURL, version)
 	mux.Handle("/mcp", mcpHandlers.Streamable)
 	mux.Handle(mcpHandlers.MetadataPath, mcpHandlers.Metadata)
 	mux.Handle(mcpHandlers.RootMetadataPath, mcpHandlers.Metadata)

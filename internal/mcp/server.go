@@ -9,6 +9,7 @@ import (
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/modelcontextprotocol/go-sdk/oauthex"
 
+	"github.com/rogueserenity/kbdb/internal/accountdelete"
 	"github.com/rogueserenity/kbdb/internal/auth"
 	ctxpkg "github.com/rogueserenity/kbdb/internal/ctx"
 	logpkg "github.com/rogueserenity/kbdb/internal/log"
@@ -73,6 +74,7 @@ func New(
 	buildImageStore repository.BuildImageStore,
 	profileRepo repository.ProfileRepository,
 	profileImageStore repository.ProfileImageStore,
+	account accountdelete.Account,
 	uploads *uploadlimit.Limiter,
 	verifier *auth.Verifier,
 	issuerURL, version string,
@@ -86,7 +88,7 @@ func New(
 	})
 	mcpServer.AddReceivingMiddleware(identityMiddleware())
 
-	registerTools(mcpServer, switchRepo, switchImageStore, keyboardRepo, keyboardImageStore, keycapSetRepo, imageStore, buildRepo, buildImageStore, profileRepo, profileImageStore, uploads)
+	registerTools(mcpServer, switchRepo, switchImageStore, keyboardRepo, keyboardImageStore, keycapSetRepo, imageStore, buildRepo, buildImageStore, profileRepo, profileImageStore, account, uploads)
 
 	streamable := sdkmcp.NewStreamableHTTPHandler(
 		func(*http.Request) *sdkmcp.Server { return mcpServer },

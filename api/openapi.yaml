@@ -791,20 +791,19 @@ paths:
           $ref: "#/components/responses/ProblemResponse"
     delete:
       tags: [profiles]
-      summary: Delete a profile
+      summary: Delete a profile and the whole account
       operationId: deleteProfile
       description: >
-        Deletes the caller's profile. identifier must be the caller's own
-        IdP subject (not a username) — deleting a profile for anyone else
-        always returns 404. This is a leaf delete: nothing references a
-        profile, so there is no cascade — the user's builds, keyboards, and
-        other items keep their own visibility and are untouched; only the
-        directory listing loses the user. The username is freed for reuse
-        and the avatar object, if any, is removed. Idempotent: deleting
-        when the caller has no profile still returns 204.
+        Deletes the caller's whole account: the profile, its avatar and
+        username, and every build, keyboard, switch and keycap set the
+        caller owns, with all their images. This can't be undone.
+        identifier must be the caller's own IdP subject (not a username) —
+        deleting for anyone else always returns 404. Safe to retry: a call
+        that fails partway leaves the rest for the next call, and when
+        there's nothing left it still returns 204.
       responses:
         "204":
-          description: The profile was deleted, or the caller had none.
+          description: Everything was deleted, or there was nothing to delete.
         "404":
           $ref: "#/components/responses/NotFoundResponse"
         "409":

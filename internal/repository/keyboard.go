@@ -353,6 +353,10 @@ type KeyboardRepository interface {
 	// Idempotent: a nonexistent id is not an error.
 	Delete(ctx context.Context, id string) error
 
+	// DeleteAll removes every keyboard the caller owns. Callers clean
+	// up images themselves, before calling DeleteAll. Idempotent.
+	DeleteAll(ctx context.Context) error
+
 	// AddImage adds image (image.ImageID must be set) to the keyboard's Images
 	// map with a server-assigned Seq that sorts it after every existing image
 	// (see KeyboardImageEntry.Seq), with Status pending; image.Seq and
