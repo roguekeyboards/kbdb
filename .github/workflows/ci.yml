@@ -115,6 +115,20 @@ jobs:
             echo "key-path=$KEY_PATH"
           } >> "$GITHUB_OUTPUT"
 
+      # A failed first deploy leaves the stack in ROLLBACK_COMPLETE, which
+      # can only be deleted, so every later deploy for the PR would fail.
+      - name: Delete stack stuck in ROLLBACK_COMPLETE
+        run: |
+          STACK="${{ steps.pr-stack.outputs.stack-name }}"
+          STATUS=$(aws cloudformation describe-stacks \
+            --stack-name "$STACK" \
+            --query "Stacks[0].StackStatus" \
+            --output text 2>/dev/null || true)
+          if [ "$STATUS" = "ROLLBACK_COMPLETE" ]; then
+            aws cloudformation delete-stack --stack-name "$STACK"
+            aws cloudformation wait stack-delete-complete --stack-name "$STACK"
+          fi
+
       - name: sam deploy
         run: |
           sam deploy \
