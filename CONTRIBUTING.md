@@ -17,7 +17,7 @@ mise activate  # add to your shell profile so `go`, `sam`, `aws`, etc. resolve d
 mise run lint             # golangci-lint + actionlint + shellcheck
 mise run test             # unit tests
 mise run build            # sam build
-mise run gen              # regenerate mocks, OpenAPI types, brand/dist, and go.mod/go.sum after changing an interface, api/openapi.yaml or brand/
+mise run gen              # regenerate mocks, OpenAPI types, API Gateway routes, brand/dist, and go.mod/go.sum after changing an interface, api/openapi.yaml or brand/
 mise run check-generated  # run gen and fail if it changed anything (what CI runs)
 ```
 
@@ -105,7 +105,7 @@ Test is for dev/personal stacks only — never point a dev stack at a live/produ
 
 ### CORS (`CorsAllowOrigins`)
 
-A comma-separated list of browser origins (each scheme + host + port) allowed to call your stack's `HttpApi` cross-origin, e.g. `http://localhost:5173,https://jay.mykeebs.dev` to cover both a local frontend dev server and its deployed counterpart. Without this, browser preflight (`OPTIONS`) requests 404 before the authorizer is ever reached — API Gateway auto-generates CORS `OPTIONS` routes and exempts them from `DefaultAuthorizer` only when `HttpApi.Properties.CorsConfiguration` is set.
+A comma-separated list of browser origins (each scheme + host + port) allowed to call your stack's `HttpApi` cross-origin, e.g. `http://localhost:5173,https://jay.mykeebs.dev` to cover both a local frontend dev server and its deployed counterpart. Without this, browser preflight (`OPTIONS`) requests 404 before the authorizer is ever reached — API Gateway auto-generates CORS `OPTIONS` routes and exempts them from the JWT authorizer only when `HttpApi.Properties.CorsConfiguration` is set.
 
 ### Logout return origins (`LogoutReturnOrigins`)
 
