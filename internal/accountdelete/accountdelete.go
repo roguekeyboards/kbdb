@@ -72,7 +72,9 @@ func (a Account) Delete(ctx context.Context) error {
 	}
 	if a.Notices != nil {
 		userID, _ := kbdbctx.UserID(ctx)
-		if err := a.Notices.Notify(ctx, userID); err != nil {
+		// The data is already gone; a caller hanging up now mustn't cancel
+		// the notice.
+		if err := a.Notices.Notify(context.WithoutCancel(ctx), userID); err != nil {
 			log.FromContext(ctx).Error(NoticeFailed, log.OwnerID, userID, log.Error, err)
 		}
 	}

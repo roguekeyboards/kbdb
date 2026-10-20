@@ -103,6 +103,21 @@ func (s *DeleteSuite) TestNoticeFails_LoggedNotReturned() {
 	s.Contains(s.logs.String(), "owner_id=alice")
 }
 
+func (s *DeleteSuite) TestCallerGone_NoticeStillSent() {
+	ctx, cancel := context.WithCancel(s.ctx())
+	s.builds.EXPECT().DeleteAll(mock.Anything).Return(nil)
+	s.keyboards.EXPECT().DeleteAll(mock.Anything).Return(nil)
+	s.switches.EXPECT().DeleteAll(mock.Anything).Return(nil)
+	s.sets.EXPECT().DeleteAll(mock.Anything).Return(nil)
+	s.images.EXPECT().DeleteAll(mock.Anything).Return(nil)
+	s.profiles.EXPECT().Delete(mock.Anything).Run(func(context.Context) { cancel() }).Return(nil)
+	s.notices.EXPECT().
+		Notify(mock.MatchedBy(func(ctx context.Context) bool { return ctx.Err() == nil }), "alice").
+		Return(nil)
+
+	s.Require().NoError(s.account.Delete(ctx))
+}
+
 func (s *DeleteSuite) TestNoNotifier_NoNotice() {
 	s.expectAllDeleted()
 	s.account.Notices = nil

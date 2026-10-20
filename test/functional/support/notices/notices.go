@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
@@ -53,23 +54,22 @@ func Listen(ctx context.Context) (*Listener, error) {
 	}
 
 	topicArn := support.AlarmTopicArn()
-	created, err := l.sqs.CreateQueue(ctx, &sqs.CreateQueueInput{
-		QueueName: aws.String(support.StackName() + "-notices-" + uuid.NewString()[:8]),
-	})
+	topic, err := arn.Parse(topicArn)
 	if err != nil {
-		return nil, fmt.Errorf("creating queue: %w", err)
+		return nil, fmt.Errorf("parsing alarm topic ARN %q: %w", topicArn, err)
 	}
-	l.queueURL = aws.ToString(created.QueueUrl)
+	queueName := support.StackName() + "-notices-" + uuid.NewString()[:8]
+	queueArn := arn.ARN{
+		Partition: topic.Partition,
+		Service:   "sqs",
+		Region:    topic.Region,
+		AccountID: topic.AccountID,
+		Resource:  queueName,
+	}.String()
 
-	attrs, err := l.sqs.GetQueueAttributes(ctx, &sqs.GetQueueAttributesInput{
-		QueueUrl:       created.QueueUrl,
-		AttributeNames: []sqstypes.QueueAttributeName{sqstypes.QueueAttributeNameQueueArn},
-	})
-	if err != nil {
-		return l, fmt.Errorf("reading queue ARN: %w", err)
-	}
-	queueArn := attrs.Attributes[string(sqstypes.QueueAttributeNameQueueArn)]
-
+	// The policy is set at creation rather than afterwards: SQS can take up
+	// to a minute to apply a changed one, and a notice sent before it
+	// applies is refused.
 	policy, err := json.Marshal(map[string]any{
 		"Version": "2012-10-17",
 		"Statement": []map[string]any{{
@@ -81,14 +81,16 @@ func Listen(ctx context.Context) (*Listener, error) {
 		}},
 	})
 	if err != nil {
-		return l, err
+		return nil, err
 	}
-	if _, err := l.sqs.SetQueueAttributes(ctx, &sqs.SetQueueAttributesInput{
-		QueueUrl:   created.QueueUrl,
+	created, err := l.sqs.CreateQueue(ctx, &sqs.CreateQueueInput{
+		QueueName:  aws.String(queueName),
 		Attributes: map[string]string{string(sqstypes.QueueAttributeNamePolicy): string(policy)},
-	}); err != nil {
-		return l, fmt.Errorf("setting queue policy: %w", err)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("creating queue: %w", err)
 	}
+	l.queueURL = aws.ToString(created.QueueUrl)
 
 	sub, err := l.sns.Subscribe(ctx, &sns.SubscribeInput{
 		TopicArn:              aws.String(topicArn),

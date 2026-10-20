@@ -201,11 +201,16 @@ Resources:
               - sns:Subscribe
               - sns:Unsubscribe
               - sns:ListSubscriptionsByTopic
+              - sns:GetDataProtectionPolicy
+              - sns:ListTagsForResource
               - sns:TagResource
+              - sns:UntagResource
               - cloudwatch:PutMetricAlarm
               - cloudwatch:DeleteAlarms
               - cloudwatch:DescribeAlarms
+              - cloudwatch:ListTagsForResource
               - cloudwatch:TagResource
+              - cloudwatch:UntagResource
             Resource:
               - !Sub arn:aws:sns:${AWS::Region}:${AWS::AccountId}:kbdb-dev-*
               - !Sub arn:aws:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:kbdb-dev-*
