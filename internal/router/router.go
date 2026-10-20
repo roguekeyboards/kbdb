@@ -49,6 +49,7 @@ func New(
 	buildImageStore repository.BuildImageStore,
 	profileRepo repository.ProfileRepository,
 	profileImageStore repository.ProfileImageStore,
+	ownerImageStore repository.OwnerImageStore,
 	uploads *uploadlimit.Limiter,
 	issuerURL, idpConsentPublicToken, version string,
 	logoutReturnOrigins []string,
@@ -71,16 +72,12 @@ func New(
 	pr := repoapi.Profile{Images: profileImageStore, Repo: profileRepo}
 
 	account := accountdelete.Account{
-		Profiles:       profileRepo,
-		ProfileImages:  profileImageStore,
-		Builds:         buildRepo,
-		BuildImages:    buildImageStore,
-		Keyboards:      keyboardRepo,
-		KeyboardImages: keyboardImageStore,
-		Switches:       switchRepo,
-		SwitchImages:   switchImageStore,
-		KeycapSets:     keycapSetRepo,
-		KitImages:      imageStore,
+		Images:     ownerImageStore,
+		Builds:     buildRepo,
+		Keyboards:  keyboardRepo,
+		Switches:   switchRepo,
+		KeycapSets: keycapSetRepo,
+		Profiles:   profileRepo,
 	}
 
 	ownerPrefs := middleware.OwnerPreferences(profileRepo)
@@ -226,7 +223,7 @@ func New(
 	// response can't carry). internal/gatewayroutes gives /mcp no gateway
 	// authorizer accordingly. Not wrapped in validate: api/openapi.yaml only covers
 	// the REST surface.
-	mcpHandlers := mcp.New(switchRepo, switchImageStore, keyboardRepo, keyboardImageStore, keycapSetRepo, imageStore, buildRepo, buildImageStore, profileRepo, profileImageStore, uploads, verifier, issuerURL, version)
+	mcpHandlers := mcp.New(switchRepo, switchImageStore, keyboardRepo, keyboardImageStore, keycapSetRepo, imageStore, buildRepo, buildImageStore, profileRepo, profileImageStore, account, uploads, verifier, issuerURL, version)
 	mux.Handle("/mcp", mcpHandlers.Streamable)
 	mux.Handle(mcpHandlers.MetadataPath, mcpHandlers.Metadata)
 	mux.Handle(mcpHandlers.RootMetadataPath, mcpHandlers.Metadata)

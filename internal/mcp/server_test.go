@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/rogueserenity/kbdb/internal/accountdelete"
 	"github.com/rogueserenity/kbdb/internal/auth"
 	authmocks "github.com/rogueserenity/kbdb/internal/auth/mocks"
 )
@@ -35,7 +36,7 @@ func (s *NewSuite) SetupTest() {
 		Expiry:   time.Now().Add(time.Hour),
 	}, nil).Maybe()
 
-	h := New(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+	h := New(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, accountdelete.Account{}, nil,
 		auth.NewVerifierForTesting(verifier, "aud"), "https://issuer.example", "test")
 	s.srv = httptest.NewServer(h.Streamable)
 	s.T().Cleanup(s.srv.Close)

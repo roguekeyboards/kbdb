@@ -327,6 +327,57 @@ func (_c *MockKeycapSetRepository_Delete_Call) RunAndReturn(run func(ctx context
 	return _c
 }
 
+// DeleteAll provides a mock function for the type MockKeycapSetRepository
+func (_mock *MockKeycapSetRepository) DeleteAll(ctx context.Context) error {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteAll")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockKeycapSetRepository_DeleteAll_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteAll'
+type MockKeycapSetRepository_DeleteAll_Call struct {
+	*mock.Call
+}
+
+// DeleteAll is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockKeycapSetRepository_Expecter) DeleteAll(ctx any) *MockKeycapSetRepository_DeleteAll_Call {
+	return &MockKeycapSetRepository_DeleteAll_Call{Call: _e.mock.On("DeleteAll", ctx)}
+}
+
+func (_c *MockKeycapSetRepository_DeleteAll_Call) Run(run func(ctx context.Context)) *MockKeycapSetRepository_DeleteAll_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockKeycapSetRepository_DeleteAll_Call) Return(err error) *MockKeycapSetRepository_DeleteAll_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockKeycapSetRepository_DeleteAll_Call) RunAndReturn(run func(ctx context.Context) error) *MockKeycapSetRepository_DeleteAll_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteKit provides a mock function for the type MockKeycapSetRepository
 func (_mock *MockKeycapSetRepository) DeleteKit(ctx context.Context, setID string, kitID string) error {
 	ret := _mock.Called(ctx, setID, kitID)

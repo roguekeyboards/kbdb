@@ -22,6 +22,7 @@ func registerTools(
 	buildImageStore repository.BuildImageStore,
 	profileRepo repository.ProfileRepository,
 	profileImageStore repository.ProfileImageStore,
+	account accountdelete.Account,
 	uploads *uploadlimit.Limiter,
 ) {
 	sdkmcp.AddTool(s, listLookupsTool, handleListLookups())
@@ -29,18 +30,7 @@ func registerTools(
 	sdkmcp.AddTool(s, getProfileTool, handleGetProfile(profileRepo))
 	sdkmcp.AddTool(s, createProfileTool, handleCreateProfile(profileRepo))
 	sdkmcp.AddTool(s, updateProfileTool, handleUpdateProfile(profileRepo))
-	sdkmcp.AddTool(s, deleteProfileTool, handleDeleteProfile(accountdelete.Account{
-		Profiles:       profileRepo,
-		ProfileImages:  profileImageStore,
-		Builds:         buildRepo,
-		BuildImages:    buildImageStore,
-		Keyboards:      keyboardRepo,
-		KeyboardImages: keyboardImageStore,
-		Switches:       switchRepo,
-		SwitchImages:   switchImageStore,
-		KeycapSets:     keycapSetRepo,
-		KitImages:      imageStore,
-	}))
+	sdkmcp.AddTool(s, deleteProfileTool, handleDeleteProfile(account))
 	sdkmcp.AddTool(s, listProfilesTool, handleListProfiles(profileRepo))
 	sdkmcp.AddTool(s, setProfileImageTool, handleSetProfileImage(profileRepo, profileImageStore, uploads))
 	sdkmcp.AddTool(s, deleteProfileImageTool, handleDeleteProfileImage(profileRepo, profileImageStore))

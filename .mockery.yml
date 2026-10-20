@@ -50,6 +50,9 @@ packages:
       UploadCounter:
         config:
           structname: 'MockUploadCounter'
+      OwnerImageStore:
+        config:
+          structname: 'MockOwnerImageStore'
   github.com/rogueserenity/kbdb/internal/repository/dynamo:
     config:
       dir: '{{.InterfaceDir}}/mocks'

@@ -109,6 +109,10 @@ type SwitchRepository interface {
 	// Delete. Idempotent: a nonexistent id is not an error.
 	Delete(ctx context.Context, id string) error
 
+	// DeleteAll removes every switch the caller owns. Callers clean
+	// up images themselves, before calling DeleteAll. Idempotent.
+	DeleteAll(ctx context.Context) error
+
 	// SetImagePath sets the caller's switch's ImagePath, with ImageStatus
 	// pending. Returns ErrNotFound if id doesn't exist.
 	SetImagePath(ctx context.Context, id string, key SwitchImageKey) error

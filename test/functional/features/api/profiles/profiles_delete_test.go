@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/rogueserenity/kbdb/test/functional/support/account"
 	"github.com/rogueserenity/kbdb/test/functional/support/api"
 	"github.com/rogueserenity/kbdb/test/functional/support/db"
 )
@@ -77,19 +78,21 @@ var _ = Describe("Deleting a profile", func() {
 	})
 
 	Context("given the caller has a profile and owns one of each item", func() {
-		var ids accountItems
+		var items account.Items
 
 		BeforeEach(func(ctx SpecContext) {
 			Expect(db.SeedProfile(ctx, ownerID, db.SeedProfileOptions{
 				Username:     username,
 				Discoverable: true,
 			})).To(Succeed())
-			ids = seedAccountItems(ctx, ownerID)
+			var err error
+			items, err = account.Seed(ctx, ownerID)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		AfterEach(func(ctx SpecContext) {
 			_ = db.DeleteProfile(ctx, ownerID, username)
-			ids.cleanUp(ctx, ownerID)
+			items.CleanUp(ctx, ownerID)
 		})
 
 		When("deleting the profile", func() {
@@ -109,20 +112,25 @@ var _ = Describe("Deleting a profile", func() {
 				Expect(got.StatusCode).To(Equal(http.StatusNotFound))
 
 				By("no longer resolving any of the items")
-				ids.expectAllGone(ctx, ownerID, ownerToken)
+				expectItemsGone(ctx, items, ownerID, ownerToken)
+
+				By("deleting image objects no record pointed to")
+				Expect(items.RemainingStrayImages(ctx)).To(BeEmpty())
 			})
 		})
 	})
 
 	Context("given the caller's profile is already gone but they still own items", func() {
-		var ids accountItems
+		var items account.Items
 
 		BeforeEach(func(ctx SpecContext) {
-			ids = seedAccountItems(ctx, ownerID)
+			var err error
+			items, err = account.Seed(ctx, ownerID)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		AfterEach(func(ctx SpecContext) {
-			ids.cleanUp(ctx, ownerID)
+			items.CleanUp(ctx, ownerID)
 		})
 
 		When("deleting the profile again", func() {
@@ -134,7 +142,8 @@ var _ = Describe("Deleting a profile", func() {
 
 			It("returns 204 and deletes the remaining items", func(ctx SpecContext) {
 				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
-				ids.expectAllGone(ctx, ownerID, ownerToken)
+				expectItemsGone(ctx, items, ownerID, ownerToken)
+				Expect(items.RemainingStrayImages(ctx)).To(BeEmpty())
 			})
 		})
 	})

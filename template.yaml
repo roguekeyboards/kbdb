@@ -692,7 +692,9 @@ Resources:
       # Hand-written, not SAM's S3CrudPolicy/DynamoDBReadPolicy (those grant
       # extra actions we don't need). Presigned URLs inherit this role's
       # permissions, so Put/Get cover upload/download; Delete is for the
-      # DELETE-image endpoints.
+      # DELETE-image endpoints. ListBucket and BatchWriteItem are for an
+      # account delete (internal/accountdelete), which removes a user's
+      # images by key prefix and their items by partition.
       Policies:
         - Version: "2012-10-17"
           Statement:
@@ -703,12 +705,16 @@ Resources:
                 - s3:DeleteObject
               Resource: !Sub "${ImagesBucket.Arn}/*"
             - Effect: Allow
+              Action: s3:ListBucket
+              Resource: !GetAtt ImagesBucket.Arn
+            - Effect: Allow
               Action:
                 - dynamodb:Query
                 - dynamodb:GetItem
                 - dynamodb:PutItem
                 - dynamodb:UpdateItem
                 - dynamodb:DeleteItem
+                - dynamodb:BatchWriteItem
               Resource: !GetAtt SwitchTable.Arn
             - Effect: Allow
               Action:
@@ -717,6 +723,7 @@ Resources:
                 - dynamodb:PutItem
                 - dynamodb:UpdateItem
                 - dynamodb:DeleteItem
+                - dynamodb:BatchWriteItem
               Resource: !GetAtt KeyboardTable.Arn
             - Effect: Allow
               Action:
@@ -725,6 +732,7 @@ Resources:
                 - dynamodb:PutItem
                 - dynamodb:UpdateItem
                 - dynamodb:DeleteItem
+                - dynamodb:BatchWriteItem
               Resource: !GetAtt KeycapSetTable.Arn
             - Effect: Allow
               Action:
@@ -734,6 +742,7 @@ Resources:
                 - dynamodb:UpdateItem
                 - dynamodb:DeleteItem
                 - dynamodb:TransactWriteItems
+                - dynamodb:BatchWriteItem
               Resource: !GetAtt BuildTable.Arn
             - Effect: Allow
               Action:

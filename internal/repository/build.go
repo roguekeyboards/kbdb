@@ -157,6 +157,11 @@ type BuildRepository interface {
 	// before calling Delete. Idempotent: a nonexistent id is not an error.
 	Delete(ctx context.Context, id string) error
 
+	// DeleteAll removes every build the caller owns, ref-markers included.
+	// Callers clean up images themselves, before calling DeleteAll.
+	// Idempotent.
+	DeleteAll(ctx context.Context) error
+
 	// AddImage adds image (image.ImageID must be set) to the build's Images
 	// map with a server-assigned Seq that sorts it after every existing image,
 	// with Status pending; image.Seq and image.Status are ignored. Returns

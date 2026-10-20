@@ -222,6 +222,11 @@ func (r *SwitchRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
+// DeleteAll implements repository.SwitchRepository.
+func (r *SwitchRepository) DeleteAll(ctx context.Context) error {
+	return deleteOwnerItems(ctx, r.client, r.tableName)
+}
+
 func switchKey(ownerID, switchID string) map[string]types.AttributeValue {
 	return map[string]types.AttributeValue{
 		"user_id": &types.AttributeValueMemberS{Value: ownerID},

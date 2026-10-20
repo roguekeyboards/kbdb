@@ -129,3 +129,169 @@ func (_c *MockS3API_DeleteObject_Call) RunAndReturn(run func(ctx context.Context
 	_c.Call.Return(run)
 	return _c
 }
+
+// DeleteObjects provides a mock function for the type MockS3API
+func (_mock *MockS3API) DeleteObjects(ctx context.Context, params *s3.DeleteObjectsInput, optFns ...func(*s3.Options)) (*s3.DeleteObjectsOutput, error) {
+	var tmpRet mock.Arguments
+	if len(optFns) > 0 {
+		tmpRet = _mock.Called(ctx, params, optFns)
+	} else {
+		tmpRet = _mock.Called(ctx, params)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteObjects")
+	}
+
+	var r0 *s3.DeleteObjectsOutput
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *s3.DeleteObjectsInput, ...func(*s3.Options)) (*s3.DeleteObjectsOutput, error)); ok {
+		return returnFunc(ctx, params, optFns...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *s3.DeleteObjectsInput, ...func(*s3.Options)) *s3.DeleteObjectsOutput); ok {
+		r0 = returnFunc(ctx, params, optFns...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*s3.DeleteObjectsOutput)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *s3.DeleteObjectsInput, ...func(*s3.Options)) error); ok {
+		r1 = returnFunc(ctx, params, optFns...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockS3API_DeleteObjects_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteObjects'
+type MockS3API_DeleteObjects_Call struct {
+	*mock.Call
+}
+
+// DeleteObjects is a helper method to define mock.On call
+//   - ctx context.Context
+//   - params *s3.DeleteObjectsInput
+//   - optFns ...func(*s3.Options)
+func (_e *MockS3API_Expecter) DeleteObjects(ctx any, params any, optFns ...any) *MockS3API_DeleteObjects_Call {
+	return &MockS3API_DeleteObjects_Call{Call: _e.mock.On("DeleteObjects",
+		append([]any{ctx, params}, optFns...)...)}
+}
+
+func (_c *MockS3API_DeleteObjects_Call) Run(run func(ctx context.Context, params *s3.DeleteObjectsInput, optFns ...func(*s3.Options))) *MockS3API_DeleteObjects_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *s3.DeleteObjectsInput
+		if args[1] != nil {
+			arg1 = args[1].(*s3.DeleteObjectsInput)
+		}
+		var arg2 []func(*s3.Options)
+		var variadicArgs []func(*s3.Options)
+		if len(args) > 2 {
+			variadicArgs = args[2].([]func(*s3.Options))
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockS3API_DeleteObjects_Call) Return(deleteObjectsOutput *s3.DeleteObjectsOutput, err error) *MockS3API_DeleteObjects_Call {
+	_c.Call.Return(deleteObjectsOutput, err)
+	return _c
+}
+
+func (_c *MockS3API_DeleteObjects_Call) RunAndReturn(run func(ctx context.Context, params *s3.DeleteObjectsInput, optFns ...func(*s3.Options)) (*s3.DeleteObjectsOutput, error)) *MockS3API_DeleteObjects_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListObjectsV2 provides a mock function for the type MockS3API
+func (_mock *MockS3API) ListObjectsV2(ctx context.Context, params *s3.ListObjectsV2Input, optFns ...func(*s3.Options)) (*s3.ListObjectsV2Output, error) {
+	var tmpRet mock.Arguments
+	if len(optFns) > 0 {
+		tmpRet = _mock.Called(ctx, params, optFns)
+	} else {
+		tmpRet = _mock.Called(ctx, params)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListObjectsV2")
+	}
+
+	var r0 *s3.ListObjectsV2Output
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *s3.ListObjectsV2Input, ...func(*s3.Options)) (*s3.ListObjectsV2Output, error)); ok {
+		return returnFunc(ctx, params, optFns...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *s3.ListObjectsV2Input, ...func(*s3.Options)) *s3.ListObjectsV2Output); ok {
+		r0 = returnFunc(ctx, params, optFns...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*s3.ListObjectsV2Output)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *s3.ListObjectsV2Input, ...func(*s3.Options)) error); ok {
+		r1 = returnFunc(ctx, params, optFns...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockS3API_ListObjectsV2_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListObjectsV2'
+type MockS3API_ListObjectsV2_Call struct {
+	*mock.Call
+}
+
+// ListObjectsV2 is a helper method to define mock.On call
+//   - ctx context.Context
+//   - params *s3.ListObjectsV2Input
+//   - optFns ...func(*s3.Options)
+func (_e *MockS3API_Expecter) ListObjectsV2(ctx any, params any, optFns ...any) *MockS3API_ListObjectsV2_Call {
+	return &MockS3API_ListObjectsV2_Call{Call: _e.mock.On("ListObjectsV2",
+		append([]any{ctx, params}, optFns...)...)}
+}
+
+func (_c *MockS3API_ListObjectsV2_Call) Run(run func(ctx context.Context, params *s3.ListObjectsV2Input, optFns ...func(*s3.Options))) *MockS3API_ListObjectsV2_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *s3.ListObjectsV2Input
+		if args[1] != nil {
+			arg1 = args[1].(*s3.ListObjectsV2Input)
+		}
+		var arg2 []func(*s3.Options)
+		var variadicArgs []func(*s3.Options)
+		if len(args) > 2 {
+			variadicArgs = args[2].([]func(*s3.Options))
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockS3API_ListObjectsV2_Call) Return(listObjectsV2Output *s3.ListObjectsV2Output, err error) *MockS3API_ListObjectsV2_Call {
+	_c.Call.Return(listObjectsV2Output, err)
+	return _c
+}
+
+func (_c *MockS3API_ListObjectsV2_Call) RunAndReturn(run func(ctx context.Context, params *s3.ListObjectsV2Input, optFns ...func(*s3.Options)) (*s3.ListObjectsV2Output, error)) *MockS3API_ListObjectsV2_Call {
+	_c.Call.Return(run)
+	return _c
+}

@@ -129,7 +129,7 @@ func handleDeleteProfile(account accountdelete.Account) mcp.ToolHandlerFor[schem
 			return nil, schema.DeleteProfileOutput{}, err
 		}
 
-		if mutErr := handleTransactionError(ctx, account.Delete(ctx, ownerID), log.ProfileID, ownerID); mutErr != nil {
+		if mutErr := handleTransactionError(ctx, account.Delete(ctx), log.ProfileID, ownerID); mutErr != nil {
 			return nil, schema.DeleteProfileOutput{}, mutErr
 		}
 

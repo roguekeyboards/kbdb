@@ -231,6 +231,11 @@ func (r *KeycapSetRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
+// DeleteAll implements repository.KeycapSetRepository.
+func (r *KeycapSetRepository) DeleteAll(ctx context.Context) error {
+	return deleteOwnerItems(ctx, r.client, r.tableName)
+}
+
 // AddKit implements repository.KeycapSetRepository.
 func (r *KeycapSetRepository) AddKit(ctx context.Context, setID string, kit repository.KeycapKit, primary *bool) (*repository.KeycapKit, error) {
 	if kit.KitID == "" {

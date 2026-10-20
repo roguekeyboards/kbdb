@@ -442,12 +442,9 @@ func (s *UpdateProfileSuite) TestMutationConflict_409() {
 type DeleteProfileSuite struct {
 	suite.Suite
 
-	mockRepo     *mocks.MockProfileRepository
-	mockBuilds   *mocks.MockBuildRepository
-	mockKeyboard *mocks.MockKeyboardRepository
-	mockSwitches *mocks.MockSwitchRepository
-	mockSets     *mocks.MockKeycapSetRepository
-	handler      http.HandlerFunc
+	mockRepo   *mocks.MockProfileRepository
+	mockImages *mocks.MockOwnerImageStore
+	handler    http.HandlerFunc
 }
 
 func TestDeleteProfileSuite(t *testing.T) {
@@ -456,23 +453,21 @@ func TestDeleteProfileSuite(t *testing.T) {
 
 func (s *DeleteProfileSuite) SetupTest() {
 	s.mockRepo = mocks.NewMockProfileRepository(s.T())
-	s.mockBuilds = mocks.NewMockBuildRepository(s.T())
-	s.mockKeyboard = mocks.NewMockKeyboardRepository(s.T())
-	s.mockSwitches = mocks.NewMockSwitchRepository(s.T())
-	s.mockSets = mocks.NewMockKeycapSetRepository(s.T())
+	s.mockImages = mocks.NewMockOwnerImageStore(s.T())
 	s.handler = DeleteProfile(accountdelete.Account{
-		Profiles:       s.mockRepo,
-		ProfileImages:  mocks.NewMockProfileImageStore(s.T()),
-		Builds:         s.mockBuilds,
-		BuildImages:    mocks.NewMockBuildImageStore(s.T()),
-		Keyboards:      s.mockKeyboard,
-		KeyboardImages: mocks.NewMockKeyboardImageStore(s.T()),
-		Switches:       s.mockSwitches,
-		SwitchImages:   mocks.NewMockSwitchImageStore(s.T()),
-		KeycapSets:     s.mockSets,
-		KitImages:      mocks.NewMockKeycapKitImageStore(s.T()),
+		Images:     s.mockImages,
+		Builds:     emptyItemStore{},
+		Keyboards:  emptyItemStore{},
+		Switches:   emptyItemStore{},
+		KeycapSets: emptyItemStore{},
+		Profiles:   s.mockRepo,
 	})
 }
+
+// emptyItemStore is an accountdelete.ItemStore with nothing to delete.
+type emptyItemStore struct{}
+
+func (emptyItemStore) DeleteAll(context.Context) error { return nil }
 
 // del builds a DELETE request with ctx caller set to caller (empty for
 // anonymous).
@@ -492,17 +487,8 @@ func (s *DeleteProfileSuite) del(caller string) *httptest.ResponseRecorder {
 	return rec
 }
 
-func (s *DeleteProfileSuite) expectNoItems() {
-	s.mockBuilds.EXPECT().List(mock.Anything, "user-alice", mock.Anything, "", mock.Anything, "").Return(nil, "", nil)
-	s.mockKeyboard.EXPECT().List(mock.Anything, "user-alice", mock.Anything, mock.Anything, "").Return(nil, "", nil)
-	s.mockSwitches.EXPECT().List(mock.Anything, "user-alice", mock.Anything, mock.Anything, "").Return(nil, "", nil)
-	s.mockSets.EXPECT().List(mock.Anything, "user-alice", mock.Anything, mock.Anything, "").Return(nil, "", nil)
-}
-
 func (s *DeleteProfileSuite) TestDeletesAccount_204() {
-	s.expectNoItems()
-	s.mockRepo.EXPECT().Get(mock.Anything, "user-alice").
-		Return(&repository.Profile{OwnerID: "user-alice", Username: "alice"}, nil)
+	s.mockImages.EXPECT().DeleteAll(mock.Anything).Return(nil)
 	s.mockRepo.EXPECT().Delete(mock.Anything).Return(nil)
 
 	rec := s.del("user-alice")
@@ -522,19 +508,8 @@ func (s *DeleteProfileSuite) TestAnonymous_404() {
 	s.Equal(http.StatusNotFound, rec.Code)
 }
 
-func (s *DeleteProfileSuite) TestNothingLeft_204_Idempotent() {
-	s.expectNoItems()
-	s.mockRepo.EXPECT().Get(mock.Anything, "user-alice").
-		Return(nil, repository.ErrNotFound)
-
-	rec := s.del("user-alice")
-
-	s.Equal(http.StatusNoContent, rec.Code)
-}
-
 func (s *DeleteProfileSuite) TestDeleteFails_500() {
-	s.mockBuilds.EXPECT().List(mock.Anything, "user-alice", mock.Anything, "", mock.Anything, "").
-		Return(nil, "", errors.New("dynamo down"))
+	s.mockImages.EXPECT().DeleteAll(mock.Anything).Return(errors.New("s3 down"))
 
 	rec := s.del("user-alice")
 
@@ -542,9 +517,7 @@ func (s *DeleteProfileSuite) TestDeleteFails_500() {
 }
 
 func (s *DeleteProfileSuite) TestMutationConflict_409() {
-	s.expectNoItems()
-	s.mockRepo.EXPECT().Get(mock.Anything, "user-alice").
-		Return(&repository.Profile{OwnerID: "user-alice", Username: "alice"}, nil)
+	s.mockImages.EXPECT().DeleteAll(mock.Anything).Return(nil)
 	s.mockRepo.EXPECT().Delete(mock.Anything).Return(repository.ErrMutationConflict)
 
 	rec := s.del("user-alice")

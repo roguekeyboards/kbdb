@@ -240,6 +240,11 @@ func (r *KeyboardRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
+// DeleteAll implements repository.KeyboardRepository.
+func (r *KeyboardRepository) DeleteAll(ctx context.Context) error {
+	return deleteOwnerItems(ctx, r.client, r.tableName)
+}
+
 // AddImage implements repository.KeyboardRepository. One UpdateItem sets
 // images.<id> = {path, seq, status: pending}. Seq is time.Now().UnixNano(),
 // so a new image sorts after every existing one without reading the current

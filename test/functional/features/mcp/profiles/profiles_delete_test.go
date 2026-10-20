@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/rogueserenity/kbdb/test/functional/support"
+	"github.com/rogueserenity/kbdb/test/functional/support/account"
 	"github.com/rogueserenity/kbdb/test/functional/support/api"
 	"github.com/rogueserenity/kbdb/test/functional/support/db"
 )
@@ -74,26 +75,21 @@ var _ = Describe("Deleting a profile over MCP", func() {
 	})
 
 	Context("given the caller has a profile and owns one of each item", func() {
-		var keyboardID, switchID, keycapSetID, buildID string
+		var items account.Items
 
 		BeforeEach(func(ctx SpecContext) {
 			Expect(db.SeedProfile(ctx, ownerID, db.SeedProfileOptions{
 				Username:     username,
 				Discoverable: true,
 			})).To(Succeed())
-			keyboardID, switchID, keycapSetID, buildID = uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString()
-			Expect(db.SeedKeyboardWithImage(ctx, ownerID, keyboardID, uuid.NewString(), "private")).To(Succeed())
-			Expect(db.SeedSwitchWithImage(ctx, ownerID, switchID, "public")).To(Succeed())
-			Expect(db.SeedKeycapSetWithKit(ctx, ownerID, keycapSetID, uuid.NewString(), "private")).To(Succeed())
-			Expect(db.SeedBuild(ctx, ownerID, buildID, keyboardID, "public")).To(Succeed())
+			var seedErr error
+			items, seedErr = account.Seed(ctx, ownerID)
+			Expect(seedErr).NotTo(HaveOccurred())
 		})
 
 		AfterEach(func(ctx SpecContext) {
 			_ = db.DeleteProfile(ctx, ownerID, username)
-			_ = db.DeleteBuild(ctx, ownerID, buildID, keyboardID)
-			_ = db.DeleteKeyboard(ctx, ownerID, keyboardID)
-			_ = db.DeleteSwitch(ctx, ownerID, switchID)
-			_ = db.DeleteKeycapSet(ctx, ownerID, keycapSetID)
+			items.CleanUp(ctx, ownerID)
 		})
 
 		When("delete_profile is called", func() {
@@ -101,20 +97,21 @@ var _ = Describe("Deleting a profile over MCP", func() {
 				result, err = client.CallTool(ctx, "delete_profile", map[string]any{})
 			})
 
-			It("succeeds and deletes every item", func(ctx SpecContext) {
+			It("succeeds and deletes every item and image", func(ctx SpecContext) {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result.IsError).To(BeFalse())
 
 				for tool, args := range map[string]map[string]any{
-					"get_keyboard":   {"keyboard_id": keyboardID},
-					"get_switch":     {"switch_id": switchID},
-					"get_keycap_set": {"keycap_set_id": keycapSetID},
-					"get_build":      {"build_id": buildID},
+					"get_keyboard":   {"keyboard_id": items.KeyboardID},
+					"get_switch":     {"switch_id": items.SwitchID},
+					"get_keycap_set": {"keycap_set_id": items.KeycapSetID},
+					"get_build":      {"build_id": items.BuildID},
 				} {
 					got, getErr := client.CallTool(ctx, tool, args)
 					Expect(getErr).NotTo(HaveOccurred())
 					Expect(got.IsError).To(BeTrue(), tool)
 				}
+				Expect(items.RemainingStrayImages(ctx)).To(BeEmpty())
 			})
 		})
 	})

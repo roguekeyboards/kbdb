@@ -254,7 +254,7 @@ func DeleteProfile(account accountdelete.Account) http.HandlerFunc {
 			return
 		}
 
-		if handleTransactionError(w, r, account.Delete(r.Context(), userID), log.ProfileID, userID) {
+		if handleTransactionError(w, r, account.Delete(r.Context()), log.ProfileID, userID) {
 			return
 		}
 

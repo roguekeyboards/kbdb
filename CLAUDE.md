@@ -51,7 +51,7 @@ Shared business rules (deliberately transport-neutral, called by both REST and M
 - `lookup/` — validates entity fields against approved lookup category values.
 - `buildrefs/` — validates a Build's cross-entity references against live repository data.
 - `cascadedelete/` — the block/cascade/detach `on_delete` policy for items still referenced by Builds.
-- `accountdelete/` — deletes a whole account (every item and image, then the profile), behind the REST profile delete and MCP `delete_profile`.
+- `accountdelete/` — deletes a whole account (images by key prefix, items by `user_id` partition, then the profile), behind the REST profile delete and MCP `delete_profile`.
 - `profileread/` — resolves a profile identifier and applies the discoverable-or-owner visibility rule.
 - `profilevalidate/` — field-level rules for a profile's writable body.
 
