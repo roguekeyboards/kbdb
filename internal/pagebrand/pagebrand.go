@@ -1,4 +1,7 @@
-package consent
+// Package pagebrand holds the mykeebs artwork kbdb's own HTML pages (the
+// consent and logout pages, the privacy policy and terms) embed inline, so
+// they render without depending on the web app being up.
+package pagebrand
 
 import (
 	"encoding/base64"
@@ -8,16 +11,16 @@ import (
 	"github.com/rogueserenity/kbdb/brand"
 )
 
-// pageBrand is the mykeebs artwork the consent and logout pages embed
-// inline, so they render without depending on the web app being up. Its
-// values are trusted: they come from brand's embedded files, never a request.
-type pageBrand struct {
+// Brand is the artwork a page embeds. Its values are trusted: they come from
+// brand's embedded files, never a request.
+type Brand struct {
 	Logo    template.HTML
 	Favicon template.URL
 	Tokens  template.CSS
 }
 
-var pageBrandAssets = pageBrand{
+// Assets is the mykeebs logo, favicon and theme tokens.
+var Assets = Brand{
 	Logo:    template.HTML(mustReadBrandFile("logo-horizontal-on-dark.svg")),                                                  //nolint:gosec // embedded brand file.
 	Favicon: template.URL("data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString(mustReadBrandFile("favicon.svg"))), //nolint:gosec // embedded brand file.
 	Tokens:  template.CSS(mustReadBrandFile("tokens.css")),                                                                    //nolint:gosec // embedded brand file.
