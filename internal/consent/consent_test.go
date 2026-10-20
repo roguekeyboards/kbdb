@@ -52,6 +52,16 @@ func (s *HandlerSuite) TestGet_IncludesSwitchAccountControl() {
 	s.Contains(rec.Body.String(), "Use a different account")
 }
 
+func (s *HandlerSuite) TestGet_EmbedsBranding() {
+	req := httptest.NewRequestWithContext(s.T().Context(), http.MethodGet, "/authorize", nil)
+	rec := httptest.NewRecorder()
+
+	Handler("public-token-test-abc123", "https://auth.example.com").ServeHTTP(rec, req)
+
+	s.Equal(http.StatusOK, rec.Code)
+	assertBranded(s.Assert(), rec.Body.String(), "mykeebs — Sign in")
+}
+
 func (s *HandlerSuite) TestNonGet_MethodNotAllowed() {
 	req := httptest.NewRequestWithContext(s.T().Context(), http.MethodPost, "/authorize", nil)
 	rec := httptest.NewRecorder()

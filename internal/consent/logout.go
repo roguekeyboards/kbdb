@@ -26,6 +26,7 @@ type logoutTemplateData struct {
 	IDPConsentPublicToken string
 	OIDCIssuerBaseURL     string
 	ReturnTo              string
+	Brand                 pageBrand
 }
 
 // LogoutHandler serves GET /logout: revokes the IdP session on this
@@ -51,6 +52,7 @@ func LogoutHandler(idpConsentPublicToken, oidcIssuerBaseURL string, allowedRetur
 			IDPConsentPublicToken: idpConsentPublicToken,
 			OIDCIssuerBaseURL:     oidcIssuerBaseURL,
 			ReturnTo:              returnTo,
+			Brand:                 pageBrandAssets,
 		}
 
 		var buf bytes.Buffer

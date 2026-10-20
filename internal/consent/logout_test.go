@@ -30,6 +30,18 @@ func (s *LogoutHandlerSuite) TestGet_AllowedReturnTo_RendersIt() {
 	s.Contains(rec.Body.String(), `"http://localhost:5173/"`)
 }
 
+func (s *LogoutHandlerSuite) TestGet_EmbedsBranding() {
+	req := httptest.NewRequestWithContext(s.T().Context(), http.MethodGet,
+		"/logout?return_to=http://localhost:5173/", nil)
+	rec := httptest.NewRecorder()
+
+	LogoutHandler("public-token-test-abc123", "https://auth.example.com",
+		[]string{"http://localhost:5173"}).ServeHTTP(rec, req)
+
+	s.Equal(http.StatusOK, rec.Code)
+	assertBranded(s.Assert(), rec.Body.String(), "mykeebs — Sign out")
+}
+
 func (s *LogoutHandlerSuite) TestGet_EscapesReturnTo() {
 	// A return_to containing a double quote must not break out of the JS
 	// string literal it's rendered into.
