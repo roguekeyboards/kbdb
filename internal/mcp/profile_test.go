@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/rogueserenity/kbdb/internal/accountdelete"
 	ctxpkg "github.com/rogueserenity/kbdb/internal/ctx"
 	"github.com/rogueserenity/kbdb/internal/mcp/schema"
 	"github.com/rogueserenity/kbdb/internal/repository"
@@ -281,8 +282,11 @@ func (s *HandleUpdateProfileSuite) TestRepoError_GenericError() {
 type HandleDeleteProfileSuite struct {
 	suite.Suite
 
-	mockRepo   *mocks.MockProfileRepository
-	mockImages *mocks.MockProfileImageStore
+	mockRepo     *mocks.MockProfileRepository
+	mockBuilds   *mocks.MockBuildRepository
+	mockKeyboard *mocks.MockKeyboardRepository
+	mockSwitches *mocks.MockSwitchRepository
+	mockSets     *mocks.MockKeycapSetRepository
 }
 
 func TestHandleDeleteProfileSuite(t *testing.T) {
@@ -291,15 +295,38 @@ func TestHandleDeleteProfileSuite(t *testing.T) {
 
 func (s *HandleDeleteProfileSuite) SetupTest() {
 	s.mockRepo = mocks.NewMockProfileRepository(s.T())
-	s.mockImages = mocks.NewMockProfileImageStore(s.T())
+	s.mockBuilds = mocks.NewMockBuildRepository(s.T())
+	s.mockKeyboard = mocks.NewMockKeyboardRepository(s.T())
+	s.mockSwitches = mocks.NewMockSwitchRepository(s.T())
+	s.mockSets = mocks.NewMockKeycapSetRepository(s.T())
 }
 
 func (s *HandleDeleteProfileSuite) call() error {
-	_, _, err := handleDeleteProfile(s.mockRepo, s.mockImages)(callerContext(s.T()), nil, schema.DeleteProfileInput{})
+	account := accountdelete.Account{
+		Profiles:       s.mockRepo,
+		ProfileImages:  mocks.NewMockProfileImageStore(s.T()),
+		Builds:         s.mockBuilds,
+		BuildImages:    mocks.NewMockBuildImageStore(s.T()),
+		Keyboards:      s.mockKeyboard,
+		KeyboardImages: mocks.NewMockKeyboardImageStore(s.T()),
+		Switches:       s.mockSwitches,
+		SwitchImages:   mocks.NewMockSwitchImageStore(s.T()),
+		KeycapSets:     s.mockSets,
+		KitImages:      mocks.NewMockKeycapKitImageStore(s.T()),
+	}
+	_, _, err := handleDeleteProfile(account)(callerContext(s.T()), nil, schema.DeleteProfileInput{})
 	return err
 }
 
-func (s *HandleDeleteProfileSuite) TestDeletesProfile_NoError() {
+func (s *HandleDeleteProfileSuite) expectNoItems() {
+	s.mockBuilds.EXPECT().List(mock.Anything, callerID, mock.Anything, "", mock.Anything, "").Return(nil, "", nil)
+	s.mockKeyboard.EXPECT().List(mock.Anything, callerID, mock.Anything, mock.Anything, "").Return(nil, "", nil)
+	s.mockSwitches.EXPECT().List(mock.Anything, callerID, mock.Anything, mock.Anything, "").Return(nil, "", nil)
+	s.mockSets.EXPECT().List(mock.Anything, callerID, mock.Anything, mock.Anything, "").Return(nil, "", nil)
+}
+
+func (s *HandleDeleteProfileSuite) TestDeletesAccount_NoError() {
+	s.expectNoItems()
 	s.mockRepo.EXPECT().Get(mock.Anything, callerID).
 		Return(&repository.Profile{OwnerID: callerID, Username: "alice"}, nil)
 	s.mockRepo.EXPECT().Delete(mock.Anything).Return(nil)
@@ -307,52 +334,27 @@ func (s *HandleDeleteProfileSuite) TestDeletesProfile_NoError() {
 	s.Require().NoError(s.call())
 }
 
-func (s *HandleDeleteProfileSuite) TestNoProfile_IdempotentNoError() {
+func (s *HandleDeleteProfileSuite) TestNothingLeft_IdempotentNoError() {
+	s.expectNoItems()
 	s.mockRepo.EXPECT().Get(mock.Anything, callerID).Return(nil, repository.ErrNotFound)
 
 	s.Require().NoError(s.call())
-	s.mockRepo.AssertNotCalled(s.T(), "Delete", mock.Anything)
 }
 
-func (s *HandleDeleteProfileSuite) TestAvatarDeletedBeforeDBDelete() {
-	key := repository.ProfileImageKey("profiles/" + callerID + "/avatar/up1")
-	s.mockRepo.EXPECT().Get(mock.Anything, callerID).
-		Return(&repository.Profile{OwnerID: callerID, Username: "alice", AvatarPath: &key}, nil)
-
-	var order []string
-	s.mockImages.EXPECT().Delete(mock.Anything, key).
-		Run(func(context.Context, repository.ProfileImageKey) { order = append(order, "s3") }).
-		Return(nil)
-	s.mockRepo.EXPECT().Delete(mock.Anything).
-		Run(func(context.Context) { order = append(order, "db") }).
-		Return(nil)
-
-	s.Require().NoError(s.call())
-	s.Equal([]string{"s3", "db"}, order)
-}
-
-func (s *HandleDeleteProfileSuite) TestAvatarDeleteFails_ErrorNoDBDelete() {
-	key := repository.ProfileImageKey("profiles/" + callerID + "/avatar/up1")
-	s.mockRepo.EXPECT().Get(mock.Anything, callerID).
-		Return(&repository.Profile{OwnerID: callerID, Username: "alice", AvatarPath: &key}, nil)
-	s.mockImages.EXPECT().Delete(mock.Anything, key).Return(errors.New("s3 down"))
-
-	s.Require().Error(s.call())
-	s.mockRepo.AssertNotCalled(s.T(), "Delete", mock.Anything)
-}
-
-func (s *HandleDeleteProfileSuite) TestGetError_GenericError() {
-	s.mockRepo.EXPECT().Get(mock.Anything, callerID).Return(nil, errors.New("dynamo down"))
+func (s *HandleDeleteProfileSuite) TestDeleteFails_GenericError() {
+	s.mockBuilds.EXPECT().List(mock.Anything, callerID, mock.Anything, "", mock.Anything, "").
+		Return(nil, "", errors.New("dynamo down"))
 
 	s.Require().Error(s.call())
 }
 
-func (s *HandleDeleteProfileSuite) TestDeleteError_GenericError() {
+func (s *HandleDeleteProfileSuite) TestMutationConflict_ConflictError() {
+	s.expectNoItems()
 	s.mockRepo.EXPECT().Get(mock.Anything, callerID).
 		Return(&repository.Profile{OwnerID: callerID, Username: "alice"}, nil)
-	s.mockRepo.EXPECT().Delete(mock.Anything).Return(errors.New("dynamo down"))
+	s.mockRepo.EXPECT().Delete(mock.Anything).Return(repository.ErrMutationConflict)
 
-	s.Require().Error(s.call())
+	s.ErrorIs(s.call(), errMutationConflict)
 }
 
 type HandleListProfilesSuite struct {

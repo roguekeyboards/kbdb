@@ -11,6 +11,7 @@ import (
 	"github.com/getkin/kin-openapi/openapi3filter"
 	nethttpmiddleware "github.com/oapi-codegen/nethttp-middleware"
 
+	"github.com/rogueserenity/kbdb/internal/accountdelete"
 	"github.com/rogueserenity/kbdb/internal/auth"
 	"github.com/rogueserenity/kbdb/internal/consent"
 	"github.com/rogueserenity/kbdb/internal/handlers"
@@ -68,6 +69,19 @@ func New(
 		KeycapSetRepo:  keycapSetRepo,
 	}
 	pr := repoapi.Profile{Images: profileImageStore, Repo: profileRepo}
+
+	account := accountdelete.Account{
+		Profiles:       profileRepo,
+		ProfileImages:  profileImageStore,
+		Builds:         buildRepo,
+		BuildImages:    buildImageStore,
+		Keyboards:      keyboardRepo,
+		KeyboardImages: keyboardImageStore,
+		Switches:       switchRepo,
+		SwitchImages:   switchImageStore,
+		KeycapSets:     keycapSetRepo,
+		KitImages:      imageStore,
+	}
 
 	ownerPrefs := middleware.OwnerPreferences(profileRepo)
 
@@ -189,10 +203,10 @@ func New(
 	mux.Handle("PUT /v1/profile/{identifier}",
 		middleware.RequireAuthorizerIdentity(validate(handlers.UpdateProfile(profileRepo, pr))))
 	// Same path/auth as the POST/PUT - DELETE only. {identifier} must be the
-	// caller's own subject (authz.IsOwner). A leaf delete (nothing
-	// references a Profile), idempotent: no profile is still 204.
+	// caller's own subject (authz.IsOwner). Deletes the whole account, every
+	// item included; idempotent: nothing left is still 204.
 	mux.Handle("DELETE /v1/profile/{identifier}",
-		middleware.RequireAuthorizerIdentity(validate(handlers.DeleteProfile(profileRepo, profileImageStore))))
+		middleware.RequireAuthorizerIdentity(validate(handlers.DeleteProfile(account))))
 	// The public directory: anonymous OK, only discoverable profiles returned.
 	mux.Handle("GET /v1/profiles",
 		middleware.OptionalAuth(verifier)(validate(handlers.ListProfiles(profileRepo, pr))))

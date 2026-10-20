@@ -76,6 +76,69 @@ var _ = Describe("Deleting a profile", func() {
 		})
 	})
 
+	Context("given the caller has a profile and owns one of each item", func() {
+		var ids accountItems
+
+		BeforeEach(func(ctx SpecContext) {
+			Expect(db.SeedProfile(ctx, ownerID, db.SeedProfileOptions{
+				Username:     username,
+				Discoverable: true,
+			})).To(Succeed())
+			ids = seedAccountItems(ctx, ownerID)
+		})
+
+		AfterEach(func(ctx SpecContext) {
+			_ = db.DeleteProfile(ctx, ownerID, username)
+			ids.cleanUp(ctx, ownerID)
+		})
+
+		When("deleting the profile", func() {
+			BeforeEach(func(ctx SpecContext) {
+				var err error
+				resp, err = client.Delete(ctx, ownerID, ownerToken)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("returns 204 and deletes the profile and every item", func(ctx SpecContext) {
+				By("returning 204")
+				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+
+				By("no longer resolving the profile")
+				got, err := client.Get(ctx, ownerID, ownerToken)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(got.StatusCode).To(Equal(http.StatusNotFound))
+
+				By("no longer resolving any of the items")
+				ids.expectAllGone(ctx, ownerID, ownerToken)
+			})
+		})
+	})
+
+	Context("given the caller's profile is already gone but they still own items", func() {
+		var ids accountItems
+
+		BeforeEach(func(ctx SpecContext) {
+			ids = seedAccountItems(ctx, ownerID)
+		})
+
+		AfterEach(func(ctx SpecContext) {
+			ids.cleanUp(ctx, ownerID)
+		})
+
+		When("deleting the profile again", func() {
+			BeforeEach(func(ctx SpecContext) {
+				var err error
+				resp, err = client.Delete(ctx, ownerID, ownerToken)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("returns 204 and deletes the remaining items", func(ctx SpecContext) {
+				Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+				ids.expectAllGone(ctx, ownerID, ownerToken)
+			})
+		})
+	})
+
 	Context("given the caller has no profile", func() {
 		When("deleting the profile", func() {
 			BeforeEach(func(ctx SpecContext) {

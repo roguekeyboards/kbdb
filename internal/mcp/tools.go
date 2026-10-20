@@ -3,6 +3,7 @@ package mcp
 import (
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/rogueserenity/kbdb/internal/accountdelete"
 	"github.com/rogueserenity/kbdb/internal/repository"
 	"github.com/rogueserenity/kbdb/internal/uploadlimit"
 )
@@ -28,7 +29,18 @@ func registerTools(
 	sdkmcp.AddTool(s, getProfileTool, handleGetProfile(profileRepo))
 	sdkmcp.AddTool(s, createProfileTool, handleCreateProfile(profileRepo))
 	sdkmcp.AddTool(s, updateProfileTool, handleUpdateProfile(profileRepo))
-	sdkmcp.AddTool(s, deleteProfileTool, handleDeleteProfile(profileRepo, profileImageStore))
+	sdkmcp.AddTool(s, deleteProfileTool, handleDeleteProfile(accountdelete.Account{
+		Profiles:       profileRepo,
+		ProfileImages:  profileImageStore,
+		Builds:         buildRepo,
+		BuildImages:    buildImageStore,
+		Keyboards:      keyboardRepo,
+		KeyboardImages: keyboardImageStore,
+		Switches:       switchRepo,
+		SwitchImages:   switchImageStore,
+		KeycapSets:     keycapSetRepo,
+		KitImages:      imageStore,
+	}))
 	sdkmcp.AddTool(s, listProfilesTool, handleListProfiles(profileRepo))
 	sdkmcp.AddTool(s, setProfileImageTool, handleSetProfileImage(profileRepo, profileImageStore, uploads))
 	sdkmcp.AddTool(s, deleteProfileImageTool, handleDeleteProfileImage(profileRepo, profileImageStore))

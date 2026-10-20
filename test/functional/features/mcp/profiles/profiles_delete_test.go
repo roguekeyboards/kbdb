@@ -73,6 +73,52 @@ var _ = Describe("Deleting a profile over MCP", func() {
 		})
 	})
 
+	Context("given the caller has a profile and owns one of each item", func() {
+		var keyboardID, switchID, keycapSetID, buildID string
+
+		BeforeEach(func(ctx SpecContext) {
+			Expect(db.SeedProfile(ctx, ownerID, db.SeedProfileOptions{
+				Username:     username,
+				Discoverable: true,
+			})).To(Succeed())
+			keyboardID, switchID, keycapSetID, buildID = uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString()
+			Expect(db.SeedKeyboardWithImage(ctx, ownerID, keyboardID, uuid.NewString(), "private")).To(Succeed())
+			Expect(db.SeedSwitchWithImage(ctx, ownerID, switchID, "public")).To(Succeed())
+			Expect(db.SeedKeycapSetWithKit(ctx, ownerID, keycapSetID, uuid.NewString(), "private")).To(Succeed())
+			Expect(db.SeedBuild(ctx, ownerID, buildID, keyboardID, "public")).To(Succeed())
+		})
+
+		AfterEach(func(ctx SpecContext) {
+			_ = db.DeleteProfile(ctx, ownerID, username)
+			_ = db.DeleteBuild(ctx, ownerID, buildID, keyboardID)
+			_ = db.DeleteKeyboard(ctx, ownerID, keyboardID)
+			_ = db.DeleteSwitch(ctx, ownerID, switchID)
+			_ = db.DeleteKeycapSet(ctx, ownerID, keycapSetID)
+		})
+
+		When("delete_profile is called", func() {
+			BeforeEach(func(ctx SpecContext) {
+				result, err = client.CallTool(ctx, "delete_profile", map[string]any{})
+			})
+
+			It("succeeds and deletes every item", func(ctx SpecContext) {
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result.IsError).To(BeFalse())
+
+				for tool, args := range map[string]map[string]any{
+					"get_keyboard":   {"keyboard_id": keyboardID},
+					"get_switch":     {"switch_id": switchID},
+					"get_keycap_set": {"keycap_set_id": keycapSetID},
+					"get_build":      {"build_id": buildID},
+				} {
+					got, getErr := client.CallTool(ctx, tool, args)
+					Expect(getErr).NotTo(HaveOccurred())
+					Expect(got.IsError).To(BeTrue(), tool)
+				}
+			})
+		})
+	})
+
 	Context("given the caller has no profile", func() {
 		When("delete_profile is called", func() {
 			BeforeEach(func(ctx SpecContext) {

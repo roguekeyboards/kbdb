@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/rogueserenity/kbdb/internal/accountdelete"
 	"github.com/rogueserenity/kbdb/internal/authz"
 	"github.com/rogueserenity/kbdb/internal/log"
 	"github.com/rogueserenity/kbdb/internal/lookup"
@@ -41,7 +42,7 @@ var updateProfileTool = &mcp.Tool{
 
 var deleteProfileTool = &mcp.Tool{
 	Name:        "delete_profile",
-	Description: "Deletes your own public profile, freeing its username for reuse and removing your avatar if one is set. This only makes you undiscoverable - your builds, keyboards, and other items keep their own visibility and are untouched. Idempotent: deleting when you have no profile succeeds.",
+	Description: "Deletes your whole account: your profile, avatar and username, and every build, keyboard, switch and keycap set you own, with all their images. This can't be undone. Safe to retry: if it fails partway, calling it again deletes the rest. Succeeds when there's nothing left to delete.",
 }
 
 var listProfilesTool = &mcp.Tool{
@@ -121,30 +122,14 @@ func handleUpdateProfile(repo repository.ProfileRepository) mcp.ToolHandlerFor[s
 	}
 }
 
-func handleDeleteProfile(repo repository.ProfileRepository, images repository.ProfileImageStore) mcp.ToolHandlerFor[schema.DeleteProfileInput, schema.DeleteProfileOutput] {
+func handleDeleteProfile(account accountdelete.Account) mcp.ToolHandlerFor[schema.DeleteProfileInput, schema.DeleteProfileOutput] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, _ schema.DeleteProfileInput) (*mcp.CallToolResult, schema.DeleteProfileOutput, error) {
 		ownerID, err := resolveOwnerID(ctx, "")
 		if err != nil {
 			return nil, schema.DeleteProfileOutput{}, err
 		}
 
-		p, err := repo.Get(ctx, ownerID)
-		if errors.Is(err, repository.ErrNotFound) {
-			return nil, schema.DeleteProfileOutput{}, nil
-		}
-		if err != nil {
-			log.FromContext(ctx).Error("getting profile", log.Error, err, log.ProfileID, ownerID)
-			return nil, schema.DeleteProfileOutput{}, errors.New("failed to delete profile")
-		}
-
-		if p.AvatarPath != nil {
-			if err := images.Delete(ctx, *p.AvatarPath); err != nil {
-				log.FromContext(ctx).Error("deleting profile avatar object", log.Error, err, log.ProfileID, ownerID)
-				return nil, schema.DeleteProfileOutput{}, errors.New("failed to delete profile")
-			}
-		}
-
-		if mutErr := handleTransactionError(ctx, repo.Delete(ctx), log.ProfileID, ownerID); mutErr != nil {
+		if mutErr := handleTransactionError(ctx, account.Delete(ctx, ownerID), log.ProfileID, ownerID); mutErr != nil {
 			return nil, schema.DeleteProfileOutput{}, mutErr
 		}
 

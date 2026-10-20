@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/rogueserenity/kbdb/internal/accountdelete"
 	"github.com/rogueserenity/kbdb/internal/authz"
 	"github.com/rogueserenity/kbdb/internal/handlers/api"
 	"github.com/rogueserenity/kbdb/internal/log"
@@ -238,12 +239,13 @@ func UpdateProfile(repo repository.ProfileRepository, pr repoapi.Profile) http.H
 	}
 }
 
-// DeleteProfile removes the caller's profile. {identifier} must be the
-// caller's own subject (anything else is 404, not 403). A leaf delete -
-// nothing references a Profile - so no cascade; it only makes the user
-// undiscoverable. Any avatar object is removed too. Idempotent: no profile
+// DeleteProfile deletes the caller's whole account: the profile, its
+// avatar and username, and every item they own with its images (see
+// [accountdelete.Account.Delete]). {identifier} must be the caller's own
+// subject (anything else is 404, not 403). Idempotent and safe to retry: a
+// call that fails partway leaves the rest for the next one, and no profile
 // is still 204.
-func DeleteProfile(repo repository.ProfileRepository, images repository.ProfileImageStore) http.HandlerFunc {
+func DeleteProfile(account accountdelete.Account) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := r.PathValue("identifier")
 
@@ -252,26 +254,7 @@ func DeleteProfile(repo repository.ProfileRepository, images repository.ProfileI
 			return
 		}
 
-		p, err := repo.Get(r.Context(), userID)
-		if errors.Is(err, repository.ErrNotFound) {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-		if err != nil {
-			log.FromContext(r.Context()).Error("getting profile", log.Error, err, log.ProfileID, userID)
-			problem.Internal(w, "failed to delete profile")
-			return
-		}
-
-		if p.AvatarPath != nil {
-			if err := images.Delete(r.Context(), *p.AvatarPath); err != nil {
-				log.FromContext(r.Context()).Error("deleting profile avatar object", log.Error, err, log.ProfileID, userID)
-				problem.Internal(w, "failed to delete profile")
-				return
-			}
-		}
-
-		if handleTransactionError(w, r, repo.Delete(r.Context()), log.ProfileID, userID) {
+		if handleTransactionError(w, r, account.Delete(r.Context(), userID), log.ProfileID, userID) {
 			return
 		}
 
