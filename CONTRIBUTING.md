@@ -49,7 +49,7 @@ Most iteration just needs `mise run func-test` again — Go code and test change
 ```sh
 mise run migrate-build          # -> bin/kbdb-migrate
 
-# 1. Get a token for the SOURCE environment (opens a browser: Discord or email OTP).
+# 1. Get a token for the SOURCE environment (opens a browser to sign in with Discord).
 bin/kbdb-migrate login --issuer https://auth.jay.mykeebs.dev
 
 # 2. Dump.

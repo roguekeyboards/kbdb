@@ -24,6 +24,7 @@ var authorizeTemplate = template.Must(template.New("authorize.html").Parse(autho
 type templateData struct {
 	IDPConsentPublicToken string
 	OIDCIssuerBaseURL     string
+	Brand                 pageBrand
 }
 
 // Handler serves GET /authorize: kbdb's IdP consent/login page.
@@ -32,6 +33,7 @@ func Handler(idpConsentPublicToken, oidcIssuerBaseURL string) http.Handler {
 	data := templateData{
 		IDPConsentPublicToken: idpConsentPublicToken,
 		OIDCIssuerBaseURL:     oidcIssuerBaseURL,
+		Brand:                 pageBrandAssets,
 	}
 	if err := authorizeTemplate.Execute(&buf, data); err != nil {
 		log.Fatalf("consent: rendering authorize.html: %v", err)
