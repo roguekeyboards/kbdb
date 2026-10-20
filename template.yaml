@@ -101,7 +101,8 @@ Parameters:
       Address the alarm topic emails (confirm the subscription by hand
       once). It also gets a notice for every account delete, to remove the
       user from the identity provider by hand (internal/deletenotice).
-      Empty, the default, creates no topic, no alarms and no notices.
+      Empty, the default, still creates the topic and alarms, with no one
+      subscribed: the functional tests subscribe their own queue.
   BudgetEmail:
     Type: String
     Default: aws-budget@rogueserenity.dev
@@ -569,16 +570,16 @@ Resources:
 
   AlarmTopic:
     Type: AWS::SNS::Topic
-    Condition: HasAlarmEmail
     Properties:
-      Subscription:
-        - Protocol: email
-          Endpoint: !Ref AlarmEmail
+      Subscription: !If
+        - HasAlarmEmail
+        - - Protocol: email
+            Endpoint: !Ref AlarmEmail
+        - !Ref AWS::NoValue
 
   # Any event in the DLQ is an image left pending until it's re-driven.
   ModerationDLQAlarm:
     Type: AWS::CloudWatch::Alarm
-    Condition: HasAlarmEmail
     Properties:
       AlarmDescription: Moderation events failed every retry and are waiting in the DLQ
       Namespace: AWS/SQS
@@ -597,7 +598,6 @@ Resources:
 
   ModerateFunctionErrorsAlarm:
     Type: AWS::CloudWatch::Alarm
-    Condition: HasAlarmEmail
     Properties:
       AlarmDescription: The moderation function returned errors
       Namespace: AWS/Lambda
@@ -616,7 +616,6 @@ Resources:
 
   ApiFunctionErrorsAlarm:
     Type: AWS::CloudWatch::Alarm
-    Condition: HasAlarmEmail
     Properties:
       AlarmDescription: The API function returned errors
       Namespace: AWS/Lambda
@@ -635,7 +634,6 @@ Resources:
 
   HttpApi5xxAlarm:
     Type: AWS::CloudWatch::Alarm
-    Condition: HasAlarmEmail
     Properties:
       AlarmDescription: The HTTP API returned 5xx responses
       Namespace: AWS/ApiGateway
@@ -658,7 +656,6 @@ Resources:
   # carries the user ID (owner_id). The API logs are kept 14 days.
   AccountDeleteNoticeFailedFilter:
     Type: AWS::Logs::MetricFilter
-    Condition: HasAlarmEmail
     Properties:
       LogGroupName: !Ref ApiFunctionLogGroup
       FilterPattern: '"account delete notice failed"'
@@ -669,7 +666,6 @@ Resources:
 
   AccountDeleteNoticeFailedAlarm:
     Type: AWS::CloudWatch::Alarm
-    Condition: HasAlarmEmail
     Properties:
       AlarmDescription: >-
         An account delete notice failed to send. Find "account delete notice
@@ -717,7 +713,7 @@ Resources:
           PROFILE_USERNAME_TABLE_NAME: !Ref ProfileUsernameTable
           UPLOAD_COUNTER_TABLE_NAME: !Ref UploadCounterTable
           DAILY_UPLOAD_LIMIT: !Ref DailyUploadLimit
-          ACCOUNT_DELETE_TOPIC_ARN: !If [HasAlarmEmail, !Ref AlarmTopic, '']
+          ACCOUNT_DELETE_TOPIC_ARN: !Ref AlarmTopic
           # Empty in real deployments; sam local's --env-vars override
           # (env.local.json) can only override a var declared here.
           DYNAMODB_ENDPOINT_URL: ""
@@ -744,12 +740,9 @@ Resources:
             - Effect: Allow
               Action: s3:ListBucket
               Resource: !GetAtt ImagesBucket.Arn
-            - !If
-              - HasAlarmEmail
-              - Effect: Allow
-                Action: sns:Publish
-                Resource: !Ref AlarmTopic
-              - !Ref AWS::NoValue
+            - Effect: Allow
+              Action: sns:Publish
+              Resource: !Ref AlarmTopic
             - Effect: Allow
               Action:
                 - dynamodb:Query
@@ -939,6 +932,9 @@ Outputs:
   ImagesBucketName:
     Description: S3 bucket holding user-uploaded images (build photos, keycap kit renders)
     Value: !Ref ImagesBucket
+  AlarmTopicArn:
+    Description: SNS topic for alarms and account delete notices
+    Value: !Ref AlarmTopic
   SwitchTableName:
     Description: DynamoDB table backing GET /users/{userId}/switches
     Value: !Ref SwitchTable

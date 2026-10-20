@@ -186,6 +186,10 @@ jobs:
             --stack-name "${{ steps.pr-stack.outputs.stack-name }}" \
             --query "Stacks[0].Outputs[?OutputKey=='ImagesBucketName'].OutputValue" \
             --output text)
+          ALARM_TOPIC_ARN=$(aws cloudformation describe-stacks \
+            --stack-name "${{ steps.pr-stack.outputs.stack-name }}" \
+            --query "Stacks[0].Outputs[?OutputKey=='AlarmTopicArn'].OutputValue" \
+            --output text)
           {
             echo "api-url=$API_URL"
             echo "switch-table-name=$SWITCH_TABLE_NAME"
@@ -196,6 +200,7 @@ jobs:
             echo "profile-username-table-name=$PROFILE_USERNAME_TABLE_NAME"
             echo "upload-counter-table-name=$UPLOAD_COUNTER_TABLE_NAME"
             echo "images-bucket-name=$IMAGES_BUCKET_NAME"
+            echo "alarm-topic-arn=$ALARM_TOPIC_ARN"
           } >> "$GITHUB_OUTPUT"
 
       - name: Run functional tests
@@ -212,4 +217,6 @@ jobs:
           KBDB_PROFILE_USERNAME_TABLE_NAME: ${{ steps.stack-outputs.outputs.profile-username-table-name }}
           KBDB_UPLOAD_COUNTER_TABLE_NAME: ${{ steps.stack-outputs.outputs.upload-counter-table-name }}
           KBDB_IMAGES_BUCKET_NAME: ${{ steps.stack-outputs.outputs.images-bucket-name }}
+          KBDB_ALARM_TOPIC_ARN: ${{ steps.stack-outputs.outputs.alarm-topic-arn }}
+          KBDB_STACK_NAME: ${{ steps.pr-stack.outputs.stack-name }}
         run: mise run func-test

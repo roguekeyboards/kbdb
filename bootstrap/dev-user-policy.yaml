@@ -167,7 +167,11 @@ Resources:
               - logs:DeleteLogGroup
               - logs:PutRetentionPolicy
               - logs:TagResource
-            # template.yaml's ApiFunctionLogGroup and ModerateFunctionLogGroup.
+              - logs:PutMetricFilter
+              - logs:DeleteMetricFilter
+              - logs:DescribeMetricFilters
+            # template.yaml's ApiFunctionLogGroup and ModerateFunctionLogGroup,
+            # and AccountDeleteNoticeFailedFilter on the former.
             # Mirrors bootstrap/ci-oidc-role.yaml's equivalent statement.
             Resource:
               - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-api-kbdb-dev-*
@@ -185,9 +189,8 @@ Resources:
               - sqs:UntagQueue
               - sqs:ListQueueTags
             Resource: !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:kbdb-dev-*
-          # template.yaml's AlarmTopic and alarms, created only when the
-          # environment sets AlarmEmail. CI never does, so ci-oidc-role.yaml
-          # has no equivalent.
+          # template.yaml's AlarmTopic and alarms. Mirrors
+          # bootstrap/ci-oidc-role.yaml's AlarmTopic and Alarms statements.
           - Sid: AlarmsScoped
             Effect: Allow
             Action:

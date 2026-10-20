@@ -77,6 +77,24 @@ func ImagesBucketName() string {
 	return os.Getenv("KBDB_IMAGES_BUCKET_NAME")
 }
 
+// AlarmTopicArn returns the stack's alarm topic, which also carries
+// account delete notices.
+func AlarmTopicArn() string {
+	return os.Getenv("KBDB_ALARM_TOPIC_ARN")
+}
+
+// StackName returns the deployed stack's name, which prefixes any AWS
+// resource a spec creates so the CI role may manage it.
+func StackName() string {
+	return os.Getenv("KBDB_STACK_NAME")
+}
+
+// AWSEndpointURL returns the endpoint for the other AWS services specs
+// call directly (SNS, SQS). Empty uses default AWS endpoint resolution.
+func AWSEndpointURL() string {
+	return os.Getenv("KBDB_AWS_ENDPOINT_URL")
+}
+
 // AIMockConfigPath returns the host path of the file floci reads canned
 // Rekognition responses from, or "" against real AWS, which has no such
 // file.

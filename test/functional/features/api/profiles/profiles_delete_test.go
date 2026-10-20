@@ -2,6 +2,7 @@ package profiles_test
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
@@ -10,6 +11,7 @@ import (
 	"github.com/rogueserenity/kbdb/test/functional/support/account"
 	"github.com/rogueserenity/kbdb/test/functional/support/api"
 	"github.com/rogueserenity/kbdb/test/functional/support/db"
+	"github.com/rogueserenity/kbdb/test/functional/support/notices"
 )
 
 var _ = Describe("Deleting a profile", func() {
@@ -78,14 +80,21 @@ var _ = Describe("Deleting a profile", func() {
 	})
 
 	Context("given the caller has a profile and owns one of each item", func() {
-		var items account.Items
+		var (
+			items    account.Items
+			listener *notices.Listener
+		)
 
 		BeforeEach(func(ctx SpecContext) {
+			var err error
+			listener, err = notices.Listen(ctx)
+			DeferCleanup(func(ctx SpecContext) { listener.Close(ctx) })
+			Expect(err).NotTo(HaveOccurred())
+
 			Expect(db.SeedProfile(ctx, ownerID, db.SeedProfileOptions{
 				Username:     username,
 				Discoverable: true,
 			})).To(Succeed())
-			var err error
 			items, err = account.Seed(ctx, ownerID)
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -116,6 +125,11 @@ var _ = Describe("Deleting a profile", func() {
 
 				By("deleting image objects no record pointed to")
 				Expect(items.RemainingStrayImages(ctx)).To(BeEmpty())
+
+				By("sending the operator a notice naming the user")
+				Eventually(func(ctx SpecContext) (bool, error) {
+					return listener.Received(ctx, ownerID)
+				}).WithContext(ctx).WithTimeout(30 * time.Second).Should(BeTrue())
 			})
 		})
 	})
