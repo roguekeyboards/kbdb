@@ -114,8 +114,11 @@ Resources:
                 # stack-scoped Resource above doesn't cover. This is an AWS
                 # account-owned, always-the-same-ARN resource, not
                 # kbdb-pr-*-scoped, since the transform itself isn't
-                # per-stack.
-                Resource: !Sub arn:aws:cloudformation:${AWS::Region}:aws:transform/Serverless-2016-10-31
+                # per-stack. AWS::Include pulls api/gateway.gen.yaml into
+                # HttpApi's definition the same way.
+                Resource:
+                  - !Sub arn:aws:cloudformation:${AWS::Region}:aws:transform/Serverless-2016-10-31
+                  - !Sub arn:aws:cloudformation:${AWS::Region}:aws:transform/Include
               - Sid: LambdaScoped
                 Effect: Allow
                 Action: lambda:*
