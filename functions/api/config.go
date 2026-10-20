@@ -40,6 +40,10 @@ type Config struct {
 	// internal/uploadlimit.
 	DailyUploadLimit int64 `env:"DAILY_UPLOAD_LIMIT" required:""`
 
+	// SNS topic the operator gets account delete notices on - see
+	// internal/deletenotice. Empty sends none.
+	AccountDeleteTopicARN string `env:"ACCOUNT_DELETE_TOPIC_ARN"`
+
 	// Empty in real deployments; set locally to point at an emulator.
 	DynamoDBEndpointURL string `env:"DYNAMODB_ENDPOINT_URL"`
 

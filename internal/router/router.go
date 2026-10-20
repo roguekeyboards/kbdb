@@ -50,6 +50,7 @@ func New(
 	profileRepo repository.ProfileRepository,
 	profileImageStore repository.ProfileImageStore,
 	ownerImageStore repository.OwnerImageStore,
+	deleteNotices accountdelete.Notifier,
 	uploads *uploadlimit.Limiter,
 	issuerURL, idpConsentPublicToken, version string,
 	logoutReturnOrigins []string,
@@ -78,6 +79,7 @@ func New(
 		Switches:   switchRepo,
 		KeycapSets: keycapSetRepo,
 		Profiles:   profileRepo,
+		Notices:    deleteNotices,
 	}
 
 	ownerPrefs := middleware.OwnerPreferences(profileRepo)

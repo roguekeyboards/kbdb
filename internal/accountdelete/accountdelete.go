@@ -8,6 +8,8 @@ import (
 	"context"
 	"fmt"
 
+	kbdbctx "github.com/rogueserenity/kbdb/internal/ctx"
+	"github.com/rogueserenity/kbdb/internal/log"
 	"github.com/rogueserenity/kbdb/internal/repository"
 )
 
@@ -15,6 +17,16 @@ import (
 type ItemStore interface {
 	DeleteAll(ctx context.Context) error
 }
+
+// Notifier tells the operator an account was deleted, so they can remove
+// the user from the identity provider by hand.
+type Notifier interface {
+	Notify(ctx context.Context, userID string) error
+}
+
+// NoticeFailed is logged when a notice can't be sent. template.yaml's
+// AccountDeleteNoticeFailedFilter matches it, so keep the two in step.
+const NoticeFailed = "account delete notice failed; remove the user from the identity provider by hand"
 
 // Account holds what [Account.Delete] deletes from.
 type Account struct {
@@ -24,13 +36,18 @@ type Account struct {
 	Switches   ItemStore
 	KeycapSets ItemStore
 	Profiles   repository.ProfileRepository
+	// Notices is optional: nil sends none (deployments without an operator
+	// address).
+	Notices Notifier
 }
 
 // Delete deletes everything the caller on ctx owns: the item tables, then
 // every image by key prefix (after the tables, so an image added while
 // they're deleted is still swept), then the profile. Every step is
 // idempotent, so a call that fails or times out partway can be retried to
-// finish the rest.
+// finish the rest. Once everything is gone it sends the operator a notice;
+// a notice that fails is logged as [NoticeFailed], not returned, since the
+// delete itself succeeded.
 // Errors wrap the repository's, so callers can still match
 // [repository.ErrMutationConflict].
 func (a Account) Delete(ctx context.Context) error {
@@ -52,6 +69,12 @@ func (a Account) Delete(ctx context.Context) error {
 	}
 	if err := a.Profiles.Delete(ctx); err != nil {
 		return fmt.Errorf("deleting profile: %w", err)
+	}
+	if a.Notices != nil {
+		userID, _ := kbdbctx.UserID(ctx)
+		if err := a.Notices.Notify(ctx, userID); err != nil {
+			log.FromContext(ctx).Error(NoticeFailed, log.OwnerID, userID, log.Error, err)
+		}
 	}
 	return nil
 }

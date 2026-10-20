@@ -99,7 +99,9 @@ Parameters:
     Default: ''
     Description: >-
       Address the alarm topic emails (confirm the subscription by hand
-      once). Empty, the default, creates no topic and no alarms.
+      once). It also gets a notice for every account delete, to remove the
+      user from the identity provider by hand (internal/deletenotice).
+      Empty, the default, creates no topic, no alarms and no notices.
   BudgetEmail:
     Type: String
     Default: aws-budget@rogueserenity.dev
@@ -650,6 +652,40 @@ Resources:
       AlarmActions:
         - !Ref AlarmTopic
 
+  # The account delete notice is how the operator learns to remove a user
+  # from the identity provider; if it fails to send, this is the backstop.
+  # The pattern matches internal/accountdelete.NoticeFailed, and the log line
+  # carries the user ID (owner_id). The API logs are kept 14 days.
+  AccountDeleteNoticeFailedFilter:
+    Type: AWS::Logs::MetricFilter
+    Condition: HasAlarmEmail
+    Properties:
+      LogGroupName: !Ref ApiFunctionLogGroup
+      FilterPattern: '"account delete notice failed"'
+      MetricTransformations:
+        - MetricNamespace: kbdb
+          MetricName: !Sub AccountDeleteNoticeFailed-${AWS::StackName}
+          MetricValue: '1'
+
+  AccountDeleteNoticeFailedAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: HasAlarmEmail
+    Properties:
+      AlarmDescription: >-
+        An account delete notice failed to send. Find "account delete notice
+        failed" in the API function's logs and remove that owner_id from the
+        identity provider by hand.
+      Namespace: kbdb
+      MetricName: !Sub AccountDeleteNoticeFailed-${AWS::StackName}
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref AlarmTopic
+
   # Single Lambda function for all routes (REST entities + MCP), not split
   # by protocol or by entity - see plan rationale. Packaged as a container
   # image (aws-lambda-web-adapter sidecar) rather than a zip - see
@@ -681,6 +717,7 @@ Resources:
           PROFILE_USERNAME_TABLE_NAME: !Ref ProfileUsernameTable
           UPLOAD_COUNTER_TABLE_NAME: !Ref UploadCounterTable
           DAILY_UPLOAD_LIMIT: !Ref DailyUploadLimit
+          ACCOUNT_DELETE_TOPIC_ARN: !If [HasAlarmEmail, !Ref AlarmTopic, '']
           # Empty in real deployments; sam local's --env-vars override
           # (env.local.json) can only override a var declared here.
           DYNAMODB_ENDPOINT_URL: ""
@@ -707,6 +744,12 @@ Resources:
             - Effect: Allow
               Action: s3:ListBucket
               Resource: !GetAtt ImagesBucket.Arn
+            - !If
+              - HasAlarmEmail
+              - Effect: Allow
+                Action: sns:Publish
+                Resource: !Ref AlarmTopic
+              - !Ref AWS::NoValue
             - Effect: Allow
               Action:
                 - dynamodb:Query
