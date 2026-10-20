@@ -24,7 +24,8 @@ const unprocessedRetries = 5
 
 // deleteOwnerItems deletes every item in tableName's user_id partition for
 // the caller. DynamoDB has no delete-by-partition-key, so it queries the
-// partition's keys a page at a time and batch-deletes each page.
+// partition's keys a page at a time, reading consistently so an item
+// written just before isn't missed, and batch-deletes each page.
 func deleteOwnerItems(ctx context.Context, client dynamoAPI, tableName string) error {
 	ownerID, ok := kbdbctx.UserID(ctx)
 	if !ok {
@@ -38,6 +39,7 @@ func deleteOwnerItems(ctx context.Context, client dynamoAPI, tableName string) e
 			KeyConditionExpression:    aws.String("user_id = :u"),
 			ExpressionAttributeValues: map[string]types.AttributeValue{":u": &types.AttributeValueMemberS{Value: ownerID}},
 			ProjectionExpression:      aws.String("user_id, id"),
+			ConsistentRead:            aws.Bool(true),
 			ExclusiveStartKey:         startKey,
 		})
 		if err != nil {

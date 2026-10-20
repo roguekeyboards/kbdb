@@ -44,7 +44,7 @@ func (s *DeleteOwnerItemsSuite) TestDeletesEveryPageInBatchesOf25() {
 	lastKey := map[string]types.AttributeValue{"user_id": &types.AttributeValueMemberS{Value: "alice"}}
 	s.mockClient.EXPECT().
 		Query(mock.Anything, mock.MatchedBy(func(in *dynamodb.QueryInput) bool {
-			return *in.TableName == "t" && in.ExclusiveStartKey == nil &&
+			return *in.TableName == "t" && in.ExclusiveStartKey == nil && *in.ConsistentRead &&
 				in.ExpressionAttributeValues[":u"].(*types.AttributeValueMemberS).Value == "alice"
 		})).
 		Return(&dynamodb.QueryOutput{Items: ownerKeys(30), LastEvaluatedKey: lastKey}, nil)

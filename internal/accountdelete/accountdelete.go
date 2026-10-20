@@ -26,15 +26,14 @@ type Account struct {
 	Profiles   repository.ProfileRepository
 }
 
-// Delete deletes everything the caller on ctx owns: images first, the
-// profile last. Every step is idempotent, so a call that fails or times
-// out partway can be retried to finish the rest.
+// Delete deletes everything the caller on ctx owns: the item tables, then
+// every image by key prefix (after the tables, so an image added while
+// they're deleted is still swept), then the profile. Every step is
+// idempotent, so a call that fails or times out partway can be retried to
+// finish the rest.
 // Errors wrap the repository's, so callers can still match
 // [repository.ErrMutationConflict].
 func (a Account) Delete(ctx context.Context) error {
-	if err := a.Images.DeleteAll(ctx); err != nil {
-		return fmt.Errorf("deleting images: %w", err)
-	}
 	for _, items := range []struct {
 		name  string
 		store ItemStore
@@ -47,6 +46,9 @@ func (a Account) Delete(ctx context.Context) error {
 		if err := items.store.DeleteAll(ctx); err != nil {
 			return fmt.Errorf("deleting %s: %w", items.name, err)
 		}
+	}
+	if err := a.Images.DeleteAll(ctx); err != nil {
+		return fmt.Errorf("deleting images: %w", err)
 	}
 	if err := a.Profiles.Delete(ctx); err != nil {
 		return fmt.Errorf("deleting profile: %w", err)

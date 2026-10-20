@@ -53,7 +53,7 @@ func (s *DeleteSuite) record(step string) func(context.Context) {
 	return func(context.Context) { s.order = append(s.order, step) }
 }
 
-func (s *DeleteSuite) TestDeletesImagesFirstAndProfileLast() {
+func (s *DeleteSuite) TestDeletesTablesThenImagesThenProfile() {
 	s.images.EXPECT().DeleteAll(mock.Anything).Run(s.record("images")).Return(nil)
 	s.builds.EXPECT().DeleteAll(mock.Anything).Run(s.record("builds")).Return(nil)
 	s.keyboards.EXPECT().DeleteAll(mock.Anything).Run(s.record("keyboards")).Return(nil)
@@ -63,17 +63,20 @@ func (s *DeleteSuite) TestDeletesImagesFirstAndProfileLast() {
 
 	s.Require().NoError(s.account.Delete(s.T().Context()))
 
-	s.Equal([]string{"images", "builds", "keyboards", "switches", "keycap sets", "profile"}, s.order)
+	s.Equal([]string{"builds", "keyboards", "switches", "keycap sets", "images", "profile"}, s.order)
 }
 
-func (s *DeleteSuite) TestImageDeleteFails_NoRecordDeleted() {
+func (s *DeleteSuite) TestImageDeleteFails_ProfileKept() {
+	s.builds.EXPECT().DeleteAll(mock.Anything).Return(nil)
+	s.keyboards.EXPECT().DeleteAll(mock.Anything).Return(nil)
+	s.switches.EXPECT().DeleteAll(mock.Anything).Return(nil)
+	s.sets.EXPECT().DeleteAll(mock.Anything).Return(nil)
 	s.images.EXPECT().DeleteAll(mock.Anything).Return(errors.New("s3 down"))
 
 	s.Require().Error(s.account.Delete(s.T().Context()))
 }
 
-func (s *DeleteSuite) TestItemDeleteFails_ProfileKept() {
-	s.images.EXPECT().DeleteAll(mock.Anything).Return(nil)
+func (s *DeleteSuite) TestItemDeleteFails_ImagesAndProfileKept() {
 	s.builds.EXPECT().DeleteAll(mock.Anything).Return(nil)
 	s.keyboards.EXPECT().DeleteAll(mock.Anything).Return(errors.New("dynamo down"))
 
