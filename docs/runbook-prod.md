@@ -179,7 +179,7 @@ A `kbdb-migrate dump` (next section) is the only backup of an account's images.
 
 ### Running `kbdb-migrate` against prod
 
-`kbdb-migrate login` and `dump --impersonate` work against prod because the Stytch Live project allows `http://localhost:8765`. Don't remove it.
+`dump --impersonate` works against prod because the Stytch Live project has `http://localhost:8765/impersonate` as its default Login redirect URL and `http://localhost:8765` as an authorized SDK domain. Don't remove them. `kbdb-migrate login` needs neither: its redirect is registered on the OAuth client it creates.
 
 ```sh
 mise run migrate-build
