@@ -56,6 +56,7 @@ func (c *VerifyCmd) Run(ctx context.Context) error {
 		name string
 		run  func() []verifyResult
 	}{
+		{"profile", func() []verifyResult { return verifyProfile(ctx, client, c.In) }},
 		{"keyboards", func() []verifyResult { return verifyKeyboards(ctx, client, c.In, &m) }},
 		{"switches", func() []verifyResult { return verifySwitches(ctx, client, c.In, &m) }},
 		{"keycap-sets", func() []verifyResult { return verifyKeycapSets(ctx, client, c.In, &m) }},
@@ -102,7 +103,7 @@ func jsonScalars(raw []byte, dropKeys ...string) (map[string]any, error) {
 }
 
 // dropCurrency removes every currency key: it comes from the owner's
-// profile, which restore doesn't carry over.
+// profile, which is checked on its own and which a dump may not have.
 func dropCurrency(v any) {
 	switch t := v.(type) {
 	case map[string]any:

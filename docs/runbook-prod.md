@@ -179,7 +179,7 @@ A `kbdb-migrate dump` (next section) is the only backup of an account's images.
 
 ### Running `kbdb-migrate` against prod
 
-`kbdb-migrate login` works against prod because the Stytch Live project allows `http://localhost:8765`. Don't remove it.
+`kbdb-migrate login` and `dump --impersonate` work against prod because the Stytch Live project allows `http://localhost:8765`. Don't remove it.
 
 ```sh
 mise run migrate-build
@@ -188,6 +188,10 @@ bin/kbdb-migrate dump --issuer https://auth.mykeebs.info --base-url https://api.
 ```
 
 After a `restore`, run `verify`. See [`kbdb-migrate`](../CONTRIBUTING.md#backing-up--moving-a-users-data-kbdb-migrate) for the full tool.
+
+### Exporting a user's data on request
+
+Use `dump --impersonate` to dump their account; see [Exporting another user's account](../CONTRIBUTING.md#exporting-another-users-account). Turn **Allow user impersonation** on in the Stytch Live dashboard only for the export, and off again straight after.
 
 ## Decommissioning prod
 
