@@ -1,13 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: >
-  One-time-per-account bootstrap (kbdb-ci only): the GitHub Actions OIDC
-  identity provider and the IAM role ci.yml's functional-test job and
-  teardown.yml both assume via aws-actions/configure-aws-credentials - no
-  long-lived AWS keys stored as GitHub secrets. Neither resource can be
-  created by CI itself (CI has no credentials until this trust relationship
-  exists), so this is deployed once via `aws cloudformation deploy`, by a
-  human operator with the kbdb-ci-admin profile, same as the other
-  bootstrap/*.yaml templates.
+Description: Bootstrap (kbdb-ci) - GitHub Actions OIDC provider and CI deploy role
 
 Resources:
   GitHubOidcProvider:
@@ -34,11 +26,6 @@ Resources:
             Condition:
               StringEquals:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
-                # A pull_request-triggered workflow's sub claim is this exact
-                # literal (not a branch-name/wildcard pattern) - verified
-                # against a real GitHub Actions run before this template was
-                # written, per the design plan's explicit requirement not to
-                # trust the documented value blind.
                 token.actions.githubusercontent.com:sub: repo:rogueserenity/kbdb:pull_request
       Policies:
         - PolicyName: kbdb-ci-deploy-permissions
@@ -60,12 +47,6 @@ Resources:
                   - cloudformation:DeleteChangeSet
                   - cloudformation:ListStackResources
                   - cloudformation:GetTemplate
-                  # Only surfaces on a stack *update* (sam deploy against an
-                  # already-existing stack from a prior successful run, e.g.
-                  # a second push to the same PR) - SAM calls this to
-                  # validate/summarize the template's parameters before
-                  # creating the changeset, which the first-ever create
-                  # doesn't seem to exercise the same way.
                   - cloudformation:GetTemplateSummary
                 Resource: !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/kbdb-pr-*/*
               - Sid: BudgetsScoped
@@ -73,49 +54,25 @@ Resources:
                 Action:
                   - budgets:ViewBudget
                   - budgets:ModifyBudget
-                  # CloudFormation tags every resource it creates (SAM/stack
-                  # metadata tags), including CostBudget - required alongside
-                  # ModifyBudget whenever a budget is created/updated with
-                  # tags, per AWS's own action reference.
                   - budgets:TagResource
-                  # A genuinely distinct action from ModifyBudget, not implied
-                  # by it - confirmed via aws iam simulate-principal-policy
-                  # (DeleteBudget denied while ModifyBudget was allowed for
-                  # the same principal/resource before this was added).
-                  # Needed for teardown.yml's delete-stack call to clean up
-                  # a kbdb-pr-<N> stack's CostBudget resource.
                   - budgets:DeleteBudget
-                # Budgets ARNs have no region segment (a global/account-level
-                # service). CloudFormation auto-generates the budget name as
-                # <LogicalResourceId>-<region>-<timestamp>-<random> - scoped
-                # to the CostBudget-* prefix template.yaml's logical resource
-                # id (CostBudget) always produces, not a literal name (which
-                # isn't known ahead of any given stack's creation).
                 Resource: !Sub arn:aws:budgets::${AWS::AccountId}:budget/CostBudget-*
               - Sid: BudgetsDependentActions
                 Effect: Allow
-                # AWS's own action-reference docs list these as dependent
-                # actions required alongside budgets:ModifyBudget/ViewBudget
-                # (iam:CreateServiceLinkedRole for ModifyBudget,
-                # billing:GetBillingViewData for ViewBudget) - neither is
-                # ARN-scopable to a specific budget/stack.
                 Action:
                   - iam:CreateServiceLinkedRole
                   - billing:GetBillingViewData
                 Resource: '*'
+              # Read-only for bootstrap-check. Never grant writes to these stacks.
+              - Sid: BootstrapTemplates
+                Effect: Allow
+                Action: cloudformation:GetTemplate
+                Resource:
+                  - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/kbdb-stack-boundary/*
+                  - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/kbdb-ci-oidc/*
               - Sid: CloudFormationServerlessTransform
                 Effect: Allow
                 Action: cloudformation:CreateChangeSet
-                # template.yaml's Transform: AWS::Serverless-2016-10-31 means
-                # CloudFormation must itself invoke this macro/transform
-                # resource to expand SAM shorthand into raw CloudFormation as
-                # part of CreateChangeSet - a separate ARN (a transform, not a
-                # stack) that the CloudFormationDeploy statement's
-                # stack-scoped Resource above doesn't cover. This is an AWS
-                # account-owned, always-the-same-ARN resource, not
-                # kbdb-pr-*-scoped, since the transform itself isn't
-                # per-stack. AWS::Include pulls api/gateway.gen.yaml into
-                # HttpApi's definition the same way.
                 Resource:
                   - !Sub arn:aws:cloudformation:${AWS::Region}:aws:transform/Serverless-2016-10-31
                   - !Sub arn:aws:cloudformation:${AWS::Region}:aws:transform/Include
@@ -128,17 +85,6 @@ Resources:
               - Sid: ApiGatewayManagement
                 Effect: Allow
                 Action: apigateway:*
-                # API Gateway v2 management-plane ARNs are keyed by an opaque,
-                # randomly-generated API ID (arn:...:apigateway:region::/apis/api-id/*),
-                # not a name derived from the stack - unlike Lambda/CloudFormation,
-                # there is no kbdb-pr-*-based pattern to scope to. Creating a
-                # new API is a PUT against the bare /apis collection endpoint
-                # (no trailing slash/ID - the ID doesn't exist yet), distinct
-                # from /apis/<id>/* used for an already-existing API's
-                # sub-resources; tagging calls go through a further separate
-                # /tags/<url-encoded-resource-arn> path. All three needed
-                # covering, confirmed by three separate real AccessDenied
-                # errors in CI rather than assumed upfront.
                 Resource:
                   - !Sub arn:aws:apigateway:${AWS::Region}::/apis
                   - !Sub arn:aws:apigateway:${AWS::Region}::/apis/*
@@ -157,8 +103,6 @@ Resources:
                   - iam:GetRolePolicy
                   - iam:TagRole
                   - iam:UntagRole
-                  # Sets bootstrap/stack-boundary.yaml's boundary on a role
-                  # that predates it in template.yaml.
                   - iam:PutRolePermissionsBoundary
                 Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/kbdb-pr-*
               - Sid: ArtifactBucket
@@ -170,9 +114,6 @@ Resources:
                 Resource:
                   - !Sub arn:aws:s3:::kbdb-sam-artifacts-${AWS::AccountId}
                   - !Sub arn:aws:s3:::kbdb-sam-artifacts-${AWS::AccountId}/*
-              # Fixed bucket (bootstrap/jwks-bucket.yaml) - no
-              # CreateBucket/DeleteBucket, unlike ImagesBucketManagement
-              # below.
               - Sid: JwksBucket
                 Effect: Allow
                 Action:
@@ -208,45 +149,20 @@ Resources:
                   - s3:GetObject
                   - s3:PutObject
                   - s3:DeleteObject
-                  # The functional test reads the moderation function's
-                  # expiry tag back off rejected images.
                   - s3:GetObjectTagging
                 Resource: !Sub arn:aws:s3:::kbdb-images-${AWS::AccountId}-kbdb-pr-*/*
               - Sid: EcrAuth
                 Effect: Allow
                 Action: ecr:GetAuthorizationToken
-                # AWS hard requirement - GetAuthorizationToken must be
-                # Resource: "*", cannot be scoped to a specific repo.
                 Resource: '*'
               - Sid: EcrPublicAuth
                 Effect: Allow
                 Action: ecr-public:GetAuthorizationToken
-                # Authenticating to public.ecr.aws (functions/api/Dockerfile's
-                # base images) raises the effective anonymous-pull rate limit,
-                # which shared GitHub-hosted runner IPs otherwise hit
-                # ("toomanyrequests: Rate exceeded"). Separate IAM action
-                # namespace from private ECR's ecr:GetAuthorizationToken above;
-                # also a hard Resource: "*" requirement.
                 Resource: '*'
               - Sid: EcrPublicStsToken
                 Effect: Allow
                 Action: sts:GetServiceBearerToken
-                # No Condition: the sts:GetServiceBearerToken call for ECR
-                # Public happens server-side inside ECR Public's own backend
-                # (aws-actions/amazon-ecr-login never calls STS directly),
-                # so there's no documented/verifiable sts:AWSServiceName
-                # value to condition on. AWS's own canonical example policy
-                # for this permission has no Condition at all - matching it
-                # exactly rather than guessing a value by analogy (which is
-                # what caused this to fail: ecr-public.amazonaws.com is not
-                # a confirmed real value).
                 Resource: '*'
-              # template.yaml's SwitchTable/KeyboardTable/KeycapSetTable.
-              # PutItem/DeleteItem are for the functional test, which
-              # seeds/cleans up fixture rows under this same assumed role.
-              # Not stack-scoped like Lambda/IAM above (table names are
-              # CloudFormation-generated), so scoped to kbdb-pr-*-prefixed
-              # tables instead.
               - Sid: DynamoDbScoped
                 Effect: Allow
                 Action:
@@ -267,7 +183,6 @@ Resources:
                   - logs:DeleteLogGroup
                   - logs:PutRetentionPolicy
                   - logs:TagResource
-                  # template.yaml's AccountDeleteNoticeFailedFilter.
                   - logs:PutMetricFilter
                   - logs:DeleteMetricFilter
                   - logs:DescribeMetricFilters
@@ -275,10 +190,6 @@ Resources:
                   - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-api-kbdb-pr-*
                   - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-moderate-kbdb-pr-*
                   - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/apigateway/kbdb-api-kbdb-pr-*
-              # template.yaml's ModerationDLQ, named
-              # <StackName>-ModerationDLQ-<random>, and the queue the
-              # functional tests subscribe to the alarm topic
-              # (test/functional/support/notices).
               - Sid: SqsScoped
                 Effect: Allow
                 Action:
@@ -292,8 +203,6 @@ Resources:
                   - sqs:ReceiveMessage
                   - sqs:DeleteMessage
                 Resource: !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:kbdb-pr-*
-              # template.yaml's AlarmTopic and alarms. Subscribe and
-              # Unsubscribe are also the functional tests' own queue.
               - Sid: AlarmTopic
                 Effect: Allow
                 Action:
@@ -344,11 +253,6 @@ Resources:
                   - ecr:DescribeRepositories
                   - ecr:ListImages
                   - ecr:BatchDeleteImage
-                  # Per AWS's own Lambda-container-image docs: for a
-                  # same-account function+repo, Lambda auto-configures the
-                  # repository policy granting itself pull access as part of
-                  # CreateFunction - but only if the principal calling
-                  # CreateFunction (this role) also has these two.
                   - ecr:GetRepositoryPolicy
                   - ecr:SetRepositoryPolicy
                 Resource: !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/kbdb-api
