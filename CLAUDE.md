@@ -36,7 +36,7 @@ Transports (each maps to shared logic rather than holding its own):
 - `router/` — wires handlers + middleware into the application's `http.Handler`. No logic of its own.
 - `gatewayroutes/` — generates `api/gateway.gen.yaml`, the API Gateway routes `template.yaml` includes, from `api/openapi.yaml` (each operation's `security` decides whether the gateway's JWT authorizer applies). A new REST route needs only the spec and `router.go`, then `mise run gen`; a route outside the spec goes in `extraRoutes`. Never add SAM `HttpApi` events: each adds a resource-policy statement, and ApiFunction's policy hit Lambda's 20 KB limit.
 - `mcp/` — MCP server over the official `modelcontextprotocol/go-sdk`, reusing the same `auth.Verifier` as REST. `mcp/schema/` holds the tool types.
-- `consent/` — the IdP consent page served at `GET /authorize` (plus logout), so MCP clients can authenticate standalone.
+- `consent/` — the IdP consent page served at `GET /authorize`, which also handles OIDC logout requests, so MCP clients can authenticate standalone.
 - `legal/` — the privacy policy and terms of service at `GET /privacy` and `GET /terms`. Served here, not by mykeebs-web, because they cover MCP and REST too. The privacy policy names the processors and retention periods in `template.yaml`; change it when those change.
 - `pagebrand/` — the logo, favicon and theme tokens that `consent/` and `legal/` pages embed inline.
 - `problem/` — RFC 9457 Problem Details responses.

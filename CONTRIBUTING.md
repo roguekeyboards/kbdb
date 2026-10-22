@@ -124,10 +124,6 @@ Test is for dev/personal stacks only — never point a dev stack at a live/produ
 
 A comma-separated list of browser origins (each scheme + host + port) allowed to call your stack's `HttpApi` cross-origin, e.g. `http://localhost:5173,https://jay.mykeebs.dev` to cover both a local frontend dev server and its deployed counterpart. Without this, browser preflight (`OPTIONS`) requests 404 before the authorizer is ever reached — API Gateway auto-generates CORS `OPTIONS` routes and exempts them from the JWT authorizer only when `HttpApi.Properties.CorsConfiguration` is set.
 
-### Logout return origins (`LogoutReturnOrigins`)
-
-A comma-separated list of browser origins `GET /logout` is allowed to redirect back to via its `return_to` param (see `internal/consent`), same format as `CorsAllowOrigins` above. `/logout` revokes the IdP session on this stack's own origin (something `mykeebs-web`'s `signOut()` can't do itself, since the session lives on a different origin than `mykeebs-web`), then redirects to `return_to` — restricted to this allowlist so it isn't an open redirect.
-
 ### Custom domain (`api.<your-name>.mykeebs.dev`)
 
 Optional. `template.yaml`'s `CustomDomainName`/`CustomDomainCertificateArn` parameters (both default to empty) map a stack to a stable domain instead of its default `execute-api.amazonaws.com` URL. `<your-name>.mykeebs.dev` itself is intentionally left free (e.g. for a future web UI hosted elsewhere, like Render) - `api.` is a real subdomain label in front of your name, not a wildcard-coverable suffix of it, so `*.mykeebs.dev` does **not** match `api.jay.mykeebs.dev` (wildcards only cover one label deep). Each developer needs their own certificate for their own `api.<name>.mykeebs.dev`, not one shared wildcard.

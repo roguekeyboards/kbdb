@@ -131,7 +131,6 @@ sam deploy \
     "OidcAudience=$AUDIENCE" \
     "IdpConsentPublicToken=public-token-test-local-kbdb" \
     "CorsAllowOrigins=http://localhost:5173" \
-    "LogoutReturnOrigins=http://localhost:5173" \
     "DailyUploadLimit=1000000" \
     "ApiReservedConcurrency=50"
 

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <!--
-  This page and logout.html are the only IdP-specific code in kbdb: they
-  embed the deployment's IdP browser SDK (currently Stytch's @stytch/vanilla-js)
-  by its own symbol and custom-element names. Swapping IdPs means rewriting
-  these two files; nothing else in the codebase references the IdP by name.
+  This page is the only IdP-specific code in kbdb: it embeds the deployment's
+  IdP browser SDK (currently Stytch's @stytch/vanilla-js) by its own symbol and
+  custom-element names. Swapping IdPs means rewriting this file; nothing else
+  in the codebase references the IdP by name.
 -->
 <html>
 <head>
@@ -149,17 +149,33 @@
       idp.render({ client: idpClient, presentation });
     }
 
+    // The identity provider component checks post_logout_redirect_uri
+    // against the client's allowed logout URLs.
+    function showLogout() {
+      document.getElementById('status').textContent = '';
+      document.getElementById('login-el').style.display = 'none';
+      const idp = document.getElementById('idp-el');
+      idp.style.display = 'block';
+      idp.render({ client: idpClient, presentation });
+    }
+
     async function render() {
       try {
-        // Discord's redirect back overwrites our OAuth query params with
-        // the IdP's own (?token=...) - save/restore via localStorage.
         let params = new URLSearchParams(window.location.search);
 
+        if (params.has('post_logout_redirect_uri')) {
+          showLogout();
+          return;
+        }
+
+        // Discord's redirect back overwrites our OAuth query params with
+        // the IdP's own (?token=...) - save/restore via localStorage.
         if (params.has('client_id')) {
           localStorage.setItem('kbdb_oauth_qs', window.location.search);
         } else if (params.has('token')) {
           await idpClient.authenticateByUrl({ session_duration_minutes: 60 });
           const savedQs = localStorage.getItem('kbdb_oauth_qs');
+          localStorage.removeItem('kbdb_oauth_qs');
           if (savedQs) {
             window.history.replaceState({}, '', window.location.pathname + savedQs);
             params = new URLSearchParams(savedQs);

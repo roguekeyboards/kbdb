@@ -36,15 +36,6 @@ Parameters:
       This deployment's IdP browser-SDK public token, rendered into the GET
       /authorize consent page (see internal/consent). Safe to embed
       client-side by design.
-  LogoutReturnOrigins:
-    Type: String
-    Description: >-
-      Comma-separated browser origins (each scheme + host + port, e.g.
-      http://localhost:5173,https://jay.mykeebs.dev) GET /logout is allowed
-      to redirect back to via its return_to param - see internal/consent.
-      Typically mykeebs-web's dev server and/or its deployed counterpart.
-      Kept as a plain string (not CommaDelimitedList) since it's only ever
-      passed straight through to LOGOUT_RETURN_ORIGINS below.
   CustomDomainName:
     Type: String
     Default: ''
@@ -702,7 +693,6 @@ Resources:
           OIDC_ISSUER_URL: !Ref OidcIssuerBaseUrl
           OIDC_AUDIENCE: !Ref OidcAudience
           IDP_CONSENT_PUBLIC_TOKEN: !Ref IdpConsentPublicToken
-          LOGOUT_RETURN_ORIGINS: !Ref LogoutReturnOrigins
           IMAGES_BUCKET_NAME: !Ref ImagesBucket
           PRESIGN_ROLE_ARN: !GetAtt PresignSigningRole.Arn
           SWITCH_TABLE_NAME: !Ref SwitchTable

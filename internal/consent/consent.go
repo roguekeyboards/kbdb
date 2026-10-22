@@ -1,7 +1,8 @@
 // Package consent hosts the IdP consent/authorization page kbdb serves
-// at GET /authorize, so MCP clients can authenticate against kbdb
-// standalone without depending on mykeebs-web being deployed. The embedded
-// HTML wires up whatever IdP browser SDK the deployment uses.
+// at GET /authorize, which also handles OIDC logout requests, so MCP
+// clients can authenticate against kbdb standalone without depending on
+// mykeebs-web being deployed. The embedded HTML wires up whatever IdP
+// browser SDK the deployment uses.
 package consent
 
 import (
@@ -29,7 +30,7 @@ type templateData struct {
 	Brand                 pagebrand.Brand
 }
 
-// Handler serves GET /authorize: kbdb's IdP consent/login page.
+// Handler serves GET /authorize: kbdb's IdP consent, login and logout page.
 func Handler(idpConsentPublicToken, oidcIssuerBaseURL string) http.Handler {
 	var buf bytes.Buffer
 	data := templateData{
