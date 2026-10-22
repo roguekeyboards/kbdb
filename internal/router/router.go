@@ -33,9 +33,8 @@ import (
 // Metadata (the OIDC issuer MCP clients should authenticate against); the
 // metadata's "resource" field is derived per-request rather than passed in
 // statically — see [github.com/rogueserenity/kbdb/internal/mcp.Handlers]
-// for why. idpConsentPublicToken configures the GET /authorize consent page and
-// GET /logout (see internal/consent); logoutReturnOrigins restricts
-// /logout's return_to param. version is advertised to MCP clients in the
+// for why. idpConsentPublicToken configures the GET /authorize consent
+// page (see internal/consent). version is advertised to MCP clients in the
 // server's initialize handshake.
 func New(
 	verifier *auth.Verifier,
@@ -53,7 +52,6 @@ func New(
 	deleteNotices accountdelete.Notifier,
 	uploads *uploadlimit.Limiter,
 	issuerURL, idpConsentPublicToken, version string,
-	logoutReturnOrigins []string,
 ) http.Handler {
 	validate := restOpenAPIValidator()
 
@@ -89,7 +87,6 @@ func New(
 	// Not part of api/openapi.yaml, so not wrapped in validate - see
 	// internal/consent and internal/legal.
 	mux.Handle("GET /authorize", consent.Handler(idpConsentPublicToken, issuerURL))
-	mux.Handle("GET /logout", consent.LogoutHandler(idpConsentPublicToken, issuerURL, logoutReturnOrigins))
 	mux.Handle("GET /privacy", legal.PrivacyHandler())
 	mux.Handle("GET /terms", legal.TermsHandler())
 

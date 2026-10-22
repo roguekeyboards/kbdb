@@ -1,5 +1,5 @@
 // Package brand holds mykeebs' logo, icons and design tokens for Go code
-// that serves pages (the consent, logout and legal pages), so they embed the
+// that serves pages (the consent and legal pages), so they embed the
 // same artwork and colours the web app uses rather than copying them.
 //
 // The source of truth is tokens.json (colours and font stacks) plus the

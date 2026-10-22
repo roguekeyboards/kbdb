@@ -12,10 +12,7 @@ type Config struct {
 	// The IdP's browser-SDK public token, rendered into the GET /authorize
 	// consent page - see internal/consent.
 	IDPConsentPublicToken string `env:"IDP_CONSENT_PUBLIC_TOKEN" required:""`
-	// Comma-separated origins GET /logout may redirect back to - see
-	// internal/consent.
-	LogoutReturnOrigins string `env:"LOGOUT_RETURN_ORIGINS" required:""`
-	ImagesBucketName    string `env:"IMAGES_BUCKET_NAME" required:""`
+	ImagesBucketName      string `env:"IMAGES_BUCKET_NAME" required:""`
 	// Role assumed solely to sign presigned GET URLs. Lambda's own
 	// credentials carry no expiry the SDK can see, so a URL signed with them
 	// can't be bounded to their real lifetime; an assumed role returns an
