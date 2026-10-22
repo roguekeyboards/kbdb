@@ -5,7 +5,7 @@ package main
 // test/functional/support/env.go) as well as a flag, so it can be driven
 // either way.
 type CLI struct {
-	Login   LoginCmd   `cmd:"" help:"Obtain an access token via a browser OAuth flow (Discord or email OTP) and cache it."`
+	Login   LoginCmd   `cmd:"" help:"Obtain an access token via a browser OAuth flow (Discord) and cache it."`
 	Dump    DumpCmd    `cmd:"" help:"Download your profile and every entity you own, plus their images, into a local directory."`
 	Restore RestoreCmd `cmd:"" help:"Recreate a dump's entities and images in the target environment."`
 	Verify  VerifyCmd  `cmd:"" help:"Check a restored environment against the dump (fields and image hashes)."`
