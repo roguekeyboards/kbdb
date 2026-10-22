@@ -29,12 +29,7 @@ type DynamoTable struct {
 func NewDynamoTable(ctx context.Context, tableName string) *DynamoTable {
 	endpoint := support.DynamoDBEndpointURL()
 
-	opts := []func(*awsconfig.LoadOptions) error{}
-	if endpoint != "" {
-		opts = append(opts, awsconfig.WithRegion("us-east-2"))
-	}
-
-	awsCfg, err := awsconfig.LoadDefaultConfig(ctx, opts...)
+	awsCfg, err := awsconfig.LoadDefaultConfig(ctx)
 	if err != nil {
 		panic(err) // config loading failing is an environment problem, not a per-spec one
 	}

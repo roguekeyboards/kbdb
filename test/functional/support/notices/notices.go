@@ -32,7 +32,7 @@ type Listener struct {
 // Listen creates a queue, lets the alarm topic send to it, and subscribes
 // it. Close removes both.
 func Listen(ctx context.Context) (*Listener, error) {
-	cfg, err := awsconfig.LoadDefaultConfig(ctx, awsconfig.WithRegion("us-east-2"))
+	cfg, err := awsconfig.LoadDefaultConfig(ctx)
 	if err != nil {
 		return nil, err
 	}
