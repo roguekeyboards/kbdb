@@ -6,7 +6,7 @@ package main
 // either way.
 type CLI struct {
 	Login   LoginCmd   `cmd:"" help:"Obtain an access token via a browser OAuth flow (Discord or email OTP) and cache it."`
-	Dump    DumpCmd    `cmd:"" help:"Download every entity you own plus its images into a local directory."`
+	Dump    DumpCmd    `cmd:"" help:"Download your profile and every entity you own, plus their images, into a local directory."`
 	Restore RestoreCmd `cmd:"" help:"Recreate a dump's entities and images in the target environment."`
 	Verify  VerifyCmd  `cmd:"" help:"Check a restored environment against the dump (fields and image hashes)."`
 }
@@ -20,13 +20,16 @@ type LoginCmd struct {
 	Port     int    `default:"8765" help:"Localhost port for the redirect listener. Must match a registered redirect URI; 8765 is the one kbdb provisions."`
 }
 
-// DumpCmd walks every collection the token's subject owns and writes a
-// directory-per-item tree under Out.
+// DumpCmd walks the profile and every collection the token's subject owns and
+// writes a directory-per-item tree under Out.
 type DumpCmd struct {
-	BaseURL string `env:"KBDB_API_BASE_URL" required:"" help:"API base URL, e.g. https://api.jay.mykeebs.dev."`
-	Token   string `env:"KBDB_AUTH_TOKEN" help:"Bearer token. Overrides the login cache. If unset, the login cache for --issuer is used."`
-	Issuer  string `env:"KBDB_OIDC_ISSUER_BASE_URL" help:"Issuer whose login-cache entry to use when --token is unset."`
-	Out     string `required:"" type:"path" help:"Output directory for the dump."`
+	BaseURL     string `env:"KBDB_API_BASE_URL" required:"" help:"API base URL, e.g. https://api.jay.mykeebs.dev."`
+	Token       string `env:"KBDB_AUTH_TOKEN" help:"Bearer token. Overrides the login cache. If unset, the login cache for --issuer is used. Ignored with --impersonate."`
+	Issuer      string `env:"KBDB_OIDC_ISSUER_BASE_URL" help:"Issuer whose login-cache entry to use when --token is unset. With --impersonate, the issuer the impersonation token is exchanged through."`
+	Impersonate bool   `help:"Dump the account a Stytch dashboard 'Impersonate user' opens, instead of your own. Needs --issuer and --public-token."`
+	PublicToken string `env:"KBDB_IDP_PUBLIC_TOKEN" help:"The Stytch project's public token (IdpConsentPublicToken in samconfig.toml), for --impersonate."`
+	Port        int    `default:"8765" help:"Localhost port for the --impersonate redirect listener. Must match the Stytch project's default Login redirect URL."`
+	Out         string `required:"" type:"path" help:"Output directory for the dump."`
 }
 
 // RestoreCmd recreates the entities and images in a dump directory in the

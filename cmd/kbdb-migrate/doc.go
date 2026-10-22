@@ -1,11 +1,12 @@
-// Command kbdb-migrate dumps every entity a user owns (keyboards, switches,
-// keycap sets, builds) and every associated S3 image to a local directory, and
-// restores such a dump into another environment through the same public REST
-// API.
+// Command kbdb-migrate dumps a user's profile and every entity they own
+// (keyboards, switches, keycap sets, builds), with every associated S3 image,
+// to a local directory, and restores such a dump into another environment
+// through the same public REST API.
 //
 // It exists to take a complete, verifiable offline copy before a
 // backwards-incompatible data-model change, and doubles as a way to move a
-// user's data between environments (dev to prod, either direction).
+// user's data between environments (dev to prod, either direction) and to
+// export someone else's account for a data request (dump --impersonate).
 //
 // # Why cmd/
 //
@@ -20,7 +21,8 @@
 // # Subcommands
 //
 //	kbdb-migrate login    - obtain an access token via browser OAuth (Discord / email OTP)
-//	kbdb-migrate dump      - download every entity + image into --out
+//	kbdb-migrate dump      - download the profile + every entity + image into --out
+//	                         (--impersonate: as the user a Stytch dashboard impersonation opens)
 //	kbdb-migrate restore   - recreate a dump's entities + images in --base-url's environment
 //	kbdb-migrate verify    - check a restore against the dump (fields + image hashes)
 //
@@ -30,11 +32,12 @@
 // dump captures lookups/lookups.json for reference and diffing only, and
 // restore ignores it.
 //
-// It does not dump or restore the profile. A profile's username is globally
-// unique and identity-bound: moving data between two accounts means both
-// accounts exist, so the source username is already taken and can't be
-// recreated under the target without renaming or colliding. Profiles are set
-// up per account by hand.
+// It never renames a profile. Restoring into an account with no profile
+// creates one with the dumped username, and fails before writing anything if
+// another account already has that username. Restoring into an account that
+// has a profile replaces its fields, and its avatar if the dump has one, but
+// keeps its username, which is what moving data between two accounts in one
+// environment needs.
 //
 // It uses no AWS credentials. Image bytes move over presigned URLs the REST
 // API mints, so it works identically against any environment the caller can

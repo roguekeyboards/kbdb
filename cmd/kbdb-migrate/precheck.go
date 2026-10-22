@@ -49,13 +49,14 @@ func checkImageLimits(dumpDir string) error {
 		}
 	}
 
-	var singleSlotDirs []string
+	type singleSlot struct{ dir, name string }
+	singleSlots := []singleSlot{{filepath.Join(dumpDir, profileDir), "avatar"}}
 	switchIDs, err := itemDirs(dumpDir, "switches")
 	if err != nil {
 		return err
 	}
 	for _, id := range switchIDs {
-		singleSlotDirs = append(singleSlotDirs, filepath.Join(dumpDir, "switches", id))
+		singleSlots = append(singleSlots, singleSlot{filepath.Join(dumpDir, "switches", id), "image"})
 	}
 	setIDs, err := itemDirs(dumpDir, "keycap-sets")
 	if err != nil {
@@ -68,11 +69,11 @@ func checkImageLimits(dumpDir string) error {
 			return err
 		}
 		for _, kitID := range kitIDs {
-			singleSlotDirs = append(singleSlotDirs, filepath.Join(setDir, "kits", kitID))
+			singleSlots = append(singleSlots, singleSlot{filepath.Join(setDir, "kits", kitID), "image"})
 		}
 	}
-	for _, dir := range singleSlotDirs {
-		manifestPath := filepath.Join(dir, "image.manifest.json")
+	for _, slot := range singleSlots {
+		manifestPath := filepath.Join(slot.dir, slot.name+".manifest.json")
 		if _, err := os.Stat(manifestPath); errors.Is(err, os.ErrNotExist) {
 			continue
 		}
@@ -80,7 +81,7 @@ func checkImageLimits(dumpDir string) error {
 		if err := readJSONFile(manifestPath, &entry); err != nil {
 			return err
 		}
-		problem, err := checkImageSize(filepath.Join(dir, entry.Filename))
+		problem, err := checkImageSize(filepath.Join(slot.dir, entry.Filename))
 		if err != nil {
 			return err
 		}

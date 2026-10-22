@@ -15,8 +15,8 @@ import (
 )
 
 // Run executes the restore. A re-run resumes: it skips whatever id-map.json
-// records, and re-uploads a single-slot image (switch, kit) the restored item
-// is missing. A crash between a create and its id-map save leaves one
+// records, re-uploads a single-slot image (switch, kit) the restored item is
+// missing, and writes the profile again. A crash between a create and its id-map save leaves one
 // duplicate item.
 func (c *RestoreCmd) Run(ctx context.Context) error {
 	token, err := resolveToken(c.Token, c.Issuer)
@@ -44,6 +44,9 @@ func (c *RestoreCmd) Run(ctx context.Context) error {
 
 	fmt.Printf("restoring into %s (subject %s)\n\n", client.baseURL, client.subject)
 
+	if err := restoreProfile(ctx, client, c.In); err != nil {
+		return err
+	}
 	if err := restoreKeyboards(ctx, client, c.In, m); err != nil {
 		return err
 	}
@@ -53,8 +56,12 @@ func (c *RestoreCmd) Run(ctx context.Context) error {
 	if err := restoreKeycapSets(ctx, client, c.In, m); err != nil {
 		return err
 	}
-	// Profiles are intentionally not restored - see the package doc.
 	if err := restoreBuilds(ctx, client, c.In, m); err != nil {
+		return err
+	}
+	// Saved even when nothing above created an item (a dump with only a
+	// profile), since verify needs it.
+	if err := m.save(); err != nil {
 		return err
 	}
 

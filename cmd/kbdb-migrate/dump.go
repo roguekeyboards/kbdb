@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -18,7 +19,7 @@ type imageRef struct {
 
 // entitySpec describes one simple dumpable collection (one whose GET body maps
 // straight to a dump directory: keyboards, switches, builds). Keycap sets and
-// the profile need bespoke handling and don't use this.
+// the profile (profile.go) need bespoke handling and don't use this.
 type entitySpec struct {
 	// name is both the dump subdirectory and the /v1/users/{sub}/ suffix.
 	name string
@@ -84,7 +85,7 @@ func singleImageRef(body []byte) ([]imageRef, error) {
 
 // Run executes the dump.
 func (c *DumpCmd) Run(ctx context.Context) error {
-	token, err := resolveToken(c.Token, c.Issuer)
+	token, err := c.token(ctx)
 	if err != nil {
 		return err
 	}
@@ -119,9 +120,14 @@ func (c *DumpCmd) Run(ctx context.Context) error {
 	counts["keycap_sets"] = ksCount
 	totalImages += ksImgs
 
-	// Profiles are intentionally not dumped or restored: the username is
-	// globally unique and identity-bound, so it can't be recreated under a
-	// different account without renaming or colliding. See the package doc.
+	hasProfile, avatars, err := dumpProfile(ctx, client, c.Out)
+	if err != nil {
+		return err
+	}
+	if hasProfile {
+		counts["profile"] = 1
+	}
+	totalImages += avatars
 
 	buildsN, buildsImgs, err := dumpSimpleCollection(ctx, client, c.Out, buildsSpec)
 	if err != nil {
@@ -149,13 +155,25 @@ func (c *DumpCmd) Run(ctx context.Context) error {
 	fmt.Printf("\ndump complete\n")
 	fmt.Printf("  source:  %s (subject %s)\n", client.baseURL, client.subject)
 	fmt.Printf("  output:  %s\n\n", c.Out)
-	for _, k := range []string{"keyboards", "switches", "keycap_sets", "builds", "images"} {
+	for _, k := range []string{"profile", "keyboards", "switches", "keycap_sets", "builds", "images"} {
 		fmt.Printf("  %-12s %d\n", k, counts[k])
 	}
-	fmt.Printf("\nEach count above equals the number the API's list endpoint returned;\n")
-	fmt.Printf("cross-check against list_keyboards / list_switches / list_keycap_sets /\n")
-	fmt.Printf("list_builds if you want independent confirmation.\n")
+	fmt.Printf("\nEach collection count above equals the number the API's list endpoint\n")
+	fmt.Printf("returned; cross-check against list_keyboards / list_switches /\n")
+	fmt.Printf("list_keycap_sets / list_builds if you want independent confirmation.\n")
 	return nil
+}
+
+// token is the bearer token the dump runs as: an impersonated session's with
+// --impersonate, otherwise --token or the login cache.
+func (c *DumpCmd) token(ctx context.Context) (string, error) {
+	if !c.Impersonate {
+		return resolveToken(c.Token, c.Issuer)
+	}
+	if c.Issuer == "" || c.PublicToken == "" {
+		return "", errors.New("--impersonate needs --issuer and --public-token")
+	}
+	return impersonate(ctx, c.Issuer, c.PublicToken, c.Port)
 }
 
 // dumpSimpleCollection dumps one collection with either an images[] array or a

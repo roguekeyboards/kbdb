@@ -86,9 +86,12 @@ func (s *PrecheckSuite) TestReportsEveryProblem() {
 	s.arrayItem("builds", "b1", sizes(repository.MaxImagesPerItem+1, 100)...)
 	s.singleSlot(filepath.Join(s.dumpDir, "switches", "sw1"), 0)
 	s.singleSlot(filepath.Join(s.dumpDir, "keycap-sets", "ks1", "kits", "kit1"), repository.MaxImageSizeBytes+1)
+	avatarDir := filepath.Join(s.dumpDir, profileDir)
+	s.writeJSON(filepath.Join(avatarDir, "avatar.manifest.json"), s.writeImage(avatarDir, "avatar.png", 0))
 
 	err := checkImageLimits(s.dumpDir)
 
+	s.Require().ErrorContains(err, filepath.Join(profileDir, "avatar.png"))
 	s.Require().ErrorContains(err, filepath.Join("keyboards", "kb1", "images", "img0.png"))
 	s.Require().ErrorContains(err, "builds/b1 has 11 images")
 	s.Require().ErrorContains(err, filepath.Join("switches", "sw1", "image.png"))
