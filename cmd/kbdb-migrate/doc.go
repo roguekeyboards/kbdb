@@ -20,7 +20,7 @@
 //
 // # Subcommands
 //
-//	kbdb-migrate login    - obtain an access token via browser OAuth (Discord / email OTP)
+//	kbdb-migrate login    - obtain an access token via browser OAuth (Discord)
 //	kbdb-migrate dump      - download the profile + every entity + image into --out
 //	                         (--impersonate: as the user a Stytch dashboard impersonation opens)
 //	kbdb-migrate restore   - recreate a dump's entities + images in --base-url's environment

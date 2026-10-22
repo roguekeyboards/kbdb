@@ -59,6 +59,25 @@ Deleting a profile deletes the whole account in kbdb, but not the user's sign-in
 
 If the user signs in again later, Stytch creates a new user with a new ID, so they start with an empty account.
 
+## When someone may have got at user data
+
+This covers anyone outside the project reading or changing data they shouldn't: a leaked AWS or Stytch credential, a bug that served one user's private items to another, a breach reported by AWS, Stytch or Cloudflare. Discord's developer terms require prompt notice to Discord, and to users where the law requires it.
+
+1. Stop it first: revoke the leaked credential, or stop API traffic (see [When a budget email arrives](#when-a-budget-email-arrives)).
+2. Work out what was reachable, whose, and when, from the API logs (kept 14 days) and CloudTrail. Write it down as you go.
+3. Tell Discord through [Discord developer support](https://support-dev.discord.com/hc/en-us/requests/new): what happened, when, which data, and what you've done. Do it within days, not after the investigation is finished.
+4. Email the affected users, at the email Stytch has for them, if their private data (email, private items, photos) was exposed. GDPR's deadline to tell the regulator is 72 hours; if EU or UK users are affected, check whether that applies.
+5. Add what happened and how to stop it recurring to this runbook.
+
+## When a request about someone's data arrives
+
+The privacy policy promises an answer within 30 days. Check the request comes from the email on the account (the Stytch Live dashboard shows it under **Users**) before acting on it.
+
+- **A copy:** [Exporting a user's data on request](#exporting-a-users-data-on-request). Zip the dump and send it.
+- **A correction** they can't make themselves: the same impersonation, then edit through the API or an MCP client.
+- **Deletion:** ask them to delete their account from the site; if they can't, impersonate them and delete the profile, then follow [When an account is deleted](#when-an-account-is-deleted).
+- **Reports of someone breaking the rules:** look at what was reported, and remove it or suspend the account if it breaks the terms. Reply to say what you did.
+
 ## When a budget email arrives
 
 The budget is $10 a month, emailing at 80% and 100%. Prod normally costs pennies.
@@ -195,9 +214,9 @@ Use `dump --impersonate` to dump their account; see [Exporting another user's ac
 
 ## Decommissioning prod
 
-`mise run teardown prod` refuses on purpose. Taking prod down is a manual job, with the admin profile:
+`mise run teardown prod` refuses on purpose. Taking prod down is a manual job, with the admin profile. The terms promise users 30 days' notice first, so they can save their data, and Discord's developer terms require deleting everything received through Discord once the app stops.
 
-1. Take a `kbdb-migrate dump` of every account whose data you want to keep.
+1. Take a `kbdb-migrate dump` of every account whose data you want to keep. Don't keep those dumps once they've been restored somewhere else.
 2. Turn off deletion protection on every table:
    ```sh
    for t in $(aws dynamodb list-tables --query 'TableNames[?starts_with(@, `kbdb-prod-`)]' --output text); do
@@ -216,5 +235,6 @@ Use `dump --impersonate` to dump their account; see [Exporting another user's ac
    aws ecr delete-repository --repository-name kbdb-api-kbdb-prod --force
    ```
 5. Stop the GitHub deploys by deleting the `kbdb-prod-oidc` stack, and delete the `api.mykeebs.info` CNAME in Cloudflare.
-6. The remaining bootstrap stacks (`kbdb-bootstrap`, the artifact bucket, and `kbdb-stack-boundary`) cost nothing to keep. Delete them only if the account itself is going away.
+6. Delete the Stytch Live project, which holds everyone's Discord ID, name, avatar and email. Then delete the prod application in the Discord developer portal.
+7. The remaining bootstrap stacks (`kbdb-bootstrap`, the artifact bucket, and `kbdb-stack-boundary`) cost nothing to keep. Delete them only if the account itself is going away.
 
