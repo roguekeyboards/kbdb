@@ -109,7 +109,7 @@ func (i Items) RemainingStrayImages(ctx context.Context) ([]string, error) {
 }
 
 func s3Client(ctx context.Context) (*s3.Client, error) {
-	cfg, err := awsconfig.LoadDefaultConfig(ctx, awsconfig.WithRegion("us-east-2"))
+	cfg, err := awsconfig.LoadDefaultConfig(ctx)
 	if err != nil {
 		return nil, err
 	}

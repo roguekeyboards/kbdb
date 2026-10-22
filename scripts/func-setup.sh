@@ -8,7 +8,7 @@ set -euo pipefail
 
 export AWS_ACCESS_KEY_ID=test
 export AWS_SECRET_ACCESS_KEY=test
-export AWS_DEFAULT_REGION=us-east-2
+export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-us-east-2}"
 # sam deploy honors this (botocore reads it); there is no --endpoint-url
 # flag, which is all samlocal wraps.
 export AWS_ENDPOINT_URL="${KBDB_FLOCI_ENDPOINT:-http://localhost.floci.io:4566}"

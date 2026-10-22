@@ -144,7 +144,7 @@ func awaitMock(ctx context.Context, cfg aws.Config, probeKey string) error {
 
 // awsConfig is the SDK configuration for talking to floci.
 func awsConfig(ctx context.Context) (aws.Config, error) {
-	cfg, err := awsconfig.LoadDefaultConfig(ctx, awsconfig.WithRegion("us-east-2"))
+	cfg, err := awsconfig.LoadDefaultConfig(ctx)
 	if err != nil {
 		return aws.Config{}, err
 	}
