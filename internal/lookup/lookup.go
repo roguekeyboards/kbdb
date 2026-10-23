@@ -2,6 +2,7 @@ package lookup
 
 import (
 	"context"
+	"fmt"
 	"slices"
 )
 
@@ -12,24 +13,23 @@ type fieldCheck struct {
 	Category Category
 }
 
-// FieldError reports that Field's Value isn't an approved Category value.
+// FieldError reports that Field's Value was rejected, and why.
 type FieldError struct {
-	Field    string
-	Value    string
-	Category Category
+	Field  string
+	Value  string
+	Reason string
 }
 
-// ValidateImageContentType reports whether contentType is an approved
-// CategoryImageContentType value. It returns a FieldError, not an error,
-// when it isn't - that's an expected validation outcome, not a failure.
-func ValidateImageContentType(ctx context.Context, contentType string) *FieldError {
-	errs := validateFields(ctx, []fieldCheck{
+func notApproved(field, value string, category Category) FieldError {
+	return FieldError{Field: field, Value: value, Reason: fmt.Sprintf("%q is not an approved %s value", value, category)}
+}
+
+// ValidateImageContentType returns a FieldError if contentType isn't an
+// approved CategoryImageContentType value.
+func ValidateImageContentType(ctx context.Context, contentType string) []FieldError {
+	return validateFields(ctx, []fieldCheck{
 		{Field: "content_type", Value: contentType, Category: CategoryImageContentType},
 	})
-	if len(errs) == 0 {
-		return nil
-	}
-	return &errs[0]
 }
 
 // validateFields fetches each distinct category at most once and returns
@@ -54,7 +54,7 @@ func validateFields(ctx context.Context, checks []fieldCheck) []FieldError {
 	var errs []FieldError
 	for _, c := range checks {
 		if !slices.Contains(values[c.Category], c.Value) {
-			errs = append(errs, FieldError(c))
+			errs = append(errs, notApproved(c.Field, c.Value, c.Category))
 		}
 	}
 

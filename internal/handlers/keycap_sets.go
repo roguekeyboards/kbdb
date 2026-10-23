@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -154,44 +153,6 @@ func decodeKeycapSetInput(w http.ResponseWriter, r *http.Request) (ks repository
 	return repoapi.KeycapSet{}.ToRepo(in), true
 }
 
-// validateKeycapSetLookups writes a 400 listing every invalid field if any
-// check fails. An unset (nil) field is skipped, not treated as invalid.
-func validateKeycapSetLookups(ctx context.Context, w http.ResponseWriter, ks repository.KeycapSet) (ok bool) {
-	fieldErrs := lookup.ValidateKeycapSet(ctx, ks)
-	if len(fieldErrs) > 0 {
-		invalidParams := make([]problem.InvalidParam, len(fieldErrs))
-		for i, fe := range fieldErrs {
-			invalidParams[i] = problem.InvalidParam{
-				Name:   fe.Field,
-				Reason: fmt.Sprintf("%q is not an approved %s value", fe.Value, fe.Category),
-			}
-		}
-		problem.ValidationFailed(w, "one or more fields are not approved lookup values", invalidParams)
-		return false
-	}
-
-	return true
-}
-
-// validateKeycapKitLookups writes a 400 listing every invalid field if any
-// check fails. An unset (nil) field is skipped, not treated as invalid.
-func validateKeycapKitLookups(ctx context.Context, w http.ResponseWriter, kit repository.KeycapKit) (ok bool) {
-	fieldErrs := lookup.ValidateKeycapKit(ctx, kit)
-	if len(fieldErrs) > 0 {
-		invalidParams := make([]problem.InvalidParam, len(fieldErrs))
-		for i, fe := range fieldErrs {
-			invalidParams[i] = problem.InvalidParam{
-				Name:   fe.Field,
-				Reason: fmt.Sprintf("%q is not an approved %s value", fe.Value, fe.Category),
-			}
-		}
-		problem.ValidationFailed(w, "one or more fields are not approved lookup values", invalidParams)
-		return false
-	}
-
-	return true
-}
-
 // CreateKeycapSet reads the {userId} path value and requires an
 // authenticated caller. userId must be the caller's own subject; creating
 // in another user's collection returns 404, not 403, to avoid revealing it
@@ -210,7 +171,7 @@ func CreateKeycapSet(keycapSetRepo repository.KeycapSetRepository, kr repoapi.Ke
 			return
 		}
 
-		if !validateKeycapSetLookups(r.Context(), w, ks) {
+		if !writeLookupErrors(w, lookup.ValidateKeycapSet(r.Context(), ks)) {
 			return
 		}
 
@@ -270,7 +231,7 @@ func UpdateKeycapSet(keycapSetRepo repository.KeycapSetRepository, kr repoapi.Ke
 			return
 		}
 
-		if !validateKeycapSetLookups(r.Context(), w, ks) {
+		if !writeLookupErrors(w, lookup.ValidateKeycapSet(r.Context(), ks)) {
 			return
 		}
 
@@ -376,7 +337,7 @@ func CreateKeycapKit(keycapSetRepo repository.KeycapSetRepository, kr repoapi.Ke
 
 		kit := kr.KitToRepo(in)
 
-		if !validateKeycapKitLookups(r.Context(), w, kit) {
+		if !writeLookupErrors(w, lookup.ValidateKeycapKit(r.Context(), kit)) {
 			return
 		}
 
@@ -433,7 +394,7 @@ func UpdateKeycapKit(keycapSetRepo repository.KeycapSetRepository, kr repoapi.Ke
 
 		kit := kr.KitToRepo(in)
 
-		if !validateKeycapKitLookups(r.Context(), w, kit) {
+		if !writeLookupErrors(w, lookup.ValidateKeycapKit(r.Context(), kit)) {
 			return
 		}
 
@@ -545,10 +506,7 @@ func SetKeycapKitImage(keycapSetRepo repository.KeycapSetRepository, images repo
 			return
 		}
 
-		if fieldErr := lookup.ValidateImageContentType(r.Context(), in.ContentType); fieldErr != nil {
-			problem.ValidationFailed(w, "one or more fields are not approved lookup values", []problem.InvalidParam{
-				{Name: "content_type", Reason: fmt.Sprintf("%q is not an approved %s value", in.ContentType, lookup.CategoryImageContentType)},
-			})
+		if !writeLookupErrors(w, lookup.ValidateImageContentType(r.Context(), in.ContentType)) {
 			return
 		}
 

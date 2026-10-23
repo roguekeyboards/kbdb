@@ -2,6 +2,7 @@ package lookup
 
 import (
 	"context"
+	"fmt"
 	"slices"
 
 	"github.com/rogueserenity/kbdb/internal/repository"
@@ -40,10 +41,9 @@ func ValidateBuild(ctx context.Context, b repository.Build) []FieldError {
 // list, so it can't go through the generic fieldCheck/validateFields path -
 // mirrors [validateKeyboardLayout]'s handling of [CategoryKeyboardLayout]).
 // An approved case_mount_type.durometer is also cross-checked against the
-// type, the way layout is cross-checked against size: unless the type is
-// set and supports_durometer, it's reported as a FieldError on
-// "case_mount_type.durometer" carrying CategoryBuildCaseMountType. An
-// unapproved type skips the cross-check, having already been reported.
+// type, the way layout is cross-checked against size: it's rejected unless
+// the type is set and supports_durometer. An unapproved type skips the
+// cross-check, having already been reported.
 func validateBuildCaseMountType(ctx context.Context, cmt repository.BuildCaseMountType) []FieldError {
 	var errs []FieldError
 
@@ -57,7 +57,7 @@ func validateBuildCaseMountType(ctx context.Context, cmt repository.BuildCaseMou
 		}
 		idx := slices.IndexFunc(values, func(v CaseMountTypeValue) bool { return v.Name == *cmt.Type })
 		if idx == -1 {
-			errs = append(errs, FieldError{Field: "case_mount_type.type", Value: *cmt.Type, Category: category})
+			errs = append(errs, notApproved("case_mount_type.type", *cmt.Type, category))
 		} else {
 			mountType = &values[idx]
 		}
@@ -68,7 +68,11 @@ func validateBuildCaseMountType(ctx context.Context, cmt repository.BuildCaseMou
 			{Field: "case_mount_type.durometer", Value: *cmt.Durometer, Category: CategoryBuildDurometer},
 		})
 		if len(durometerErrs) == 0 && (cmt.Type == nil || mountType != nil && !mountType.SupportsDurometer) {
-			durometerErrs = append(durometerErrs, FieldError{Field: "case_mount_type.durometer", Value: *cmt.Durometer, Category: CategoryBuildCaseMountType})
+			durometerErrs = append(durometerErrs, FieldError{
+				Field:  "case_mount_type.durometer",
+				Value:  *cmt.Durometer,
+				Reason: fmt.Sprintf("%q needs a case_mount_type.type that supports durometer", *cmt.Durometer),
+			})
 		}
 		errs = append(errs, durometerErrs...)
 	}

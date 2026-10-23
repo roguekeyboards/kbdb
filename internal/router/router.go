@@ -235,7 +235,7 @@ func New(
 // [github.com/rogueserenity/kbdb/internal/middleware], not here (see
 // [openapi3filter.NoopAuthenticationFunc]); open-vocabulary lookup values
 // stay hand-validated per handler (e.g.
-// [github.com/rogueserenity/kbdb/internal/handlers.validateSwitchLookups]),
+// [github.com/rogueserenity/kbdb/internal/lookup.ValidateSwitch]),
 // since that isn't expressible as a static schema.
 func restOpenAPIValidator() func(http.Handler) http.Handler {
 	spec, err := api.GetSpec()

@@ -30,7 +30,7 @@ func (s *ValidateKeycapSetSuite) TestInvalidProfile_ReturnsFieldError() {
 
 	errs := lookup.ValidateKeycapSet(s.T().Context(), ks)
 	s.Equal([]lookup.FieldError{
-		{Field: "profile", Value: "NotAProfile", Category: lookup.CategoryKeycapProfile},
+		{Field: "profile", Value: "NotAProfile", Reason: `"NotAProfile" is not an approved keycap_profile value`},
 	}, errs)
 }
 
@@ -64,7 +64,7 @@ func (s *ValidateKeycapKitSuite) TestInvalidVendor_ReturnsFieldError() {
 
 	errs := lookup.ValidateKeycapKit(s.T().Context(), k)
 	s.Equal([]lookup.FieldError{
-		{Field: "purchase.vendor", Value: "NotARealVendor", Category: lookup.CategoryVendor},
+		{Field: "purchase.vendor", Value: "NotARealVendor", Reason: `"NotARealVendor" is not an approved vendor value`},
 	}, errs)
 }
 
@@ -74,6 +74,6 @@ func (s *ValidateKeycapKitSuite) TestInvalidOrderStatus_ReturnsFieldError() {
 
 	errs := lookup.ValidateKeycapKit(s.T().Context(), k)
 	s.Equal([]lookup.FieldError{
-		{Field: "purchase.order_status", Value: "Bogus", Category: lookup.CategoryOrderStatus},
+		{Field: "purchase.order_status", Value: "Bogus", Reason: `"Bogus" is not an approved order_status value`},
 	}, errs)
 }

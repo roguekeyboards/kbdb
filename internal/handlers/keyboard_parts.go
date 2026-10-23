@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -18,23 +17,6 @@ import (
 	"github.com/rogueserenity/kbdb/internal/repoapi"
 	"github.com/rogueserenity/kbdb/internal/repository"
 )
-
-// writePartLookupErrors writes a 400 listing fieldErrs, if any.
-func writePartLookupErrors(w http.ResponseWriter, fieldErrs []lookup.FieldError) (ok bool) {
-	if len(fieldErrs) == 0 {
-		return true
-	}
-
-	invalidParams := make([]problem.InvalidParam, len(fieldErrs))
-	for i, fe := range fieldErrs {
-		invalidParams[i] = problem.InvalidParam{
-			Name:   fe.Field,
-			Reason: fmt.Sprintf("%q is not an approved %s value", fe.Value, fe.Category),
-		}
-	}
-	problem.ValidationFailed(w, "one or more fields are not approved lookup values", invalidParams)
-	return false
-}
 
 // writePart writes part as JSON with status.
 func writePart(w http.ResponseWriter, status int, part any) {
@@ -65,7 +47,7 @@ func CreateKeyboardPlate(keyboardRepo repository.KeyboardRepository, kr repoapi.
 		}
 
 		plate := kr.PlateToRepo(in)
-		if !writePartLookupErrors(w, lookup.ValidateKeyboardPlate(r.Context(), plate)) {
+		if !writeLookupErrors(w, lookup.ValidateKeyboardPlate(r.Context(), plate)) {
 			return
 		}
 
@@ -117,7 +99,7 @@ func UpdateKeyboardPlate(keyboardRepo repository.KeyboardRepository, kr repoapi.
 		}
 
 		plate := kr.PlateToRepo(in)
-		if !writePartLookupErrors(w, lookup.ValidateKeyboardPlate(r.Context(), plate)) {
+		if !writeLookupErrors(w, lookup.ValidateKeyboardPlate(r.Context(), plate)) {
 			return
 		}
 
@@ -198,7 +180,7 @@ func CreateKeyboardPCB(keyboardRepo repository.KeyboardRepository, kr repoapi.Ke
 		}
 
 		pcb := kr.PCBToRepo(in)
-		if !writePartLookupErrors(w, lookup.ValidateKeyboardPCB(r.Context(), pcb)) {
+		if !writeLookupErrors(w, lookup.ValidateKeyboardPCB(r.Context(), pcb)) {
 			return
 		}
 
@@ -247,7 +229,7 @@ func UpdateKeyboardPCB(keyboardRepo repository.KeyboardRepository, kr repoapi.Ke
 		}
 
 		pcb := kr.PCBToRepo(in)
-		if !writePartLookupErrors(w, lookup.ValidateKeyboardPCB(r.Context(), pcb)) {
+		if !writeLookupErrors(w, lookup.ValidateKeyboardPCB(r.Context(), pcb)) {
 			return
 		}
 

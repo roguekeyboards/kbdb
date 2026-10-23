@@ -288,10 +288,7 @@ func SetProfileImage(repo repository.ProfileRepository, images repository.Profil
 			return
 		}
 
-		if fieldErr := lookup.ValidateImageContentType(r.Context(), in.ContentType); fieldErr != nil {
-			problem.ValidationFailed(w, "one or more fields are not approved lookup values", []problem.InvalidParam{
-				{Name: "content_type", Reason: fmt.Sprintf("%q is not an approved %s value", in.ContentType, lookup.CategoryImageContentType)},
-			})
+		if !writeLookupErrors(w, lookup.ValidateImageContentType(r.Context(), in.ContentType)) {
 			return
 		}
 

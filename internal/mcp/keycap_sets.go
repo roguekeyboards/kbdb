@@ -260,14 +260,8 @@ func validatedKeycapSet(
 			"visibility %q must be one of: public, authenticated, private", in.Visibility)
 	}
 
-	fieldErrs := lookup.ValidateKeycapSet(ctx, ks)
-	if len(fieldErrs) > 0 {
-		reasons := make([]string, len(fieldErrs))
-		for i, fe := range fieldErrs {
-			reasons[i] = fmt.Sprintf("%s: %q is not an approved %s value", fe.Field, fe.Value, fe.Category)
-		}
-
-		return repository.KeycapSet{}, errors.New(strings.Join(reasons, "; "))
+	if err := lookupErrors(lookup.ValidateKeycapSet(ctx, ks)); err != nil {
+		return repository.KeycapSet{}, err
 	}
 
 	return ks, nil
@@ -389,8 +383,8 @@ func handleSetKeycapKitImage(
 			return nil, schema.SetKeycapKitImageOutput{}, errors.New("kit_id must not be blank")
 		}
 
-		if fieldErr := lookup.ValidateImageContentType(ctx, in.ContentType); fieldErr != nil {
-			return nil, schema.SetKeycapKitImageOutput{}, fmt.Errorf("content_type: %q is not an approved %s value", in.ContentType, lookup.CategoryImageContentType)
+		if err := lookupErrors(lookup.ValidateImageContentType(ctx, in.ContentType)); err != nil {
+			return nil, schema.SetKeycapKitImageOutput{}, err
 		}
 
 		if err := validateImageSize(in.SizeBytes); err != nil {
@@ -510,14 +504,8 @@ func validatedKeycapKit(
 
 	kit := repomcp.KeycapSet{}.KitFromMCP(in)
 
-	fieldErrs := lookup.ValidateKeycapKit(ctx, kit)
-	if len(fieldErrs) > 0 {
-		reasons := make([]string, len(fieldErrs))
-		for i, fe := range fieldErrs {
-			reasons[i] = fmt.Sprintf("%s: %q is not an approved %s value", fe.Field, fe.Value, fe.Category)
-		}
-
-		return repository.KeycapKit{}, errors.New(strings.Join(reasons, "; "))
+	if err := lookupErrors(lookup.ValidateKeycapKit(ctx, kit)); err != nil {
+		return repository.KeycapKit{}, err
 	}
 
 	return kit, nil

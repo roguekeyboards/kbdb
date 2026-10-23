@@ -44,7 +44,7 @@ func (s *ValidateBuildSuite) TestInvalidCaseMountType_ReturnsFieldError() {
 
 	errs := lookup.ValidateBuild(s.T().Context(), b)
 	s.Equal([]lookup.FieldError{
-		{Field: "case_mount_type.type", Value: "NotAMountType", Category: lookup.CategoryBuildCaseMountType},
+		{Field: "case_mount_type.type", Value: "NotAMountType", Reason: `"NotAMountType" is not an approved build_case_mount_type value`},
 	}, errs)
 }
 
@@ -54,7 +54,7 @@ func (s *ValidateBuildSuite) TestInvalidDurometer_ReturnsFieldError() {
 
 	errs := lookup.ValidateBuild(s.T().Context(), b)
 	s.Equal([]lookup.FieldError{
-		{Field: "case_mount_type.durometer", Value: "NotADurometer", Category: lookup.CategoryBuildDurometer},
+		{Field: "case_mount_type.durometer", Value: "NotADurometer", Reason: `"NotADurometer" is not an approved build_durometer value`},
 	}, errs)
 }
 
@@ -65,7 +65,7 @@ func (s *ValidateBuildSuite) TestDurometerWithMountTypeWithoutDurometerSupport_R
 
 	errs := lookup.ValidateBuild(s.T().Context(), b)
 	s.Equal([]lookup.FieldError{
-		{Field: "case_mount_type.durometer", Value: "40A", Category: lookup.CategoryBuildCaseMountType},
+		{Field: "case_mount_type.durometer", Value: "40A", Reason: `"40A" needs a case_mount_type.type that supports durometer`},
 	}, errs)
 }
 
@@ -75,7 +75,7 @@ func (s *ValidateBuildSuite) TestDurometerWithoutMountType_ReturnsFieldError() {
 
 	errs := lookup.ValidateBuild(s.T().Context(), b)
 	s.Equal([]lookup.FieldError{
-		{Field: "case_mount_type.durometer", Value: "40A", Category: lookup.CategoryBuildCaseMountType},
+		{Field: "case_mount_type.durometer", Value: "40A", Reason: `"40A" needs a case_mount_type.type that supports durometer`},
 	}, errs)
 }
 
@@ -86,7 +86,7 @@ func (s *ValidateBuildSuite) TestDurometerWithInvalidMountType_ReportsOnlyTheMou
 
 	errs := lookup.ValidateBuild(s.T().Context(), b)
 	s.Equal([]lookup.FieldError{
-		{Field: "case_mount_type.type", Value: "NotAMountType", Category: lookup.CategoryBuildCaseMountType},
+		{Field: "case_mount_type.type", Value: "NotAMountType", Reason: `"NotAMountType" is not an approved build_case_mount_type value`},
 	}, errs)
 }
 
@@ -96,7 +96,7 @@ func (s *ValidateBuildSuite) TestInvalidStabName_ReturnsFieldError() {
 
 	errs := lookup.ValidateBuild(s.T().Context(), b)
 	s.Equal([]lookup.FieldError{
-		{Field: "stabs.name", Value: "NotAStab", Category: lookup.CategoryBuildStabilizer},
+		{Field: "stabs.name", Value: "NotAStab", Reason: `"NotAStab" is not an approved build_stabilizer value`},
 	}, errs)
 }
 
@@ -106,6 +106,6 @@ func (s *ValidateBuildSuite) TestInvalidStabMountType_ReturnsFieldError() {
 
 	errs := lookup.ValidateBuild(s.T().Context(), b)
 	s.Equal([]lookup.FieldError{
-		{Field: "stabs.mount_type", Value: "NotAMountType", Category: lookup.CategoryBuildStabilizerMountType},
+		{Field: "stabs.mount_type", Value: "NotAMountType", Reason: `"NotAMountType" is not an approved build_stabilizer_mount_type value`},
 	}, errs)
 }

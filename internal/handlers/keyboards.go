@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -156,38 +155,6 @@ func decodeKeyboardInput(w http.ResponseWriter, r *http.Request) (kb repository.
 	return kb, true
 }
 
-// validateKeyboardLookups writes a 400 listing every invalid field if any
-// check fails. An unset (nil) field is skipped, not treated as invalid.
-func validateKeyboardLookups(ctx context.Context, w http.ResponseWriter, kb repository.Keyboard) (ok bool) {
-	fieldErrs := lookup.ValidateKeyboard(ctx, kb)
-	if len(fieldErrs) > 0 {
-		invalidParams := make([]problem.InvalidParam, len(fieldErrs))
-		for i, fe := range fieldErrs {
-			invalidParams[i] = keyboardFieldErrorToInvalidParam(fe, kb.Size)
-		}
-		problem.ValidationFailed(w, "one or more fields are not approved lookup values", invalidParams)
-		return false
-	}
-
-	return true
-}
-
-// keyboardFieldErrorToInvalidParam special-cases the layout/size cross-check
-// (lookup.ValidateKeyboard reports it as a FieldError with Field "layout"
-// and Category CategoryKeyboardSize) to keep its more specific message.
-func keyboardFieldErrorToInvalidParam(fe lookup.FieldError, size *string) problem.InvalidParam {
-	if fe.Field == "layout" && fe.Category == lookup.CategoryKeyboardSize {
-		return problem.InvalidParam{
-			Name:   fe.Field,
-			Reason: fmt.Sprintf("%q is not a valid layout for size %q", fe.Value, *size),
-		}
-	}
-	return problem.InvalidParam{
-		Name:   fe.Field,
-		Reason: fmt.Sprintf("%q is not an approved %s value", fe.Value, fe.Category),
-	}
-}
-
 // CreateKeyboard reads the {userId} path value and requires an
 // authenticated caller. userId must be the caller's own subject; creating
 // in another user's collection returns 404, not 403, to avoid revealing it
@@ -206,7 +173,7 @@ func CreateKeyboard(keyboardRepo repository.KeyboardRepository, kr repoapi.Keybo
 			return
 		}
 
-		if !validateKeyboardLookups(r.Context(), w, kb) {
+		if !writeLookupErrors(w, lookup.ValidateKeyboard(r.Context(), kb)) {
 			return
 		}
 
@@ -266,7 +233,7 @@ func UpdateKeyboard(keyboardRepo repository.KeyboardRepository, kr repoapi.Keybo
 			return
 		}
 
-		if !validateKeyboardLookups(r.Context(), w, kb) {
+		if !writeLookupErrors(w, lookup.ValidateKeyboard(r.Context(), kb)) {
 			return
 		}
 
@@ -373,10 +340,7 @@ func AddKeyboardImage(keyboardRepo repository.KeyboardRepository, images reposit
 			return
 		}
 
-		if fieldErr := lookup.ValidateImageContentType(r.Context(), in.ContentType); fieldErr != nil {
-			problem.ValidationFailed(w, "one or more fields are not approved lookup values", []problem.InvalidParam{
-				{Name: "content_type", Reason: fmt.Sprintf("%q is not an approved %s value", in.ContentType, lookup.CategoryImageContentType)},
-			})
+		if !writeLookupErrors(w, lookup.ValidateImageContentType(r.Context(), in.ContentType)) {
 			return
 		}
 
