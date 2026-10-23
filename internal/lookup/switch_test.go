@@ -40,7 +40,7 @@ func (s *ValidateSwitchSuite) TestInvalidType_ReturnsFieldError() {
 
 	errs := lookup.ValidateSwitch(s.T().Context(), sw)
 	s.Equal([]lookup.FieldError{
-		{Field: "type", Value: "NotAType", Category: lookup.CategorySwitchType},
+		{Field: "type", Value: "NotAType", Reason: `"NotAType" is not an approved switch_type value`},
 	}, errs)
 }
 
@@ -53,6 +53,6 @@ func (s *ValidateSwitchSuite) TestInvalidOrderStatus_ReturnsFieldError() {
 
 	errs := lookup.ValidateSwitch(s.T().Context(), sw)
 	s.Equal([]lookup.FieldError{
-		{Field: "purchase.order_status", Value: "NotAStatus", Category: lookup.CategoryOrderStatus},
+		{Field: "purchase.order_status", Value: "NotAStatus", Reason: `"NotAStatus" is not an approved order_status value`},
 	}, errs)
 }

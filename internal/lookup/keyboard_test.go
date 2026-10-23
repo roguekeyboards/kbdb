@@ -30,7 +30,7 @@ func (s *ValidateKeyboardSuite) TestInvalidSize_ReturnsFieldError() {
 
 	errs := lookup.ValidateKeyboard(s.T().Context(), kb)
 	s.Equal([]lookup.FieldError{
-		{Field: "size", Value: "not-a-size", Category: lookup.CategoryKeyboardSize},
+		{Field: "size", Value: "not-a-size", Reason: `"not-a-size" is not an approved keyboard_size value`},
 	}, errs)
 }
 
@@ -50,7 +50,7 @@ func (s *ValidateKeyboardSuite) TestLayoutNotValidForSize_ReturnsFieldError() {
 
 	errs := lookup.ValidateKeyboard(s.T().Context(), kb)
 	s.Equal([]lookup.FieldError{
-		{Field: "layout", Value: "WK", Category: lookup.CategoryKeyboardSize},
+		{Field: "layout", Value: "WK", Reason: `"WK" is not a valid layout for size "40%"`},
 	}, errs)
 }
 
@@ -61,7 +61,7 @@ func (s *ValidateKeyboardSuite) TestInvalidSize_SkipsLayoutSizeCrossCheck() {
 
 	errs := lookup.ValidateKeyboard(s.T().Context(), kb)
 	s.Equal([]lookup.FieldError{
-		{Field: "size", Value: "not-a-size", Category: lookup.CategoryKeyboardSize},
+		{Field: "size", Value: "not-a-size", Reason: `"not-a-size" is not an approved keyboard_size value`},
 	}, errs)
 }
 
@@ -71,7 +71,7 @@ func (s *ValidateKeyboardSuite) TestInvalidLayoutName_ReturnsFieldError() {
 
 	errs := lookup.ValidateKeyboard(s.T().Context(), kb)
 	s.Equal([]lookup.FieldError{
-		{Field: "layout", Value: "NotALayout", Category: lookup.CategoryKeyboardLayout},
+		{Field: "layout", Value: "NotALayout", Reason: `"NotALayout" is not an approved keyboard_layout value`},
 	}, errs)
 }
 
@@ -96,9 +96,9 @@ func (s *ValidateKeyboardPartsSuite) TestInvalidPlate_ReturnsFieldErrors() {
 
 	errs := lookup.ValidateKeyboardPlate(s.T().Context(), plate)
 	s.ElementsMatch([]lookup.FieldError{
-		{Field: "material", Value: "NotAMaterial", Category: lookup.CategoryKeyboardPlateMaterial},
-		{Field: "purchase.vendor", Value: bad, Category: lookup.CategoryVendor},
-		{Field: "purchase.order_status", Value: bad, Category: lookup.CategoryOrderStatus},
+		{Field: "material", Value: "NotAMaterial", Reason: `"NotAMaterial" is not an approved keyboard_plate_material value`},
+		{Field: "purchase.vendor", Value: bad, Reason: `"NotAValue" is not an approved vendor value`},
+		{Field: "purchase.order_status", Value: bad, Reason: `"NotAValue" is not an approved order_status value`},
 	}, errs)
 }
 
@@ -115,10 +115,10 @@ func (s *ValidateKeyboardPartsSuite) TestInvalidPCB_ReturnsFieldErrors() {
 
 	errs := lookup.ValidateKeyboardPCB(s.T().Context(), pcb)
 	s.ElementsMatch([]lookup.FieldError{
-		{Field: "firmware", Value: bad, Category: lookup.CategoryKeyboardPCBFirmware},
-		{Field: "assembly", Value: bad, Category: lookup.CategoryKeyboardPCBAssemblyType},
-		{Field: "connectivity", Value: bad, Category: lookup.CategoryKeyboardPCBConnectivityType},
-		{Field: "purchase.order_status", Value: bad, Category: lookup.CategoryOrderStatus},
+		{Field: "firmware", Value: bad, Reason: `"NotAValue" is not an approved keyboard_pcb_firmware value`},
+		{Field: "assembly", Value: bad, Reason: `"NotAValue" is not an approved keyboard_pcb_assembly_type value`},
+		{Field: "connectivity", Value: bad, Reason: `"NotAValue" is not an approved keyboard_pcb_connectivity_type value`},
+		{Field: "purchase.order_status", Value: bad, Reason: `"NotAValue" is not an approved order_status value`},
 	}, errs)
 }
 

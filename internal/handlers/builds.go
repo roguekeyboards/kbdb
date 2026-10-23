@@ -22,31 +22,6 @@ import (
 	"github.com/rogueserenity/kbdb/internal/uploadlimit"
 )
 
-// An unset (nil) field is skipped, not treated as invalid.
-func validateBuildLookups(ctx context.Context, w http.ResponseWriter, b repository.Build) (ok bool) {
-	fieldErrs := lookup.ValidateBuild(ctx, b)
-	if len(fieldErrs) > 0 {
-		invalidParams := make([]problem.InvalidParam, len(fieldErrs))
-		for i, fe := range fieldErrs {
-			invalidParams[i] = problem.InvalidParam{Name: fe.Field, Reason: buildFieldErrorReason(fe)}
-		}
-		problem.ValidationFailed(w, "one or more fields are not approved lookup values", invalidParams)
-		return false
-	}
-
-	return true
-}
-
-// buildFieldErrorReason special-cases the durometer/mount type cross-check
-// (lookup.ValidateBuild reports it as a FieldError with Field
-// "case_mount_type.durometer" and Category CategoryBuildCaseMountType).
-func buildFieldErrorReason(fe lookup.FieldError) string {
-	if fe.Field == "case_mount_type.durometer" && fe.Category == lookup.CategoryBuildCaseMountType {
-		return fmt.Sprintf("%q needs a case_mount_type.type that supports durometer", fe.Value)
-	}
-	return fmt.Sprintf("%q is not an approved %s value", fe.Value, fe.Category)
-}
-
 // A repository error writes a 500 rather than a 400.
 func validateBuildReferences(
 	ctx context.Context, w http.ResponseWriter, ownerID string, b repository.Build,
@@ -223,7 +198,7 @@ func CreateBuild(
 
 		b := br.ToRepo(in)
 
-		if !validateBuildLookups(r.Context(), w, b) {
+		if !writeLookupErrors(w, lookup.ValidateBuild(r.Context(), b)) {
 			return
 		}
 
@@ -301,7 +276,7 @@ func UpdateBuild(
 
 		b := br.ToRepo(in)
 
-		if !validateBuildLookups(r.Context(), w, b) {
+		if !writeLookupErrors(w, lookup.ValidateBuild(r.Context(), b)) {
 			return
 		}
 
@@ -362,10 +337,7 @@ func AddBuildImage(buildRepo repository.BuildRepository, images repository.Build
 			return
 		}
 
-		if fieldErr := lookup.ValidateImageContentType(r.Context(), in.ContentType); fieldErr != nil {
-			problem.ValidationFailed(w, "one or more fields are not approved lookup values", []problem.InvalidParam{
-				{Name: "content_type", Reason: fmt.Sprintf("%q is not an approved %s value", in.ContentType, lookup.CategoryImageContentType)},
-			})
+		if !writeLookupErrors(w, lookup.ValidateImageContentType(r.Context(), in.ContentType)) {
 			return
 		}
 

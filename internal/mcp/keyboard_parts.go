@@ -286,16 +286,3 @@ func validatedKeyboardPCB(ctx context.Context, in schema.KeyboardPCBInput) (repo
 
 	return pcb, nil
 }
-
-// lookupErrors joins fieldErrs into one tool error, or returns nil.
-func lookupErrors(fieldErrs []lookup.FieldError) error {
-	if len(fieldErrs) == 0 {
-		return nil
-	}
-
-	reasons := make([]string, len(fieldErrs))
-	for i, fe := range fieldErrs {
-		reasons[i] = fmt.Sprintf("%s: %q is not an approved %s value", fe.Field, fe.Value, fe.Category)
-	}
-	return errors.New(strings.Join(reasons, "; "))
-}

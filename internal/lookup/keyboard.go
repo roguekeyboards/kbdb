@@ -2,6 +2,7 @@ package lookup
 
 import (
 	"context"
+	"fmt"
 	"slices"
 
 	"github.com/rogueserenity/kbdb/internal/repository"
@@ -58,18 +59,20 @@ func validateKeyboardLayout(ctx context.Context, size *string, layout string) *F
 
 	l, ok := GetCategory(ctx, category)
 	if !ok {
-		return &FieldError{Field: "layout", Value: layout, Category: category}
+		fe := notApproved("layout", layout, category)
+		return &fe
 	}
 
 	values := l.LayoutValues()
 
 	idx := slices.IndexFunc(values, func(v LayoutValue) bool { return v.Name == layout })
 	if idx == -1 {
-		return &FieldError{Field: "layout", Value: layout, Category: category}
+		fe := notApproved("layout", layout, category)
+		return &fe
 	}
 
 	if size != nil && !slices.Contains(values[idx].Sizes, *size) {
-		return &FieldError{Field: "layout", Value: layout, Category: CategoryKeyboardSize}
+		return &FieldError{Field: "layout", Value: layout, Reason: fmt.Sprintf("%q is not a valid layout for size %q", layout, *size)}
 	}
 
 	return nil

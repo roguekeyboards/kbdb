@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -166,25 +165,6 @@ func decodeSwitchInput(w http.ResponseWriter, r *http.Request) (sw repository.Sw
 	return sw, true
 }
 
-// validateSwitchLookups writes a 400 listing every invalid field if any
-// check fails. An unset (nil) field is skipped, not treated as invalid.
-func validateSwitchLookups(ctx context.Context, w http.ResponseWriter, sw repository.Switch) (ok bool) {
-	fieldErrs := lookup.ValidateSwitch(ctx, sw)
-	if len(fieldErrs) > 0 {
-		invalidParams := make([]problem.InvalidParam, len(fieldErrs))
-		for i, fe := range fieldErrs {
-			invalidParams[i] = problem.InvalidParam{
-				Name:   fe.Field,
-				Reason: fmt.Sprintf("%q is not an approved %s value", fe.Value, fe.Category),
-			}
-		}
-		problem.ValidationFailed(w, "one or more fields are not approved lookup values", invalidParams)
-		return false
-	}
-
-	return true
-}
-
 // CreateSwitch reads the {userId} path value and requires an authenticated
 // caller. userId must be the caller's own subject; creating in another
 // user's collection returns 404, not 403, to avoid revealing it exists.
@@ -202,7 +182,7 @@ func CreateSwitch(switchRepo repository.SwitchRepository, sr repoapi.Switch) htt
 			return
 		}
 
-		if !validateSwitchLookups(r.Context(), w, sw) {
+		if !writeLookupErrors(w, lookup.ValidateSwitch(r.Context(), sw)) {
 			return
 		}
 
@@ -262,7 +242,7 @@ func UpdateSwitch(switchRepo repository.SwitchRepository, sr repoapi.Switch) htt
 			return
 		}
 
-		if !validateSwitchLookups(r.Context(), w, sw) {
+		if !writeLookupErrors(w, lookup.ValidateSwitch(r.Context(), sw)) {
 			return
 		}
 
@@ -372,10 +352,7 @@ func SetSwitchImage(switchRepo repository.SwitchRepository, images repository.Sw
 			return
 		}
 
-		if fieldErr := lookup.ValidateImageContentType(r.Context(), in.ContentType); fieldErr != nil {
-			problem.ValidationFailed(w, "one or more fields are not approved lookup values", []problem.InvalidParam{
-				{Name: "content_type", Reason: fmt.Sprintf("%q is not an approved %s value", in.ContentType, lookup.CategoryImageContentType)},
-			})
+		if !writeLookupErrors(w, lookup.ValidateImageContentType(r.Context(), in.ContentType)) {
 			return
 		}
 

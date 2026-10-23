@@ -260,8 +260,8 @@ func handleAddKeyboardImage(
 			return nil, schema.AddKeyboardImageOutput{}, errors.New("keyboard_id must not be blank")
 		}
 
-		if fieldErr := lookup.ValidateImageContentType(ctx, in.ContentType); fieldErr != nil {
-			return nil, schema.AddKeyboardImageOutput{}, fmt.Errorf("content_type: %q is not an approved %s value", in.ContentType, lookup.CategoryImageContentType)
+		if err := lookupErrors(lookup.ValidateImageContentType(ctx, in.ContentType)); err != nil {
+			return nil, schema.AddKeyboardImageOutput{}, err
 		}
 
 		if err := validateImageSize(in.SizeBytes); err != nil {
@@ -360,28 +360,9 @@ func validatedKeyboard(
 			"visibility %q must be one of: public, authenticated, private", in.Visibility)
 	}
 
-	fieldErrs := lookup.ValidateKeyboard(ctx, kb)
-	if len(fieldErrs) > 0 {
-		reasons := make([]string, len(fieldErrs))
-		for i, fe := range fieldErrs {
-			reasons[i] = keyboardFieldErrorReason(fe, in.Size)
-		}
-
-		return repository.Keyboard{}, errors.New(strings.Join(reasons, "; "))
+	if err := lookupErrors(lookup.ValidateKeyboard(ctx, kb)); err != nil {
+		return repository.Keyboard{}, err
 	}
 
 	return kb, nil
-}
-
-// ValidateKeyboard reports a layout that isn't valid for the chosen size as
-// a FieldError on "layout" carrying the *size* category, which the generic
-// wording would render as "layout is not an approved keyboard_size value" -
-// telling an agent to go fix a field that's already correct. Mirrors
-// [github.com/rogueserenity/kbdb/internal/handlers.keyboardFieldErrorToInvalidParam].
-func keyboardFieldErrorReason(fe lookup.FieldError, size *string) string {
-	if fe.Field == "layout" && fe.Category == lookup.CategoryKeyboardSize && size != nil {
-		return fmt.Sprintf("layout: %q is not a valid layout for size %q", fe.Value, *size)
-	}
-
-	return fmt.Sprintf("%s: %q is not an approved %s value", fe.Field, fe.Value, fe.Category)
 }

@@ -167,8 +167,8 @@ func handleSetProfileImage(
 	uploads *uploadlimit.Limiter,
 ) mcp.ToolHandlerFor[schema.SetProfileImageInput, schema.SetProfileImageOutput] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, in schema.SetProfileImageInput) (*mcp.CallToolResult, schema.SetProfileImageOutput, error) {
-		if fieldErr := lookup.ValidateImageContentType(ctx, in.ContentType); fieldErr != nil {
-			return nil, schema.SetProfileImageOutput{}, fmt.Errorf("content_type: %q is not an approved %s value", in.ContentType, lookup.CategoryImageContentType)
+		if err := lookupErrors(lookup.ValidateImageContentType(ctx, in.ContentType)); err != nil {
+			return nil, schema.SetProfileImageOutput{}, err
 		}
 
 		if err := validateImageSize(in.SizeBytes); err != nil {

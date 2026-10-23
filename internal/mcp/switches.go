@@ -238,8 +238,8 @@ func handleSetSwitchImage(
 			return nil, schema.SetSwitchImageOutput{}, errors.New("switch_id must not be blank")
 		}
 
-		if fieldErr := lookup.ValidateImageContentType(ctx, in.ContentType); fieldErr != nil {
-			return nil, schema.SetSwitchImageOutput{}, fmt.Errorf("content_type: %q is not an approved %s value", in.ContentType, lookup.CategoryImageContentType)
+		if err := lookupErrors(lookup.ValidateImageContentType(ctx, in.ContentType)); err != nil {
+			return nil, schema.SetSwitchImageOutput{}, err
 		}
 
 		if err := validateImageSize(in.SizeBytes); err != nil {
@@ -352,14 +352,8 @@ func validatedSwitch(
 			"visibility %q must be one of: public, authenticated, private", in.Visibility)
 	}
 
-	fieldErrs := lookup.ValidateSwitch(ctx, sw)
-	if len(fieldErrs) > 0 {
-		reasons := make([]string, len(fieldErrs))
-		for i, fe := range fieldErrs {
-			reasons[i] = fmt.Sprintf("%s: %q is not an approved %s value", fe.Field, fe.Value, fe.Category)
-		}
-
-		return repository.Switch{}, errors.New(strings.Join(reasons, "; "))
+	if err := lookupErrors(lookup.ValidateSwitch(ctx, sw)); err != nil {
+		return repository.Switch{}, err
 	}
 
 	return sw, nil

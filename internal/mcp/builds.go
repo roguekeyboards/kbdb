@@ -311,14 +311,8 @@ func validatedBuild(ctx context.Context, in schema.BuildInput) (repository.Build
 			"visibility %q must be one of: public, authenticated, private", in.Visibility)
 	}
 
-	fieldErrs := lookup.ValidateBuild(ctx, b)
-	if len(fieldErrs) > 0 {
-		reasons := make([]string, len(fieldErrs))
-		for i, fe := range fieldErrs {
-			reasons[i] = fe.Field + ": " + buildFieldErrorReason(fe)
-		}
-
-		return repository.Build{}, errors.New(strings.Join(reasons, "; "))
+	if err := lookupErrors(lookup.ValidateBuild(ctx, b)); err != nil {
+		return repository.Build{}, err
 	}
 
 	return b, nil
@@ -391,8 +385,8 @@ func handleAddBuildImage(
 			return nil, schema.AddBuildImageOutput{}, errors.New("build_id must not be blank")
 		}
 
-		if fieldErr := lookup.ValidateImageContentType(ctx, in.ContentType); fieldErr != nil {
-			return nil, schema.AddBuildImageOutput{}, fmt.Errorf("content_type: %q is not an approved %s value", in.ContentType, lookup.CategoryImageContentType)
+		if err := lookupErrors(lookup.ValidateImageContentType(ctx, in.ContentType)); err != nil {
+			return nil, schema.AddBuildImageOutput{}, err
 		}
 
 		if err := validateImageSize(in.SizeBytes); err != nil {
@@ -485,13 +479,4 @@ func handleDeleteBuildImage(
 
 		return nil, schema.DeleteBuildImageOutput{}, nil
 	}
-}
-
-// buildFieldErrorReason mirrors
-// [github.com/rogueserenity/kbdb/internal/handlers.buildFieldErrorReason].
-func buildFieldErrorReason(fe lookup.FieldError) string {
-	if fe.Field == "case_mount_type.durometer" && fe.Category == lookup.CategoryBuildCaseMountType {
-		return fmt.Sprintf("%q needs a case_mount_type.type that supports durometer", fe.Value)
-	}
-	return fmt.Sprintf("%q is not an approved %s value", fe.Value, fe.Category)
 }
