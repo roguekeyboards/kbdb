@@ -6,8 +6,8 @@ set -euo pipefail
 # only warns.
 
 case "${1:-}" in
-  ci) stacks=(kbdb-stack-boundary=bootstrap/stack-boundary.yaml kbdb-ci-oidc=bootstrap/ci-oidc-role.yaml) ;;
-  prod) stacks=(kbdb-stack-boundary=bootstrap/stack-boundary.yaml kbdb-prod-oidc=bootstrap/prod-oidc-role.yaml) ;;
+  ci) stacks=(kbdb-stack-boundary=bootstrap/stack-boundary.yaml kbdb-ci-oidc=bootstrap/ci-oidc-role.yaml kbdb-image-delivery=bootstrap/image-delivery.yaml) ;;
+  prod) stacks=(kbdb-stack-boundary=bootstrap/stack-boundary.yaml kbdb-prod-oidc=bootstrap/prod-oidc-role.yaml kbdb-image-delivery=bootstrap/image-delivery.yaml) ;;
   *)
     echo "usage: mise run bootstrap-check <ci|prod>" >&2
     exit 2

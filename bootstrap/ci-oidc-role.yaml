@@ -70,6 +70,7 @@ Resources:
                 Resource:
                   - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/kbdb-stack-boundary/*
                   - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/kbdb-ci-oidc/*
+                  - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/kbdb-image-delivery/*
               - Sid: CloudFormationServerlessTransform
                 Effect: Allow
                 Action: cloudformation:CreateChangeSet
@@ -151,6 +152,47 @@ Resources:
                   - s3:DeleteObject
                   - s3:GetObjectTagging
                 Resource: !Sub arn:aws:s3:::kbdb-images-${AWS::AccountId}-kbdb-pr-*/*
+              # Distribution IDs are generated, so these can't be scoped to a stack.
+              - Sid: CloudFrontCreate
+                Effect: Allow
+                Action:
+                  - cloudfront:CreateDistribution
+                  - cloudfront:CreateDistributionWithTags
+                  - cloudfront:CreateOriginAccessControl
+                Resource: '*'
+              - Sid: CloudFrontDistributions
+                Effect: Allow
+                Action:
+                  - cloudfront:GetDistribution
+                  - cloudfront:GetDistributionConfig
+                  - cloudfront:UpdateDistribution
+                  - cloudfront:DeleteDistribution
+                  - cloudfront:TagResource
+                  - cloudfront:UntagResource
+                  - cloudfront:ListTagsForResource
+                Resource: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/*
+              - Sid: CloudFrontOriginAccessControls
+                Effect: Allow
+                Action:
+                  - cloudfront:GetOriginAccessControl
+                  - cloudfront:UpdateOriginAccessControl
+                  - cloudfront:DeleteOriginAccessControl
+                Resource: !Sub arn:aws:cloudfront::${AWS::AccountId}:origin-access-control/*
+              - Sid: ImagesBucketPolicy
+                Effect: Allow
+                Action:
+                  - s3:GetBucketPolicy
+                  - s3:PutBucketPolicy
+                  - s3:DeleteBucketPolicy
+                Resource: !Sub arn:aws:s3:::kbdb-images-${AWS::AccountId}-kbdb-pr-*
+              # Resolving template.yaml's AWS::SSM::Parameter::Value parameters.
+              - Sid: ImageDeliveryParameters
+                Effect: Allow
+                Action: ssm:GetParameters
+                Resource:
+                  - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/kbdb/image-delivery/key-group-id
+                  - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/kbdb/image-delivery/public-key-id
+                  - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/kbdb/image-delivery/response-headers-policy-id
               - Sid: EcrAuth
                 Effect: Allow
                 Action: ecr:GetAuthorizationToken

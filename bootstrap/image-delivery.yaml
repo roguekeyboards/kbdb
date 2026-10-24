@@ -1,0 +1,70 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  Bootstrap (every account) - the CloudFront signing key and response headers
+  policy shared by every stack's images distribution. Deployed by
+  mise run image-delivery-setup.
+
+# Per account rather than per stack: an account holds at most 10 key groups,
+# 10 public keys and 20 response headers policies, and kbdb-ci runs many PR
+# stacks at once.
+
+Parameters:
+  PublicKeyPem:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /kbdb/image-delivery/public-key
+    Description: >-
+      The public half of the account's image signing key pair, which
+      mise run image-delivery-setup generates. The private half is the
+      SecureString /kbdb/image-delivery/private-key.
+
+Resources:
+  SigningPublicKey:
+    Type: AWS::CloudFront::PublicKey
+    Properties:
+      PublicKeyConfig:
+        CallerReference: kbdb-image-signing
+        Name: kbdb-image-signing
+        EncodedKey: !Ref PublicKeyPem
+
+  SigningKeyGroup:
+    Type: AWS::CloudFront::KeyGroup
+    Properties:
+      KeyGroupConfig:
+        Name: kbdb-image-signing
+        Items:
+          - !Ref SigningPublicKey
+
+  # Every image key's bytes are immutable (#495), so browsers may keep them
+  # for good.
+  ImmutableResponseHeadersPolicy:
+    Type: AWS::CloudFront::ResponseHeadersPolicy
+    Properties:
+      ResponseHeadersPolicyConfig:
+        Name: kbdb-images-immutable
+        CustomHeadersConfig:
+          Items:
+            - Header: Cache-Control
+              Value: public, max-age=31536000, immutable
+              Override: true
+
+  # Read by template.yaml's AWS::SSM::Parameter::Value parameters.
+  PublicKeyIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /kbdb/image-delivery/public-key-id
+      Type: String
+      Value: !Ref SigningPublicKey
+
+  KeyGroupIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /kbdb/image-delivery/key-group-id
+      Type: String
+      Value: !Ref SigningKeyGroup
+
+  ResponseHeadersPolicyIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /kbdb/image-delivery/response-headers-policy-id
+      Type: String
+      Value: !Ref ImmutableResponseHeadersPolicy

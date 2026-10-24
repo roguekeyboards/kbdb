@@ -54,6 +54,40 @@ Parameters:
       Route53, needs an imperative request/validate loop that doesn't fit
       CloudFormation's declarative model) - not created by this template.
       Required if CustomDomainName is set, ignored otherwise.
+  ImagesDomainName:
+    Type: String
+    Default: ''
+    Description: >-
+      Optional custom domain for the images distribution, e.g.
+      jay.images.mykeebs.dev, so a web app's CSP can name a stable img-src.
+      Left empty (the default), images are served from the distribution's
+      own *.cloudfront.net domain.
+  ImagesDomainCertificateArn:
+    Type: String
+    Default: ''
+    Description: >-
+      ACM certificate ARN for ImagesDomainName. Must be in us-east-1, the
+      only region CloudFront takes certificates from. Provisioned
+      out-of-band like CustomDomainCertificateArn. Required if
+      ImagesDomainName is set, ignored otherwise.
+  ImagesWebAclArn:
+    Type: String
+    Default: ''
+    Description: >-
+      Optional us-east-1 WAF web ACL for the images distribution. Empty, the
+      default, attaches none. CloudFront's flat-rate plans require one, so a
+      distribution moved onto one keeps its ACL across stack updates.
+  ImagesKeyGroupId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /kbdb/image-delivery/key-group-id
+    Description: >-
+      The account's image signing key group, from bootstrap/image-delivery.yaml.
+  ImagesResponseHeadersPolicyId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /kbdb/image-delivery/response-headers-policy-id
+    Description: >-
+      The account's images response headers policy, from
+      bootstrap/image-delivery.yaml.
   CorsAllowOrigins:
     Type: CommaDelimitedList
     Description: >-
@@ -143,9 +177,16 @@ Rules:
             - !Not [!Equals [!Ref ThrottleRateLimit, '']]
             - !Not [!Equals [!Ref ThrottleBurstLimit, '']]
         AssertDescription: Set ThrottleRateLimit and ThrottleBurstLimit together, or neither.
+  ImagesDomainHasCertificate:
+    RuleCondition: !Not [!Equals [!Ref ImagesDomainName, '']]
+    Assertions:
+      - Assert: !Not [!Equals [!Ref ImagesDomainCertificateArn, '']]
+        AssertDescription: ImagesDomainName needs ImagesDomainCertificateArn.
 
 Conditions:
   HasCustomDomain: !Not [!Equals [!Ref CustomDomainName, '']]
+  HasImagesDomain: !Not [!Equals [!Ref ImagesDomainName, '']]
+  HasImagesWebAcl: !Not [!Equals [!Ref ImagesWebAclArn, '']]
   HasAlarmEmail: !Not [!Equals [!Ref AlarmEmail, '']]
   HasDataProtection: !Equals [!Ref ProtectData, 'true']
   HasThrottle: !Not [!Equals [!Ref ThrottleRateLimit, '']]
@@ -195,6 +236,86 @@ Resources:
               - Key: moderation
                 Value: rejected
             ExpirationInDays: !Ref RejectedImageExpirationDays
+
+  ImagesOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub kbdb-images-${AWS::StackName}
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  # The read path for images: every request needs a URL signed with the
+  # account's key (bootstrap/image-delivery.yaml), and the bucket stays
+  # private behind the origin access control. Uploads stay on presigned S3
+  # PUTs.
+  ImagesDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: !Sub kbdb images (${AWS::StackName})
+        PriceClass: PriceClass_100
+        HttpVersion: http2and3
+        IPV6Enabled: true
+        Aliases: !If
+          - HasImagesDomain
+          - [!Ref ImagesDomainName]
+          - !Ref AWS::NoValue
+        ViewerCertificate: !If
+          - HasImagesDomain
+          - AcmCertificateArn: !Ref ImagesDomainCertificateArn
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2021
+          - CloudFrontDefaultCertificate: true
+        WebACLId: !If [HasImagesWebAcl, !Ref ImagesWebAclArn, !Ref AWS::NoValue]
+        Origins:
+          - Id: images
+            DomainName: !GetAtt ImagesBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt ImagesOriginAccessControl.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+        DefaultCacheBehavior:
+          TargetOriginId: images
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD]
+          CachedMethods: [GET, HEAD]
+          # Managed CachingOptimized. It leaves query strings out of the
+          # cache key, so the signature parameters don't split the cache.
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+          ResponseHeadersPolicyId: !Ref ImagesResponseHeadersPolicyId
+          TrustedKeyGroups:
+            - !Ref ImagesKeyGroupId
+
+  # The moderation function tags each image it rejects, and a takedown tags
+  # an approved one, so the distribution can't fetch either from the bucket.
+  # Copies already at the edge stay until they're invalidated or expire.
+  ImagesBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ImagesBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: DistributionRead
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "${ImagesBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${ImagesDistribution}
+          - Sid: NoRejectedImages
+            Effect: Deny
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "${ImagesBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                s3:ExistingObjectTag/moderation: rejected
 
   # ApiFunction assumes this role solely to sign presigned GET URLs. A
   # presigned URL dies with the credentials that signed it, and Lambda's own
@@ -922,6 +1043,22 @@ Outputs:
   ImagesBucketName:
     Description: S3 bucket holding user-uploaded images (build photos, keycap kit renders)
     Value: !Ref ImagesBucket
+  ImagesDistributionId:
+    Description: CloudFront distribution serving image reads
+    Value: !Ref ImagesDistribution
+  ImagesDomain:
+    Description: Host image URLs are served from - ImagesDomainName when set, else the distribution's own domain
+    Value: !If
+      - HasImagesDomain
+      - !Ref ImagesDomainName
+      - !GetAtt ImagesDistribution.DomainName
+  ImagesDomainTarget:
+    Description: >-
+      Only present when ImagesDomainName is set. Cloudflare CNAME target for
+      the images domain (images.mykeebs.info, <name>.images.mykeebs.dev) -
+      point a DNS-only (not proxied) CNAME record at this value.
+    Condition: HasImagesDomain
+    Value: !GetAtt ImagesDistribution.DomainName
   AlarmTopicArn:
     Description: SNS topic for alarms and account delete notices
     Value: !Ref AlarmTopic

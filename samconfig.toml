@@ -29,6 +29,8 @@ parameter_overrides = """\
   CorsAllowOrigins=http://localhost:5173,https://jay.mykeebs.dev \
   CustomDomainName=api.jay.mykeebs.dev \
   CustomDomainCertificateArn=arn:aws:acm:us-east-2:992234857260:certificate/1831f13e-7a40-4c83-91e7-c93c254e2807 \
+  ImagesDomainName=jay.images.mykeebs.dev \
+  ImagesDomainCertificateArn=arn:aws:acm:us-east-1:992234857260:certificate/88553c3c-cb56-4fa1-a8cf-15fd5ee48a32 \
   AlarmEmail=kbdb-alerts-dev@mykeebs.com\
   """
 

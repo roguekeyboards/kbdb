@@ -116,6 +116,10 @@ aws cloudformation deploy --template-file bootstrap/stack-boundary.yaml \
   --capabilities CAPABILITY_NAMED_IAM \
   --no-fail-on-empty-changeset >/dev/null
 
+# template.yaml reads the key group and response headers policy IDs this
+# writes to SSM.
+scripts/image-delivery-setup.sh >/dev/null
+
 # ApiReservedConcurrency is set only because floci can't deploy its empty
 # default: it resolves the AWS::NoValue to "" and fails to parse it as an
 # integer. Drop it once floci omits the property instead.
