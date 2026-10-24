@@ -100,7 +100,7 @@ mise run deploy [env]    # deploy your current code to it
 mise run teardown [env]  # delete the stack, the ECR repo stack and the repo itself
 ```
 
-`env` defaults to `dev-$(whoami)`. Developers each get their own isolated stack, so nobody can break anyone else's testing. To add yours, copy the `[dev-jay.deploy.parameters]` section to `[dev-<your-name>.deploy.parameters]` and change its values: `stack_name` must be `kbdb-dev-<your-name>`, and the ECR repo in `image_repositories` must be `kbdb-api-<stack_name>` (the [scoped dev policy](#giving-a-developer-scoped-access-no-admin-needed) only covers those names). None of the values are secret; commit the section. Want a second stack? Add a second section, e.g. `dev-<your-name>-test`.
+`env` defaults to `dev-$(whoami)`. Developers each get their own isolated stack, so nobody can break anyone else's testing. To add yours, copy the `[dev-jay.deploy.parameters]` section to `[dev-<your-name>.deploy.parameters]` and change its values: `stack_name` must be `kbdb-dev-<your-name>`, and the ECR repo in `image_repositories` must be `kbdb-api-<stack_name>`. None of the values are secret; commit the section. Want a second stack? Add a second section, e.g. `dev-<your-name>-test`.
 
 Put every template parameter in the section's `parameter_overrides`. Passing `--parameter-overrides` on the command line replaces that list wholesale rather than merging with it, so the scripts never do.
 
@@ -108,7 +108,7 @@ Before changing anything, each task checks that your active AWS credentials belo
 
 **Prod** is deployed only by GitHub Actions, from releases; don't run `deploy prod` by hand. See the [prod runbook](docs/runbook-prod.md).
 
-You just need an active, authenticated AWS session — any profile works, there's no required profile name. This project's own maintainer setup happens to use a profile named `AWS_PROFILE=kbdb-dev-admin` (see [AWS accounts](#aws-accounts) below), but that's just this project's convention, not a requirement. **If you're forking this repo**, use any profile authenticated to your own AWS account, with either admin access or the [scoped dev policy](#giving-a-developer-scoped-access-no-admin-needed) attached.
+You just need an active, authenticated AWS session — any profile works, there's no required profile name. This project's own maintainer setup happens to use a profile named `AWS_PROFILE=kbdb-dev-admin` (see [AWS accounts](#aws-accounts) below), but that's just this project's convention, not a requirement. **If you're forking this repo**, use any profile authenticated to your own AWS account with admin access.
 
 ### IdP OIDC config (`OidcIssuerBaseUrl`/`OidcAudience`/`IdpConsentPublicToken`)
 
@@ -152,6 +152,15 @@ Each developer who wants this does it once for their own name:
 5. **Add `CustomDomainName=api.<your-name>.mykeebs.dev` and `CustomDomainCertificateArn=<arn-from-step-1>`** to your section's `parameter_overrides` in `samconfig.toml` (see `[dev-jay.deploy.parameters]`). Leaving both out (the default) means no custom domain.
 6. **Deploy** (`mise run deploy`), then read the stack's `ApiCustomDomainTarget` output and create a matching `api.<your-name>` CNAME in the `mykeebs.dev` Cloudflare zone (DNS-only, not proxied), pointed at that value. This one is a normal, static record — created once, not rewritten on later deploys.
 
+#### Images domain (`<your-name>.images.mykeebs.dev`)
+
+Also optional, and needed only if a web app with a CSP loads your stack's images: its `img-src` can then name a domain you own instead of `*.cloudfront.net`. Unlike the API's domain, there's no certificate to request: one wildcard certificate for `*.images.mykeebs.dev`, in `us-east-1` in the `kbdb-dev` account (CloudFront only takes certificates from there), covers every developer.
+
+1. **Add `ImagesDomainName=<your-name>.images.mykeebs.dev` and `ImagesDomainCertificateArn=<the wildcard certificate's ARN>`** to your section's `parameter_overrides`. The ARN is in `[dev-jay.deploy.parameters]`.
+2. **Deploy**, then create a DNS-only `<your-name>.images` CNAME in the `mykeebs.dev` zone pointed at the stack's `ImagesDomainTarget` output.
+
+The zone's CAA records include `issuewild "amazon.com"`, without which ACM can't issue the wildcard.
+
 ### AWS accounts
 
 Four accounts, one SSO session (`aws configure sso` once, then `aws sso login --sso-session kbdb` to refresh):
@@ -167,28 +176,30 @@ There's no default AWS profile — commands will fail with `NoCredentials` unles
 
 ### First-time account bootstrap
 
-New AWS account, never deployed to before? One-time steps, done once per account by whoever's setting it up (not needed for everyday `deploy`). **If you're forking this repo to deploy to your own account, you only need steps 1-2** — steps 4-7 exist for this project's own separate CI and prod accounts and don't apply to a single-account personal deploy; `.github/workflows/` is entirely specific to this project's own CI and isn't something you need to set up or replicate.
+New AWS account, never deployed to before? One-time steps, done once per account by whoever's setting it up (not needed for everyday `deploy`). **If you're forking this repo to deploy to your own account, you only need steps 1, 2 and 7** — steps 4-6 and 8 exist for this project's own separate CI and prod accounts and don't apply to a single-account personal deploy; `.github/workflows/` is entirely specific to this project's own CI and isn't something you need to set up or replicate.
 
 1. **Artifact bucket** (needed by everyone): `aws cloudformation deploy --template-file bootstrap/artifact-bucket.yaml --stack-name kbdb-bootstrap --profile <profile>`. Its name is `kbdb-sam-artifacts-<your-account-id>`; that's the `s3_bucket` value in your `samconfig.toml` section.
-2. **Stack permissions boundary** (needed by everyone): `aws cloudformation deploy --template-file bootstrap/stack-boundary.yaml --stack-name kbdb-stack-boundary --capabilities CAPABILITY_NAMED_IAM --profile <profile>`. `template.yaml` puts this managed policy on every role it creates, and the deploy fails without it. It's the most any stack role can do, so a change that needs a new AWS permission updates this template in every account (kbdb-ci first, or the PR's functional tests fail), then merges. CI and the prod deploy both run `mise run bootstrap-check`, which stops them when this stack or the account's OIDC role stack is behind the repo.
+2. **Stack permissions boundary** (needed by everyone): `aws cloudformation deploy --template-file bootstrap/stack-boundary.yaml --stack-name kbdb-stack-boundary --capabilities CAPABILITY_NAMED_IAM --profile <profile>`. `template.yaml` puts this managed policy on every role it creates, and the deploy fails without it. It's the most any stack role can do, so a change that needs a new AWS permission updates this template in every account (kbdb-ci first, or the PR's functional tests fail), then merges. CI and the prod deploy both run `mise run bootstrap-check`, which stops them when this stack, the account's OIDC role stack or its image delivery stack (step 7) is behind the repo.
 3. **ECR repo**: each environment's repo is created by `mise run setup` — nothing manual to do. For `kbdb-ci`'s shared repo, see [ECR repo for `kbdb-ci`](#ecr-repo-for-kbdb-ci) below.
 4. **Cost budget** (only needed for accounts without their own app stack, e.g. `kbdb-ci`): `aws cloudformation deploy --template-file bootstrap/cost-budget.yaml --stack-name kbdb-cost-budget --profile <profile>`.
 5. **(`kbdb-ci` only) GitHub Actions OIDC role**, so CI can authenticate to AWS: `aws cloudformation deploy --template-file bootstrap/ci-oidc-role.yaml --stack-name kbdb-ci-oidc --capabilities CAPABILITY_NAMED_IAM --profile kbdb-ci-admin`.
 6. **(`kbdb-ci` only) JWKS bucket**, so CI's functional-test job can publish a publicly-fetchable OIDC discovery document + JWKS (generated by `oidc-testkit-gen`) for its per-PR stacks' native JWT authorizer to verify against: `aws cloudformation deploy --template-file bootstrap/jwks-bucket.yaml --stack-name kbdb-bootstrap-jwks --profile kbdb-ci-admin`. Then set the resulting `JWKSBucketName` output as the `JWKS_BUCKET_NAME` GitHub Actions repo variable (Settings → Secrets and variables → Actions → Variables) — `ci.yml`'s functional-test job fails at its "Generate OIDC signing material" step until that's set.
-7. **(`kbdb-prod` only) GitHub Actions deploy role**, which `deploy-prod.yml` assumes to deploy each release tag: `aws cloudformation deploy --template-file bootstrap/prod-oidc-role.yaml --stack-name kbdb-prod-oidc --capabilities CAPABILITY_NAMED_IAM --profile kbdb-prod-admin`. Then set its `GitHubActionsProdDeployRoleArn` output as the `PROD_DEPLOY_ROLE_ARN` repo variable.
+7. **Image delivery** (needed by everyone): `AWS_PROFILE=<profile> mise run image-delivery-setup`. It generates the account's image signing key pair into SSM (`/kbdb/image-delivery/private-key` and `/kbdb/image-delivery/public-key`), once, then deploys `bootstrap/image-delivery.yaml` as `kbdb-image-delivery`: the CloudFront public key, key group and response headers policy that every stack's images distribution shares. They're per account because an account holds at most 10 key groups. Rerunning it keeps the existing key pair and redeploys the stack.
+8. **(`kbdb-prod` only) GitHub Actions deploy role**, which `deploy-prod.yml` assumes to deploy each release tag: `aws cloudformation deploy --template-file bootstrap/prod-oidc-role.yaml --stack-name kbdb-prod-oidc --capabilities CAPABILITY_NAMED_IAM --profile kbdb-prod-admin`. Then set its `GitHubActionsProdDeployRoleArn` output as the `PROD_DEPLOY_ROLE_ARN` repo variable.
 
 After all bootstraps, ordinary `sam deploy` calls (and, for `kbdb-ci`, CI's own workflow) work.
 
 #### Setting up `kbdb-prod`
 
-After steps 1, 2 and 7 above:
+After steps 1, 2, 7 and 8 above:
 
 1. **Raise the Lambda concurrency quota.** A new account's limit of 10 is below the API's `ApiReservedConcurrency` of 15. Request 1000 in Service Quotas (Lambda → Concurrent executions).
 2. **Certificate for `api.mykeebs.info`**, the same way as for a [custom domain](#custom-domain-apiyour-namemykeebsdev): request it in `us-east-2`, add ACM's validation CNAME to the `mykeebs.info` Cloudflare zone (DNS only), and wait for it to be issued. Its ARN goes in `CustomDomainCertificateArn`.
-3. **Fill in the `[prod]` section of `samconfig.toml`.**
-4. **First deploy, by hand:** `AWS_PROFILE=kbdb-prod-admin mise run setup prod`.
-5. **Point `api.mykeebs.info` at the API:** create a CNAME in the `mykeebs.info` zone (DNS only) to the stack's `ApiCustomDomainTarget` output.
-6. **Confirm the two email subscriptions.** The budget one's link only works while you're signed in to the `kbdb-prod` console.
+3. **Certificate for `images.mykeebs.info`**, the same way but in `us-east-1`, because CloudFront only takes certificates from there. Its ARN goes in `ImagesDomainCertificateArn`.
+4. **Fill in the `[prod]` section of `samconfig.toml`.**
+5. **First deploy, by hand:** `AWS_PROFILE=kbdb-prod-admin mise run setup prod`.
+6. **Point `api.mykeebs.info` and `images.mykeebs.info` at the stack:** create CNAMEs in the `mykeebs.info` zone (DNS only) to the stack's `ApiCustomDomainTarget` and `ImagesDomainTarget` outputs.
+7. **Confirm the two email subscriptions.** The budget one's link only works while you're signed in to the `kbdb-prod` console.
 
 #### ECR repo for `kbdb-ci`
 
@@ -200,23 +211,6 @@ aws cloudformation deploy --template-file bootstrap/ecr-repo.yaml \
 ```
 
 Its defaults (`RepositoryName=kbdb-api`, `ExpireBy=age`) are CI's: images expire 2 days after push, since nothing there is long-lived.
-
-### Giving a developer scoped access (no admin needed)
-
-Once the account is bootstrapped, day-to-day `setup`/`deploy`/`teardown` of a `kbdb-dev-*` stack don't need admin access — a much narrower policy covers exactly what those three scripts do. This is the setup for a fork you're deploying to your own AWS account, or for adding a teammate without handing them broad permissions:
-
-1. **Account admin, once**: deploy the scoped policy.
-   ```sh
-   aws cloudformation deploy --template-file bootstrap/dev-user-policy.yaml \
-     --stack-name kbdb-dev-user-policy --capabilities CAPABILITY_NAMED_IAM --profile <admin-profile>
-   ```
-   Attach the resulting policy (output as `DevPolicyArn`) to each developer's IAM user, group, or role:
-   ```sh
-   aws iam attach-user-policy --user-name <dev> --policy-arn <DevPolicyArn>
-   ```
-2. **Each developer**: with that policy attached (and no other permissions needed), run `mise run setup`, `deploy`, `teardown` as usual.
-
-This policy is scoped to `kbdb-dev-*`-named stacks/resources only — it can't touch anything outside a developer's own stack, and can't grant itself broader access. It was verified by running the full `setup` → `deploy` → `teardown` cycle as a real IAM user with only this policy attached and nothing else.
 
 ## Testing strategy
 

@@ -56,6 +56,14 @@ Resources:
             Effect: Allow
             Action: sqs:SendMessage
             Resource: !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:kbdb-*
+          - Sid: ImageSigningKey
+            Effect: Allow
+            Action: ssm:GetParameter
+            Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/kbdb/image-delivery/private-key
+          - Sid: ImagesInvalidation
+            Effect: Allow
+            Action: cloudfront:CreateInvalidation
+            Resource: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/*
           - Sid: AssumePresignSigningRole
             Effect: Allow
             Action: sts:AssumeRole
