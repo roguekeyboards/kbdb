@@ -87,8 +87,8 @@ var blobClient = sync.OnceValue(func() *http.Client {
 // the If-None-Match: * every presigned PUT requires. Package-level, not a
 // Client method: unlike Do, it doesn't target support.BaseURL(), so it needs
 // no client state.
-func DoPresigned(ctx context.Context, method, presignedURL, contentType string, body io.Reader) (*http.Response, error) {
-	req, err := http.NewRequestWithContext(ctx, method, presignedURL, body)
+func DoPresigned(ctx context.Context, method, rawURL, contentType string, body io.Reader) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, method, rawURL, body)
 	if err != nil {
 		return nil, err
 	}

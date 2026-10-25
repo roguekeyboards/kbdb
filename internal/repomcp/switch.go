@@ -6,7 +6,7 @@ import (
 )
 
 // Switch maps repository.Switch to and from its MCP tool shape. It has no
-// dependencies - unlike repoapi.Switch, this never presigns an image URL;
+// dependencies - unlike repoapi.Switch, this never signs an image URL;
 // ToMCP reports only HasImage.
 type Switch struct{}
 

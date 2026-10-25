@@ -6,7 +6,7 @@ import (
 )
 
 // Keyboard maps repository.Keyboard to and from its MCP tool shape. It has
-// no dependencies - unlike repoapi.Keyboard, this never presigns image
+// no dependencies - unlike repoapi.Keyboard, this never signs image
 // URLs; ToMCP reports only HasImages.
 type Keyboard struct{}
 

@@ -8,7 +8,7 @@ import (
 )
 
 // KeycapSet maps repository.KeycapSet to and from its MCP tool shape. It
-// has no dependencies - unlike repoapi.KeycapSet, this never presigns a GET
+// has no dependencies - unlike repoapi.KeycapSet, this never signs a GET
 // URL for a kit's image; KitToMCP reports only HasImage.
 type KeycapSet struct{}
 
@@ -47,7 +47,7 @@ func (ks KeycapSet) ToMCP(set repository.KeycapSet, isOwner bool, ownerPrefs rep
 
 // ToMCPSummary lifts nothing extra out of the set beyond the summary
 // fields themselves and PrimaryKitHasImage, which - like KitToMCP's
-// HasImage - reports presence only, never a presigned URL a list result
+// HasImage - reports presence only, never a signed URL a list result
 // would then be stuck carrying a short-lived value in. TotalCost is shown
 // per ownerPrefs.ShowPriceToMe (owner) or ownerPrefs.ShowPriceToOthers
 // (non-owner) - unlike [KeycapSet.ToMCP], the owner isn't unconditionally
