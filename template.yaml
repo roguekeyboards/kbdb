@@ -763,6 +763,9 @@ Resources:
     Properties:
       FunctionName: !Sub kbdb-api-${AWS::StackName}
       PackageType: Image
+      # Lambda's CPU scales with memory. At 128 MB each CloudFront URL
+      # signature took about 30 ms; at 256 MB about 16 ms, the same as 512.
+      MemorySize: 256
       ReservedConcurrentExecutions: !If
         - HasApiReservedConcurrency
         - !Ref ApiReservedConcurrency
