@@ -401,6 +401,7 @@ Resources:
                 Effect: Allow
                 Action:
                   - budgets:ViewBudget
+                  - budgets:ModifyBudget
                   - budgets:DeleteBudget
                   - budgets:ListTagsForResource
                 Resource: !Sub arn:aws:budgets::${AWS::AccountId}:budget/CostBudget-*
