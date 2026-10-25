@@ -74,7 +74,7 @@ var _ = Describe("Setting a profile's avatar", func() {
 						Expect(err).NotTo(HaveOccurred())
 						Expect(putResp.StatusCode).To(Equal(http.StatusOK))
 
-						By("showing the avatar, as a presigned GET URL, embedded in a follow-up GetProfile")
+						By("showing the avatar, as a signed image URL, embedded in a follow-up GetProfile")
 						getResp, err := client.Get(ctx, ownerID, ownerToken)
 						Expect(err).NotTo(HaveOccurred())
 
@@ -87,7 +87,7 @@ var _ = Describe("Setting a profile's avatar", func() {
 						Expect(p.Avatar).NotTo(BeNil())
 						Expect(p.Avatar.URL).NotTo(BeEmpty())
 
-						By("fetching the presigned GET URL and getting back the exact bytes that were uploaded")
+						By("fetching the signed image URL and getting back the exact bytes that were uploaded")
 						getImageResp, err := api.DoPresigned(ctx, http.MethodGet, p.Avatar.URL, "", nil)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(getImageResp.StatusCode).To(Equal(http.StatusOK))

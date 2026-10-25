@@ -16,24 +16,24 @@ type ProfileImageStore struct {
 	client  s3API
 	presign s3PresignAPI
 	bucket  string
-	creds   credentialsProvider
+	get     *GetSigner
 }
 
 var _ repository.ProfileImageStore = (*ProfileImageStore)(nil)
 
 // NewProfileImageStore returns a ProfileImageStore backed by client.
-func NewProfileImageStore(client *s3.Client, presign *s3.PresignClient, bucket string, creds aws.CredentialsProvider) *ProfileImageStore {
+func NewProfileImageStore(client *s3.Client, presign *s3.PresignClient, bucket string, get *GetSigner) *ProfileImageStore {
 	return &ProfileImageStore{
 		client:  client,
 		presign: presign,
 		bucket:  bucket,
-		creds:   creds,
+		get:     get,
 	}
 }
 
 // PresignGet implements repository.ProfileImageStore.
-func (s *ProfileImageStore) PresignGet(ctx context.Context, key repository.ProfileImageKey) (url string, expiresAt time.Time, err error) {
-	return presignGet(ctx, s.creds, s.presign, s.bucket, string(key))
+func (s *ProfileImageStore) PresignGet(_ context.Context, key repository.ProfileImageKey) (url string, expiresAt time.Time, err error) {
+	return s.get.sign(string(key))
 }
 
 // PresignPut implements repository.ProfileImageStore.

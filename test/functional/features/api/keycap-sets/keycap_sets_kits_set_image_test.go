@@ -81,7 +81,7 @@ var _ = Describe("Setting a keycap kit's image", func() {
 						Expect(err).NotTo(HaveOccurred())
 						Expect(putResp.StatusCode).To(Equal(http.StatusOK))
 
-						By("showing the kit's image, as a presigned GET URL, embedded in a follow-up GetKeycapSet")
+						By("showing the kit's image, as a signed image URL, embedded in a follow-up GetKeycapSet")
 						getResp, err := client.Get(ctx, ownerID, keycapSetID, ownerToken)
 						Expect(err).NotTo(HaveOccurred())
 
@@ -99,7 +99,7 @@ var _ = Describe("Setting a keycap kit's image", func() {
 						Expect(set.Kits[0].Image).NotTo(BeNil())
 						Expect(set.Kits[0].Image.URL).NotTo(BeEmpty())
 
-						By("fetching the presigned GET URL and getting back the exact bytes that were uploaded")
+						By("fetching the signed image URL and getting back the exact bytes that were uploaded")
 						getImageResp, err := api.DoPresigned(ctx, http.MethodGet, set.Kits[0].Image.URL, "", nil)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(getImageResp.StatusCode).To(Equal(http.StatusOK))

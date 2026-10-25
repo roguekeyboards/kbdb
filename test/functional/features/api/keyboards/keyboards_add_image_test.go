@@ -17,7 +17,11 @@ import (
 	"github.com/rogueserenity/kbdb/test/functional/support/db"
 )
 
-const maxPresignGetTTL = time.Hour
+// A signed image URL expires 24h after the start of its 12h window.
+const (
+	minSignedGetLifetime = 12 * time.Hour
+	maxSignedGetLifetime = 24 * time.Hour
+)
 
 // imageIDs GETs the keyboard and returns its image ids in the order the API
 // presents them.
@@ -98,7 +102,7 @@ var _ = Describe("Adding an image to a keyboard", func() {
 						Expect(err).NotTo(HaveOccurred())
 						Expect(putResp.StatusCode).To(Equal(http.StatusOK))
 
-						By("showing the image, as a presigned GET URL, embedded in a follow-up GetKeyboard")
+						By("showing the image, as a signed image URL, embedded in a follow-up GetKeyboard")
 						getResp, err := client.Get(ctx, ownerID, keyboardID, ownerToken)
 						Expect(err).NotTo(HaveOccurred())
 
@@ -113,7 +117,7 @@ var _ = Describe("Adding an image to a keyboard", func() {
 						Expect(keyboard.Images[0].ImageID).To(Equal(created.ImageID))
 						Expect(keyboard.Images[0].URL).NotTo(BeEmpty())
 
-						By("fetching the presigned GET URL and getting back the exact bytes that were uploaded")
+						By("fetching the signed image URL and getting back the exact bytes that were uploaded")
 						getImageResp, err := api.DoPresigned(ctx, http.MethodGet, keyboard.Images[0].URL, "", nil)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(getImageResp.StatusCode).To(Equal(http.StatusOK))
@@ -122,14 +126,15 @@ var _ = Describe("Adding an image to a keyboard", func() {
 						Expect(err).NotTo(HaveOccurred())
 						Expect(gotBytes).To(Equal(imageBytes))
 
-						By("advertising a lifetime the signing credentials can actually back")
+						By("expiring 12 to 24 hours from now")
 						signed, err := url.Parse(keyboard.Images[0].URL)
 						Expect(err).NotTo(HaveOccurred())
-						expiresSec, err := strconv.Atoi(signed.Query().Get("X-Amz-Expires"))
+						expires, err := strconv.ParseInt(signed.Query().Get("Expires"), 10, 64)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(expiresSec).To(BeNumerically(">", 0))
-						Expect(expiresSec).To(BeNumerically("<=", int(maxPresignGetTTL.Seconds())),
-							"X-Amz-Expires must fit inside the signing session, not exceed it")
+						// Less a minute: a URL signed just before a window ends has
+						// barely over 12h left by the time it's checked.
+						Expect(time.Until(time.Unix(expires, 0))).To(BeNumerically(">", minSignedGetLifetime-time.Minute))
+						Expect(time.Until(time.Unix(expires, 0))).To(BeNumerically("<=", maxSignedGetLifetime))
 					})
 				})
 			})

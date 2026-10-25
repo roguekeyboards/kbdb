@@ -37,14 +37,14 @@ func sha256Hex(data []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// httpClientForBlobs is used for presigned S3 GET/PUT, which are plain HTTP,
-// not API calls. Generous timeout for large originals.
+// httpClientForBlobs is used for signed image GETs and presigned S3 PUTs,
+// which are plain HTTP, not API calls. Generous timeout for large originals.
 var httpClientForBlobs = &http.Client{Timeout: 5 * time.Minute}
 
-// downloadImage fetches a presigned GET URL and returns the bytes plus the
+// downloadImage fetches a signed image URL and returns the bytes plus the
 // response Content-Type.
-func downloadImage(ctx context.Context, presignedURL string) (data []byte, contentType string, err error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, presignedURL, nil)
+func downloadImage(ctx context.Context, imageURL string) (data []byte, contentType string, err error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, imageURL, nil)
 	if err != nil {
 		return nil, "", fmt.Errorf("building image GET: %w", err)
 	}

@@ -16,24 +16,24 @@ type KeycapKitImageStore struct {
 	client  s3API
 	presign s3PresignAPI
 	bucket  string
-	creds   credentialsProvider
+	get     *GetSigner
 }
 
 var _ repository.KeycapKitImageStore = (*KeycapKitImageStore)(nil)
 
 // NewKeycapKitImageStore returns a KeycapKitImageStore backed by client.
-func NewKeycapKitImageStore(client *s3.Client, presign *s3.PresignClient, bucket string, creds aws.CredentialsProvider) *KeycapKitImageStore {
+func NewKeycapKitImageStore(client *s3.Client, presign *s3.PresignClient, bucket string, get *GetSigner) *KeycapKitImageStore {
 	return &KeycapKitImageStore{
 		client:  client,
 		presign: presign,
 		bucket:  bucket,
-		creds:   creds,
+		get:     get,
 	}
 }
 
 // PresignGet implements repository.KeycapKitImageStore.
-func (s *KeycapKitImageStore) PresignGet(ctx context.Context, key repository.KeycapKitImageKey) (url string, expiresAt time.Time, err error) {
-	return presignGet(ctx, s.creds, s.presign, s.bucket, string(key))
+func (s *KeycapKitImageStore) PresignGet(_ context.Context, key repository.KeycapKitImageKey) (url string, expiresAt time.Time, err error) {
+	return s.get.sign(string(key))
 }
 
 // PresignPut implements repository.KeycapKitImageStore.

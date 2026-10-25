@@ -264,8 +264,8 @@ func NewKeycapKitImageKey(ctx context.Context, setID, kitID, uploadID string) (K
 // caller-facing presigned URL - that's minted fresh per request, never
 // persisted.
 type KeycapKitImageStore interface {
-	// PresignGet returns a presigned GET URL for key, and when it stops
-	// working - bounded by the signing credentials, not configured.
+	// PresignGet returns a signed GET URL for key on the images
+	// distribution, and when it stops working.
 	PresignGet(ctx context.Context, key KeycapKitImageKey) (url string, expiresAt time.Time, err error)
 
 	// PresignPut returns a short-lived presigned PUT URL for key, locked

@@ -193,8 +193,8 @@ func NewProfileImageKey(ctx context.Context, uploadID string) (ProfileImageKey, 
 // ProfileImageStore stores a profile's avatar object in a private object
 // store, addressed by ProfileImageKey.
 type ProfileImageStore interface {
-	// PresignGet returns a presigned GET URL for key, and when it stops
-	// working - bounded by the signing credentials, not configured.
+	// PresignGet returns a signed GET URL for key on the images
+	// distribution, and when it stops working.
 	PresignGet(ctx context.Context, key ProfileImageKey) (url string, expiresAt time.Time, err error)
 
 	// PresignPut returns a short-lived presigned PUT URL for key, locked to

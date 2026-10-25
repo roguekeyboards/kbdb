@@ -16,24 +16,24 @@ type BuildImageStore struct {
 	client  s3API
 	presign s3PresignAPI
 	bucket  string
-	creds   credentialsProvider
+	get     *GetSigner
 }
 
 var _ repository.BuildImageStore = (*BuildImageStore)(nil)
 
 // NewBuildImageStore returns a BuildImageStore backed by client.
-func NewBuildImageStore(client *s3.Client, presign *s3.PresignClient, bucket string, creds aws.CredentialsProvider) *BuildImageStore {
+func NewBuildImageStore(client *s3.Client, presign *s3.PresignClient, bucket string, get *GetSigner) *BuildImageStore {
 	return &BuildImageStore{
 		client:  client,
 		presign: presign,
 		bucket:  bucket,
-		creds:   creds,
+		get:     get,
 	}
 }
 
 // PresignGetBuildImage implements repository.BuildImageStore.
-func (s *BuildImageStore) PresignGetBuildImage(ctx context.Context, key repository.BuildImageKey) (url string, expiresAt time.Time, err error) {
-	return presignGet(ctx, s.creds, s.presign, s.bucket, string(key))
+func (s *BuildImageStore) PresignGetBuildImage(_ context.Context, key repository.BuildImageKey) (url string, expiresAt time.Time, err error) {
+	return s.get.sign(string(key))
 }
 
 // PresignPutBuildImage implements repository.BuildImageStore.

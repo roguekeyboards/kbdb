@@ -1,7 +1,5 @@
 package main
 
-import "time"
-
 // Config is populated from environment variables via Kong. There are no CLI
 // flags for this service — it's a Lambda entrypoint, not a CLI tool — but
 // Kong's struct-tag env binding, defaults, and required-field validation are
@@ -13,26 +11,21 @@ type Config struct {
 	// consent page - see internal/consent.
 	IDPConsentPublicToken string `env:"IDP_CONSENT_PUBLIC_TOKEN" required:""`
 	ImagesBucketName      string `env:"IMAGES_BUCKET_NAME" required:""`
-	// Role assumed solely to sign presigned GET URLs. Lambda's own
-	// credentials carry no expiry the SDK can see, so a URL signed with them
-	// can't be bounded to their real lifetime; an assumed role returns an
-	// explicit Expiration. Optional: empty falls back to the ambient
-	// credentials (sam local, and any deploy without the role).
-	PresignRoleARN string `env:"PRESIGN_ROLE_ARN"`
-
-	// Session length requested when assuming PresignRoleARN, and so the
-	// ceiling on a presigned GET URL's life. 1h is the hard maximum here:
-	// Lambda's execution role is itself assumed, so assuming another role
-	// from it is role chaining, which STS caps at 1h whatever the target
-	// role's MaxSessionDuration says.
-	PresignSessionDuration   time.Duration `env:"PRESIGN_SESSION_DURATION" default:"1h"`
-	SwitchTableName          string        `env:"SWITCH_TABLE_NAME" required:""`
-	KeyboardTableName        string        `env:"KEYBOARD_TABLE_NAME" required:""`
-	KeycapSetTableName       string        `env:"KEYCAP_SET_TABLE_NAME" required:""`
-	BuildTableName           string        `env:"BUILD_TABLE_NAME" required:""`
-	ProfileTableName         string        `env:"PROFILE_TABLE_NAME" required:""`
-	ProfileUsernameTableName string        `env:"PROFILE_USERNAME_TABLE_NAME" required:""`
-	UploadCounterTableName   string        `env:"UPLOAD_COUNTER_TABLE_NAME" required:""`
+	// Image GET URLs are CloudFront signed URLs under this base, e.g.
+	// https://images.mykeebs.info.
+	ImagesBaseURL string `env:"IMAGES_BASE_URL" required:""`
+	// SSM parameters holding the image signing key pair's private half and
+	// its CloudFront public key ID. Both are read at cold start in one call,
+	// so a key rotation can't pair a new key with an old ID.
+	ImagesSigningKeyParam    string `env:"IMAGES_SIGNING_KEY_PARAM" required:""`
+	ImagesSigningKeyIDParam  string `env:"IMAGES_SIGNING_KEY_ID_PARAM" required:""`
+	SwitchTableName          string `env:"SWITCH_TABLE_NAME" required:""`
+	KeyboardTableName        string `env:"KEYBOARD_TABLE_NAME" required:""`
+	KeycapSetTableName       string `env:"KEYCAP_SET_TABLE_NAME" required:""`
+	BuildTableName           string `env:"BUILD_TABLE_NAME" required:""`
+	ProfileTableName         string `env:"PROFILE_TABLE_NAME" required:""`
+	ProfileUsernameTableName string `env:"PROFILE_USERNAME_TABLE_NAME" required:""`
+	UploadCounterTableName   string `env:"UPLOAD_COUNTER_TABLE_NAME" required:""`
 	// Upload URLs issued per UTC day across every user - see
 	// internal/uploadlimit.
 	DailyUploadLimit int64 `env:"DAILY_UPLOAD_LIMIT" required:""`

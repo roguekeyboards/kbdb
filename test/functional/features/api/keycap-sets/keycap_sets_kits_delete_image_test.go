@@ -117,7 +117,7 @@ var _ = Describe("Deleting a keycap kit's image", func() {
 						Expect(set.Kits).To(HaveLen(1))
 						Expect(set.Kits[0].Image).To(BeNil())
 
-						By("the previously-issued presigned GET URL no longer serving the object from S3")
+						By("the previously-issued signed image URL no longer serving the object from S3")
 						getImageResp, err := api.DoPresigned(ctx, http.MethodGet, imageGetURL, "", nil)
 						Expect(err).NotTo(HaveOccurred())
 						// Real S3 returns 403 (not 404) for GetObject against a

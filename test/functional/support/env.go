@@ -113,3 +113,16 @@ func S3EndpointURL() string {
 func DynamoDBEndpointURL() string {
 	return os.Getenv("KBDB_DYNAMODB_ENDPOINT_URL")
 }
+
+// CACertPath returns a PEM CA certificate to trust on top of the system
+// roots when fetching image URLs: floci's test CA locally, empty against real
+// AWS.
+func CACertPath() string {
+	return os.Getenv("KBDB_CA_CERT_PATH")
+}
+
+// ImagesDomain returns the host image URLs must be served from: the stack's
+// ImagesDomain output.
+func ImagesDomain() string {
+	return os.Getenv("KBDB_IMAGES_DOMAIN")
+}

@@ -11,7 +11,7 @@ Globals:
     Timeout: 10
     MemorySize: 128
     # bootstrap/stack-boundary.yaml, deployed to every account before any
-    # stack. PresignSigningRole sets the same boundary.
+    # stack.
     PermissionsBoundary: !Sub arn:aws:iam::${AWS::AccountId}:policy/kbdb-stack-boundary
 
 Parameters:
@@ -88,6 +88,13 @@ Parameters:
     Description: >-
       The account's images response headers policy, from
       bootstrap/image-delivery.yaml.
+  ImagesBaseUrl:
+    Type: String
+    Default: ''
+    Description: >-
+      Optional override for the base of image URLs. Empty, the default, uses
+      https:// plus ImagesDomainName when set, else the distribution's own
+      domain. Only floci sets it, to add its port.
   CorsAllowOrigins:
     Type: CommaDelimitedList
     Description: >-
@@ -187,6 +194,7 @@ Conditions:
   HasCustomDomain: !Not [!Equals [!Ref CustomDomainName, '']]
   HasImagesDomain: !Not [!Equals [!Ref ImagesDomainName, '']]
   HasImagesWebAcl: !Not [!Equals [!Ref ImagesWebAclArn, '']]
+  HasImagesBaseUrl: !Not [!Equals [!Ref ImagesBaseUrl, '']]
   HasAlarmEmail: !Not [!Equals [!Ref AlarmEmail, '']]
   HasDataProtection: !Equals [!Ref ProtectData, 'true']
   HasThrottle: !Not [!Equals [!Ref ThrottleRateLimit, '']]
@@ -194,8 +202,9 @@ Conditions:
 
 Resources:
   # Holds user-uploaded images (build photos, keycap kit renders). Private -
-  # access only via presigned URLs minted by ApiFunction after an ownership/
-  # sharing check. Stack-scoped (no per-bucket cost, keeps
+  # read through ImagesDistribution's signed URLs and written through
+  # presigned PUTs, both minted by ApiFunction after an ownership/sharing
+  # check. Stack-scoped (no per-bucket cost, keeps
   # environments isolated).
   ImagesBucket:
     Type: AWS::S3::Bucket
@@ -259,10 +268,11 @@ Resources:
         PriceClass: PriceClass_100
         HttpVersion: http2and3
         IPV6Enabled: true
-        Aliases: !If
-          - HasImagesDomain
-          - [!Ref ImagesDomainName]
-          - !Ref AWS::NoValue
+        # A list around the !If, not an !If returning a list: floci's
+        # provisioner drops Aliases given as any intrinsic. With no domain the
+        # NoValue leaves an empty list, which CloudFront treats as no aliases.
+        Aliases:
+          - !If [HasImagesDomain, !Ref ImagesDomainName, !Ref AWS::NoValue]
         ViewerCertificate: !If
           - HasImagesDomain
           - AcmCertificateArn: !Ref ImagesDomainCertificateArn
@@ -316,56 +326,6 @@ Resources:
             Condition:
               StringEquals:
                 s3:ExistingObjectTag/moderation: rejected
-
-  # ApiFunction assumes this role solely to sign presigned GET URLs. A
-  # presigned URL dies with the credentials that signed it, and Lambda's own
-  # execution-role credentials arrive via env vars that carry no expiry - the
-  # SDK reports CanExpire=false, so the signer can't bound the URL to them and
-  # was emitting URLs that outlived their token (S3 answers ExpiredToken).
-  # Assuming a role instead returns an explicit Expiration, so the URL's
-  # lifetime is one we set via DurationSeconds and can report accurately.
-  # GetObject only: this role signs reads, it never writes or deletes.
-  PresignSigningRole:
-    Type: AWS::IAM::Role
-    Properties:
-      PermissionsBoundary: !Sub arn:aws:iam::${AWS::AccountId}:policy/kbdb-stack-boundary
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              AWS: !GetAtt ApiFunctionRole.Arn
-            Action: sts:AssumeRole
-      # 3600, not higher: ApiFunction assumes this role from Lambda's own
-      # assumed execution role, which is role chaining - STS rejects any
-      # DurationSeconds over 1h for that, so a larger ceiling here would be
-      # misleading.
-      MaxSessionDuration: 3600
-      Policies:
-        - PolicyName: presign-get
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action: s3:GetObject
-                Resource: !Sub "${ImagesBucket.Arn}/*"
-
-  # Standalone rather than inline on ApiFunction: the function's role is
-  # PresignSigningRole's trusted principal, so an inline grant would make each
-  # role's definition depend on the other's ARN. A separate policy resource
-  # references both and is depended on by neither.
-  PresignAssumeRolePolicy:
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyName: presign-assume-role
-      Roles:
-        - !Ref ApiFunctionRole
-      PolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Action: sts:AssumeRole
-            Resource: !GetAtt PresignSigningRole.Arn
 
   # User-owned switches. user_id (the owner's IdP subject claim) is the
   # partition key, id the sort key - every real access pattern is scoped to
@@ -815,7 +775,15 @@ Resources:
           OIDC_AUDIENCE: !Ref OidcAudience
           IDP_CONSENT_PUBLIC_TOKEN: !Ref IdpConsentPublicToken
           IMAGES_BUCKET_NAME: !Ref ImagesBucket
-          PRESIGN_ROLE_ARN: !GetAtt PresignSigningRole.Arn
+          IMAGES_BASE_URL: !If
+            - HasImagesBaseUrl
+            - !Ref ImagesBaseUrl
+            - !If
+              - HasImagesDomain
+              - !Sub https://${ImagesDomainName}
+              - !Sub https://${ImagesDistribution.DomainName}
+          IMAGES_SIGNING_KEY_PARAM: /kbdb/image-delivery/private-key
+          IMAGES_SIGNING_KEY_ID_PARAM: /kbdb/image-delivery/public-key-id
           SWITCH_TABLE_NAME: !Ref SwitchTable
           KEYBOARD_TABLE_NAME: !Ref KeyboardTable
           KEYCAP_SET_TABLE_NAME: !Ref KeycapSetTable
@@ -834,23 +802,28 @@ Resources:
           # port const.
           AWS_LWA_PORT: "8000"
       # Hand-written, not SAM's S3CrudPolicy/DynamoDBReadPolicy (those grant
-      # extra actions we don't need). Presigned URLs inherit this role's
-      # permissions, so Put/Get cover upload/download; Delete is for the
-      # DELETE-image endpoints. ListBucket and BatchWriteItem are for an
-      # account delete (internal/accountdelete), which removes a user's
-      # images by key prefix and their items by partition.
+      # extra actions we don't need). Presigned upload URLs inherit this
+      # role's permissions, hence PutObject; downloads go through
+      # ImagesDistribution instead. Delete is for the DELETE-image endpoints.
+      # ListBucket and BatchWriteItem are for an account delete
+      # (internal/accountdelete), which removes a user's images by key prefix
+      # and their items by partition.
       Policies:
         - Version: "2012-10-17"
           Statement:
             - Effect: Allow
               Action:
                 - s3:PutObject
-                - s3:GetObject
                 - s3:DeleteObject
               Resource: !Sub "${ImagesBucket.Arn}/*"
             - Effect: Allow
               Action: s3:ListBucket
               Resource: !GetAtt ImagesBucket.Arn
+            - Effect: Allow
+              Action: ssm:GetParameters
+              Resource:
+                - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/kbdb/image-delivery/private-key
+                - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/kbdb/image-delivery/public-key-id
             - Effect: Allow
               Action: sns:Publish
               Resource: !Ref AlarmTopic
