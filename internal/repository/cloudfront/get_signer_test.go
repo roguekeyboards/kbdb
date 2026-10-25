@@ -1,4 +1,4 @@
-package s3
+package cloudfront
 
 import (
 	"crypto/rand"
@@ -11,13 +11,10 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/rogueserenity/kbdb/internal/repository/s3/mocks"
+	"github.com/rogueserenity/kbdb/internal/repository/cloudfront/mocks"
 )
 
-var (
-	testGetNow    = time.Date(2026, 10, 25, 3, 0, 0, 0, time.UTC)
-	testGetExpiry = time.Date(2026, 10, 26, 0, 0, 0, 0, time.UTC)
-)
+var testGetNow = time.Date(2026, 10, 25, 3, 0, 0, 0, time.UTC)
 
 func testGetSigner(signer urlSigner) *GetSigner {
 	return &GetSigner{
@@ -59,7 +56,7 @@ func (s *GetSignerSuite) TestExpiry_AlignsToUTCWindows() {
 			g := testGetSigner(signer)
 			g.now = func() time.Time { return tc.now }
 
-			_, expiresAt, err := g.sign("k")
+			_, expiresAt, err := g.Sign("k")
 
 			s.Require().NoError(err)
 			s.True(tc.want.Equal(expiresAt), "got %s, want %s", expiresAt, tc.want)
@@ -72,7 +69,7 @@ func (s *GetSignerSuite) TestSign_TrimsTrailingSlashFromBaseURL() {
 	s.Require().NoError(err)
 	g := NewGetSigner("https://images.example.com/", "KEYID", key)
 
-	signed, _, err := g.sign("switches/alice/sw1/image/up1")
+	signed, _, err := g.Sign("switches/alice/sw1/image/up1")
 
 	s.Require().NoError(err)
 	u, err := url.Parse(signed)
@@ -86,9 +83,9 @@ func (s *GetSignerSuite) TestSign_RealSigner_SHA256AndDeterministic() {
 	g := NewGetSigner("https://images.example.com", "KEYID", key)
 	g.now = func() time.Time { return testGetNow }
 
-	first, expiresAt, err := g.sign("k")
+	first, expiresAt, err := g.Sign("k")
 	s.Require().NoError(err)
-	second, _, err := g.sign("k")
+	second, _, err := g.Sign("k")
 	s.Require().NoError(err)
 
 	s.Equal(first, second, "URLs signed within one window must be identical")

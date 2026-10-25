@@ -8,7 +8,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/rogueserenity/kbdb/test/functional/support"
 	"github.com/rogueserenity/kbdb/test/functional/support/api"
+	"github.com/rogueserenity/kbdb/test/functional/support/cdn"
 	"github.com/rogueserenity/kbdb/test/functional/support/db"
 )
 
@@ -38,10 +40,16 @@ var _ = Describe("Deleting a switch's image", func() {
 	})
 
 	Context("given a private switch owned by the caller with an image on it", func() {
+		var key string
+
 		BeforeEach(func(ctx SpecContext) {
 			setResp, err := client.SetImage(ctx, ownerID, switchID, ownerToken, api.ImageUploadBody(approvedImageContentType))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(setResp.StatusCode).To(Equal(http.StatusCreated))
+
+			img, err := db.GetSwitchImage(ctx, ownerID, switchID)
+			Expect(err).NotTo(HaveOccurred())
+			key = img.Path
 		})
 
 		Context("given the caller is the owner", func() {
@@ -67,6 +75,13 @@ var _ = Describe("Deleting a switch's image", func() {
 					}
 					Expect(json.NewDecoder(getResp.Body).Decode(&sw)).To(Succeed())
 					Expect(sw.Image).To(BeNil())
+				})
+
+				It("clears the image's cached copies", func(ctx SpecContext) {
+					if !support.ImagesInvalidation() {
+						Skip("this stack doesn't invalidate deleted images")
+					}
+					Expect(cdn.Invalidated(ctx, "/"+key)).To(BeTrue())
 				})
 			})
 		})

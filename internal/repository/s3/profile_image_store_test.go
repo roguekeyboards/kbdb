@@ -3,6 +3,7 @@ package s3
 import (
 	"errors"
 	"testing"
+	"time"
 
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -17,7 +18,8 @@ type ProfileImageStoreSuite struct {
 
 	mockClient  *mocks.MockS3API
 	mockPresign *mocks.MockS3PresignAPI
-	mockSigner  *mocks.MockURLSigner
+	mockSigner  *mocks.MockGetSigner
+	mockCDN     *mocks.MockInvalidator
 	store       *ProfileImageStore
 }
 
@@ -28,31 +30,30 @@ func TestProfileImageStoreSuite(t *testing.T) {
 func (s *ProfileImageStoreSuite) SetupTest() {
 	s.mockClient = mocks.NewMockS3API(s.T())
 	s.mockPresign = mocks.NewMockS3PresignAPI(s.T())
-	s.mockSigner = mocks.NewMockURLSigner(s.T())
+	s.mockSigner = mocks.NewMockGetSigner(s.T())
+	s.mockCDN = mocks.NewMockInvalidator(s.T())
 	s.store = &ProfileImageStore{
 		client:  s.mockClient,
 		presign: s.mockPresign,
 		bucket:  "images-bucket",
-		get:     testGetSigner(s.mockSigner),
+		get:     s.mockSigner,
+		cdn:     s.mockCDN,
 	}
 }
 
 func (s *ProfileImageStoreSuite) TestSignGet_SignsKeyOnImagesDomain() {
-	s.mockSigner.EXPECT().
-		Sign("https://images.example.com/profiles/user-alice/avatar/up1", testGetExpiry).
-		Return("https://images.example.com/signed", nil)
+	expiry := time.Date(2026, 10, 26, 0, 0, 0, 0, time.UTC)
+	s.mockSigner.EXPECT().Sign("profiles/user-alice/avatar/up1").Return("https://images.example.com/signed", expiry, nil)
 
 	url, expiresAt, err := s.store.SignGet(s.T().Context(), "profiles/user-alice/avatar/up1")
 
 	s.Require().NoError(err)
 	s.Equal("https://images.example.com/signed", url)
-	s.Equal(testGetExpiry, expiresAt)
+	s.Equal(expiry, expiresAt)
 }
 
 func (s *ProfileImageStoreSuite) TestSignGet_SignerError_Propagates() {
-	s.mockSigner.EXPECT().
-		Sign(mock.Anything, mock.Anything).
-		Return("", errors.New("crypto/rsa: verification error"))
+	s.mockSigner.EXPECT().Sign(mock.Anything).Return("", time.Time{}, errors.New("crypto/rsa: verification error"))
 
 	url, _, err := s.store.SignGet(s.T().Context(), "profiles/user-alice/avatar/up1")
 
@@ -82,6 +83,14 @@ func (s *ProfileImageStoreSuite) TestDelete_Succeeds() {
 			return *in.Bucket == "images-bucket" && *in.Key == "profiles/user-alice/avatar/up1"
 		})).
 		Return(&s3.DeleteObjectOutput{}, nil)
+	s.mockCDN.EXPECT().Invalidate(mock.Anything, []string{"/profiles/user-alice/avatar/up1"}).Return(nil)
+
+	s.Require().NoError(s.store.Delete(s.T().Context(), "profiles/user-alice/avatar/up1"))
+}
+
+func (s *ProfileImageStoreSuite) TestDelete_InvalidationFails_StillSucceeds() {
+	s.mockClient.EXPECT().DeleteObject(mock.Anything, mock.Anything).Return(&s3.DeleteObjectOutput{}, nil)
+	s.mockCDN.EXPECT().Invalidate(mock.Anything, mock.Anything).Return(errors.New("cloudfront: throttled"))
 
 	s.Require().NoError(s.store.Delete(s.T().Context(), "profiles/user-alice/avatar/up1"))
 }

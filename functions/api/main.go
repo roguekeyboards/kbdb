@@ -19,6 +19,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/cloudfront/sign"
+	awscloudfront "github.com/aws/aws-sdk-go-v2/service/cloudfront"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
@@ -27,6 +28,7 @@ import (
 	"github.com/rogueserenity/kbdb/internal/accountdelete"
 	"github.com/rogueserenity/kbdb/internal/auth"
 	"github.com/rogueserenity/kbdb/internal/deletenotice"
+	"github.com/rogueserenity/kbdb/internal/repository/cloudfront"
 	"github.com/rogueserenity/kbdb/internal/repository/dynamo"
 	imagestore "github.com/rogueserenity/kbdb/internal/repository/s3"
 	"github.com/rogueserenity/kbdb/internal/router"
@@ -88,14 +90,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("loading image signing key: %v", err)
 	}
-	getSigner := imagestore.NewGetSigner(cfg.ImagesBaseURL, keyID, key)
+	getSigner := cloudfront.NewGetSigner(cfg.ImagesBaseURL, keyID, key)
+	cdn := cloudfront.NewInvalidator(awscloudfront.NewFromConfig(awsCfg), cfg.ImagesDistributionID)
 
-	keycapKitImageStore := imagestore.NewKeycapKitImageStore(s3Client, presignClient, cfg.ImagesBucketName, getSigner)
-	buildImageStore := imagestore.NewBuildImageStore(s3Client, presignClient, cfg.ImagesBucketName, getSigner)
-	keyboardImageStore := imagestore.NewKeyboardImageStore(s3Client, presignClient, cfg.ImagesBucketName, getSigner)
-	switchImageStore := imagestore.NewSwitchImageStore(s3Client, presignClient, cfg.ImagesBucketName, getSigner)
-	profileImageStore := imagestore.NewProfileImageStore(s3Client, presignClient, cfg.ImagesBucketName, getSigner)
-	ownerImageStore := imagestore.NewOwnerImageStore(s3Client, cfg.ImagesBucketName)
+	keycapKitImageStore := imagestore.NewKeycapKitImageStore(s3Client, presignClient, cfg.ImagesBucketName, getSigner, cdn)
+	buildImageStore := imagestore.NewBuildImageStore(s3Client, presignClient, cfg.ImagesBucketName, getSigner, cdn)
+	keyboardImageStore := imagestore.NewKeyboardImageStore(s3Client, presignClient, cfg.ImagesBucketName, getSigner, cdn)
+	switchImageStore := imagestore.NewSwitchImageStore(s3Client, presignClient, cfg.ImagesBucketName, getSigner, cdn)
+	profileImageStore := imagestore.NewProfileImageStore(s3Client, presignClient, cfg.ImagesBucketName, getSigner, cdn)
+	ownerImageStore := imagestore.NewOwnerImageStore(s3Client, cfg.ImagesBucketName, cdn)
 
 	var deleteNotices accountdelete.Notifier
 	if cfg.AccountDeleteTopicARN != "" {

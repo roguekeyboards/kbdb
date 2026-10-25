@@ -16,6 +16,7 @@ import (
 
 	"github.com/rogueserenity/kbdb/internal/imagekey"
 	"github.com/rogueserenity/kbdb/internal/repository"
+	"github.com/rogueserenity/kbdb/internal/repository/cloudfront"
 )
 
 // ErrNotCurrent is returned for a key no item's image slot holds any more.
@@ -34,12 +35,14 @@ type Overrides struct {
 	images  *Images
 	reviews *ReviewLog
 	bucket  string
+	cdn     invalidator
 	now     func() time.Time
 }
 
-// NewOverrides returns Overrides for the images in bucket.
-func NewOverrides(s3Client *s3.Client, images *Images, reviews *ReviewLog, bucket string) *Overrides {
-	return &Overrides{s3: s3Client, images: images, reviews: reviews, bucket: bucket, now: time.Now}
+// NewOverrides returns Overrides for the images in bucket, served through
+// the distribution cdn invalidates.
+func NewOverrides(s3Client *s3.Client, images *Images, reviews *ReviewLog, bucket string, cdn *cloudfront.Invalidator) *Overrides {
+	return &Overrides{s3: s3Client, images: images, reviews: reviews, bucket: bucket, cdn: cdn, now: time.Now}
 }
 
 // Uphold records that a rejection was reviewed and stands. It changes
@@ -136,6 +139,10 @@ var expiryDatePattern = regexp.MustCompile(`expiry-date="([^"]+)"`)
 // rejection awaiting review, or a finished takedown. Its reason is left as
 // it was and nothing is recorded, so a queued rejection isn't cleared by
 // mistake (Uphold is for that).
+//
+// Every run invalidates the key's cached copies last, after the tag that
+// stops S3 serving the file and after the review is recorded, so a run
+// whose invalidation failed is completed by running it again.
 func (o *Overrides) Reject(ctx context.Context, key, reason string) (already, gone bool, err error) {
 	if strings.TrimSpace(reason) == "" {
 		return false, false, errors.New("a rejection reason can't be blank")
@@ -152,10 +159,16 @@ func (o *Overrides) Reject(ctx context.Context, key, reason string) (already, go
 	if err != nil {
 		return false, false, err
 	}
-	if already && !added {
-		return true, gone, nil
+	already = already && !added
+	if !already {
+		if err := o.reviews.Record(ctx, key, ActionRejected, reason); err != nil {
+			return false, false, err
+		}
 	}
-	return false, gone, o.reviews.Record(ctx, key, ActionRejected, reason)
+	if err := o.cdn.Invalidate(ctx, "/"+key); err != nil {
+		return false, false, err
+	}
+	return already, gone, nil
 }
 
 // addRejectedTag adds the rejected tag to key's tags. added reports that

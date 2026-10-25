@@ -8,7 +8,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
+	"github.com/rogueserenity/kbdb/internal/log"
 	"github.com/rogueserenity/kbdb/internal/repository"
+	"github.com/rogueserenity/kbdb/internal/repository/cloudfront"
 )
 
 // KeyboardImageStore is the S3-backed repository.KeyboardImageStore.
@@ -16,24 +18,26 @@ type KeyboardImageStore struct {
 	client  s3API
 	presign s3PresignAPI
 	bucket  string
-	get     *GetSigner
+	get     getSigner
+	cdn     invalidator
 }
 
 var _ repository.KeyboardImageStore = (*KeyboardImageStore)(nil)
 
 // NewKeyboardImageStore returns a KeyboardImageStore backed by client.
-func NewKeyboardImageStore(client *s3.Client, presign *s3.PresignClient, bucket string, get *GetSigner) *KeyboardImageStore {
+func NewKeyboardImageStore(client *s3.Client, presign *s3.PresignClient, bucket string, get *cloudfront.GetSigner, cdn *cloudfront.Invalidator) *KeyboardImageStore {
 	return &KeyboardImageStore{
 		client:  client,
 		presign: presign,
 		bucket:  bucket,
 		get:     get,
+		cdn:     cdn,
 	}
 }
 
 // SignGetKeyboardImage implements repository.KeyboardImageStore.
 func (s *KeyboardImageStore) SignGetKeyboardImage(_ context.Context, key repository.KeyboardImageKey) (url string, expiresAt time.Time, err error) {
-	return s.get.sign(string(key))
+	return s.get.Sign(string(key))
 }
 
 // PresignPutKeyboardImage implements repository.KeyboardImageStore.
@@ -60,6 +64,10 @@ func (s *KeyboardImageStore) DeleteKeyboardImage(ctx context.Context, key reposi
 	})
 	if err != nil {
 		return fmt.Errorf("deleting s3://%s/%s: %w", s.bucket, key, err)
+	}
+
+	if err := s.cdn.Invalidate(ctx, "/"+string(key)); err != nil {
+		log.FromContext(ctx).Error("invalidating a deleted image", log.Error, err)
 	}
 
 	return nil

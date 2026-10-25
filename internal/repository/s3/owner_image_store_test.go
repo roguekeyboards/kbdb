@@ -20,6 +20,7 @@ type OwnerImageStoreSuite struct {
 	suite.Suite
 
 	mockClient *mocks.MockS3API
+	mockCDN    *mocks.MockInvalidator
 	store      *OwnerImageStore
 	ctx        context.Context
 }
@@ -30,7 +31,8 @@ func TestOwnerImageStoreSuite(t *testing.T) {
 
 func (s *OwnerImageStoreSuite) SetupTest() {
 	s.mockClient = mocks.NewMockS3API(s.T())
-	s.store = &OwnerImageStore{client: s.mockClient, bucket: "images-bucket"}
+	s.mockCDN = mocks.NewMockInvalidator(s.T())
+	s.store = &OwnerImageStore{client: s.mockClient, bucket: "images-bucket", cdn: s.mockCDN}
 	s.ctx = kbdbctx.WithUserID(s.T().Context(), "alice")
 }
 
@@ -53,9 +55,40 @@ func (s *OwnerImageStoreSuite) TestDeletesEveryObjectUnderEachPrefix() {
 				*in.Delete.Objects[0].Key == "keyboards/alice/k1/images/i1"
 		})).
 		Return(&s3.DeleteObjectsOutput{}, nil).Once()
+	s.mockCDN.EXPECT().Invalidate(mock.Anything, []string{"/keyboards/alice/*"}).Return(nil)
 
 	s.Require().NoError(s.store.DeleteAll(s.ctx))
 	s.Equal(repository.OwnerImagePrefixes("alice"), listed)
+}
+
+func (s *OwnerImageStoreSuite) TestInvalidatesOnlyPrefixesThatHadObjects() {
+	s.mockClient.EXPECT().ListObjectsV2(mock.Anything, mock.Anything, mock.Anything).
+		RunAndReturn(func(_ context.Context, in *s3.ListObjectsV2Input, _ ...func(*s3.Options)) (*s3.ListObjectsV2Output, error) {
+			switch *in.Prefix {
+			case "builds/alice/", "profiles/alice/":
+				return &s3.ListObjectsV2Output{Contents: []types.Object{{Key: aws.String(*in.Prefix + "x")}}}, nil
+			}
+			return &s3.ListObjectsV2Output{}, nil
+		})
+	s.mockClient.EXPECT().DeleteObjects(mock.Anything, mock.Anything).Return(&s3.DeleteObjectsOutput{}, nil).Times(2)
+	s.mockCDN.EXPECT().Invalidate(mock.Anything, []string{"/builds/alice/*", "/profiles/alice/*"}).Return(nil)
+
+	s.Require().NoError(s.store.DeleteAll(s.ctx))
+}
+
+func (s *OwnerImageStoreSuite) TestNothingDeleted_InvalidatesNothing() {
+	s.mockClient.EXPECT().ListObjectsV2(mock.Anything, mock.Anything, mock.Anything).Return(&s3.ListObjectsV2Output{}, nil)
+
+	s.Require().NoError(s.store.DeleteAll(s.ctx))
+}
+
+func (s *OwnerImageStoreSuite) TestInvalidationFails_StillSucceeds() {
+	s.mockClient.EXPECT().ListObjectsV2(mock.Anything, mock.Anything, mock.Anything).
+		Return(&s3.ListObjectsV2Output{Contents: []types.Object{{Key: aws.String("builds/alice/b1/images/i1")}}}, nil)
+	s.mockClient.EXPECT().DeleteObjects(mock.Anything, mock.Anything).Return(&s3.DeleteObjectsOutput{}, nil)
+	s.mockCDN.EXPECT().Invalidate(mock.Anything, mock.Anything).Return(errors.New("cloudfront: throttled"))
+
+	s.Require().NoError(s.store.DeleteAll(s.ctx))
 }
 
 func (s *OwnerImageStoreSuite) TestPerKeyErrors_Error() {

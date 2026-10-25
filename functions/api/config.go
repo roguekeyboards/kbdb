@@ -17,8 +17,11 @@ type Config struct {
 	// SSM parameters holding the image signing key pair's private half and
 	// its CloudFront public key ID. Both are read at cold start in one call,
 	// so a key rotation can't pair a new key with an old ID.
-	ImagesSigningKeyParam    string `env:"IMAGES_SIGNING_KEY_PARAM" required:""`
-	ImagesSigningKeyIDParam  string `env:"IMAGES_SIGNING_KEY_ID_PARAM" required:""`
+	ImagesSigningKeyParam   string `env:"IMAGES_SIGNING_KEY_PARAM" required:""`
+	ImagesSigningKeyIDParam string `env:"IMAGES_SIGNING_KEY_ID_PARAM" required:""`
+	// The images distribution whose edge copies are invalidated when an
+	// image is deleted. Empty invalidates nothing.
+	ImagesDistributionID     string `env:"IMAGES_DISTRIBUTION_ID"`
 	SwitchTableName          string `env:"SWITCH_TABLE_NAME" required:""`
 	KeyboardTableName        string `env:"KEYBOARD_TABLE_NAME" required:""`
 	KeycapSetTableName       string `env:"KEYCAP_SET_TABLE_NAME" required:""`

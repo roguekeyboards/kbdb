@@ -1,6 +1,10 @@
 package support
 
-import "os"
+import (
+	"os"
+	"path/filepath"
+	"runtime"
+)
 
 // BaseURL returns the API's base URL under test, e.g. "http://127.0.0.1:3000"
 // for a local sam local start-api instance or the real deployed kbdb-dev API
@@ -125,4 +129,27 @@ func CACertPath() string {
 // ImagesDomain output.
 func ImagesDomain() string {
 	return os.Getenv("KBDB_IMAGES_DOMAIN")
+}
+
+// IsCI reports whether specs are running in CI, which targets real AWS
+// rather than the local emulator.
+func IsCI() bool {
+	return os.Getenv("CI") == "true"
+}
+
+// ImagesDistributionID returns the stack's images distribution.
+func ImagesDistributionID() string {
+	return os.Getenv("KBDB_IMAGES_DISTRIBUTION_ID")
+}
+
+// ImagesInvalidation reports whether the stack invalidates deleted images:
+// off in CI's PR stacks, on for floci.
+func ImagesInvalidation() bool {
+	return os.Getenv("KBDB_IMAGES_INVALIDATION") == "true"
+}
+
+// RepoRoot returns the kbdb repository's root directory.
+func RepoRoot() string {
+	_, file, _, _ := runtime.Caller(0)
+	return filepath.Join(filepath.Dir(file), "..", "..", "..")
 }

@@ -151,6 +151,7 @@ Resources:
                   - s3:PutObject
                   - s3:DeleteObject
                   - s3:GetObjectTagging
+                  - s3:PutObjectTagging
                 Resource: !Sub arn:aws:s3:::kbdb-images-${AWS::AccountId}-kbdb-pr-*/*
               # Distribution IDs are generated, so these can't be scoped to a stack.
               - Sid: CloudFrontCreate
@@ -170,6 +171,9 @@ Resources:
                   - cloudfront:TagResource
                   - cloudfront:UntagResource
                   - cloudfront:ListTagsForResource
+                  - cloudfront:CreateInvalidation
+                  - cloudfront:ListInvalidations
+                  - cloudfront:GetInvalidation
                 Resource: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/*
               - Sid: CloudFrontOriginAccessControls
                 Effect: Allow
@@ -216,6 +220,7 @@ Resources:
                   - dynamodb:UpdateTimeToLive
                   - dynamodb:PutItem
                   - dynamodb:GetItem
+                  - dynamodb:UpdateItem
                   - dynamodb:DeleteItem
                 Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/kbdb-pr-*
               - Sid: LogsScoped
@@ -232,6 +237,14 @@ Resources:
                   - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-api-kbdb-pr-*
                   - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-moderate-kbdb-pr-*
                   - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/apigateway/kbdb-api-kbdb-pr-*
+              # The takedown spec runs kbdb-moderation reject, which records
+              # its review in the moderation function's log group.
+              - Sid: ModerationReviewLog
+                Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-moderate-kbdb-pr-*:*
               - Sid: SqsScoped
                 Effect: Allow
                 Action:
