@@ -54,7 +54,7 @@ When someone reports an image on the site:
 1. Right-click the image and copy its address.
 2. `mise run moderation-reject [env] '<the copied link>' [reason]`. Quote the link: it contains `&`.
 
-The image is rejected at once. The owner sees the placeholder with the reason you gave (`manual` if you gave none), and nobody else sees the image. Any link the site already handed out keeps working while CloudFront has the image cached, up to a day.
+The image is rejected at once. The owner sees the placeholder with the reason you gave (`manual` if you gave none), and nobody else sees the image. Links the site already handed out stop working within seconds, except in a browser that has already loaded the image. If the command fails after rejecting, run it again: a rerun finishes the takedown.
 
 A takedown is final once its file is deleted. The lifecycle rule counts from **upload**, so a takedown of an image older than 30 days is deleted at the rule's next nightly run (midnight UTC). If you might want to undo it, do so the same day.
 

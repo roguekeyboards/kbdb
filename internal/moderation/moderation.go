@@ -35,6 +35,10 @@ type s3API interface {
 	DeleteObjectTagging(ctx context.Context, in *s3.DeleteObjectTaggingInput, opts ...func(*s3.Options)) (*s3.DeleteObjectTaggingOutput, error)
 }
 
+type invalidator interface {
+	Invalidate(ctx context.Context, paths ...string) error
+}
+
 // rekognitionAPI is the subset of the Rekognition client the moderator
 // uses.
 type rekognitionAPI interface {

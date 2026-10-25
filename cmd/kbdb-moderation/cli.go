@@ -232,7 +232,7 @@ func (c *RejectCmd) Run(ctx context.Context, st *stack) error {
 	case gone:
 		fmt.Printf("Rejected %s (%s). Its file is already gone.\n", key, c.Reason)
 	default:
-		fmt.Printf("Rejected %s (%s). Download links issued before now keep working while CloudFront has the image cached, up to a day.\n", key, c.Reason)
+		fmt.Printf("Rejected %s (%s). Links already handed out stop working within seconds, except in a browser that has already loaded the image.\n", key, c.Reason)
 	}
 	return nil
 }

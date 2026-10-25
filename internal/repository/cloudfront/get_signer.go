@@ -1,4 +1,4 @@
-package s3
+package cloudfront
 
 import (
 	"crypto"
@@ -35,8 +35,8 @@ func NewGetSigner(baseURL, keyID string, key crypto.Signer) *GetSigner {
 	}
 }
 
-// sign returns a signed URL for key and when it stops working.
-func (g *GetSigner) sign(key string) (string, time.Time, error) {
+// Sign returns a signed URL for key and when it stops working.
+func (g *GetSigner) Sign(key string) (string, time.Time, error) {
 	expiresAt := g.now().Truncate(repository.ImageURLWindow).Add(repository.ImageURLLifetime)
 
 	url, err := g.signer.Sign(g.baseURL+"/"+key, expiresAt)

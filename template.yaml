@@ -147,6 +147,14 @@ Parameters:
       'true' turns on deletion protection and point-in-time recovery for
       every table holding user data. For prod; dev and CI stacks are torn
       down all the time, so it's off by default.
+  InvalidateImages:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+    Description: >-
+      'true' clears a deleted image from the distribution's edge caches.
+      CI's PR stacks pass 'false': each invalidation path past the first
+      1,000 a month costs, and their functional runs would need thousands.
   ThrottleRateLimit:
     Type: String
     Default: ''
@@ -197,6 +205,7 @@ Conditions:
   HasImagesBaseUrl: !Not [!Equals [!Ref ImagesBaseUrl, '']]
   HasAlarmEmail: !Not [!Equals [!Ref AlarmEmail, '']]
   HasDataProtection: !Equals [!Ref ProtectData, 'true']
+  HasImageInvalidation: !Equals [!Ref InvalidateImages, 'true']
   HasThrottle: !Not [!Equals [!Ref ThrottleRateLimit, '']]
   HasApiReservedConcurrency: !Not [!Equals [!Ref ApiReservedConcurrency, '']]
 
@@ -787,6 +796,7 @@ Resources:
               - !Sub https://${ImagesDistribution.DomainName}
           IMAGES_SIGNING_KEY_PARAM: /kbdb/image-delivery/private-key
           IMAGES_SIGNING_KEY_ID_PARAM: /kbdb/image-delivery/public-key-id
+          IMAGES_DISTRIBUTION_ID: !If [HasImageInvalidation, !Ref ImagesDistribution, '']
           SWITCH_TABLE_NAME: !Ref SwitchTable
           KEYBOARD_TABLE_NAME: !Ref KeyboardTable
           KEYCAP_SET_TABLE_NAME: !Ref KeycapSetTable
@@ -827,6 +837,12 @@ Resources:
               Resource:
                 - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/kbdb/image-delivery/private-key
                 - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/kbdb/image-delivery/public-key-id
+            - !If
+              - HasImageInvalidation
+              - Effect: Allow
+                Action: cloudfront:CreateInvalidation
+                Resource: !Sub arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${ImagesDistribution}
+              - !Ref AWS::NoValue
             - Effect: Allow
               Action: sns:Publish
               Resource: !Ref AlarmTopic

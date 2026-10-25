@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -182,4 +183,24 @@ func s3Client(cfg aws.Config) *s3.Client {
 			o.UsePathStyle = true
 		}
 	})
+}
+
+// Reject takes down the image at key by running the operator CLI's reject
+// against the stack under test, as an operator would.
+func Reject(ctx context.Context, key, reason string) error {
+	region := os.Getenv("AWS_REGION")
+	if region == "" {
+		region = os.Getenv("AWS_DEFAULT_REGION")
+	}
+	cmd := exec.CommandContext(ctx, "go", "run", "./cmd/kbdb-moderation", //nolint:gosec // test-controlled arguments
+		"--stack", support.StackName(), "--region", region, "reject", key, reason)
+	cmd.Dir = support.RepoRoot()
+	cmd.Env = os.Environ()
+	if endpoint := support.AWSEndpointURL(); endpoint != "" {
+		cmd.Env = append(cmd.Env, "AWS_ENDPOINT_URL="+endpoint)
+	}
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("kbdb-moderation reject: %w: %s", err, out)
+	}
+	return nil
 }

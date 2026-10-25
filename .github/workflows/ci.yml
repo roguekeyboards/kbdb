@@ -148,6 +148,7 @@ jobs:
               "IdpConsentPublicToken=public-token-test-local-kbdb" \
               "CorsAllowOrigins=http://localhost:5173" \
               "DailyUploadLimit=1000000" \
+              "InvalidateImages=false" \
             --tags "kbdb:pr=pr-${{ github.event.pull_request.number }}" \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset
@@ -199,6 +200,10 @@ jobs:
             --stack-name "${{ steps.pr-stack.outputs.stack-name }}" \
             --query "Stacks[0].Outputs[?OutputKey=='ImagesDomain'].OutputValue" \
             --output text)
+          IMAGES_DISTRIBUTION_ID=$(aws cloudformation describe-stacks \
+            --stack-name "${{ steps.pr-stack.outputs.stack-name }}" \
+            --query "Stacks[0].Outputs[?OutputKey=='ImagesDistributionId'].OutputValue" \
+            --output text)
           {
             echo "api-url=$API_URL"
             echo "switch-table-name=$SWITCH_TABLE_NAME"
@@ -211,6 +216,7 @@ jobs:
             echo "images-bucket-name=$IMAGES_BUCKET_NAME"
             echo "alarm-topic-arn=$ALARM_TOPIC_ARN"
             echo "images-domain=$IMAGES_DOMAIN"
+            echo "images-distribution-id=$IMAGES_DISTRIBUTION_ID"
           } >> "$GITHUB_OUTPUT"
 
       - name: Run functional tests
@@ -229,5 +235,6 @@ jobs:
           KBDB_IMAGES_BUCKET_NAME: ${{ steps.stack-outputs.outputs.images-bucket-name }}
           KBDB_ALARM_TOPIC_ARN: ${{ steps.stack-outputs.outputs.alarm-topic-arn }}
           KBDB_IMAGES_DOMAIN: ${{ steps.stack-outputs.outputs.images-domain }}
+          KBDB_IMAGES_DISTRIBUTION_ID: ${{ steps.stack-outputs.outputs.images-distribution-id }}
           KBDB_STACK_NAME: ${{ steps.pr-stack.outputs.stack-name }}
         run: mise run func-test

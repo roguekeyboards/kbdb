@@ -7,6 +7,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
+	awscloudfront "github.com/aws/aws-sdk-go-v2/service/cloudfront"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
@@ -14,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 
 	"github.com/rogueserenity/kbdb/internal/moderation"
+	"github.com/rogueserenity/kbdb/internal/repository/cloudfront"
 	"github.com/rogueserenity/kbdb/internal/repository/dynamo"
 )
 
@@ -25,6 +27,7 @@ type stack struct {
 	logGroup string
 	function string
 	dlqURL   string
+	cdn      *cloudfront.Invalidator
 	images   *moderation.Images
 
 	// expiryDays is the stack's RejectedImageExpirationDays.
@@ -53,7 +56,7 @@ func resolveStack(ctx context.Context, cfg aws.Config, name string) (*stack, err
 	for _, logical := range []string{
 		"ImagesBucket", "ModerateFunctionLogGroup", "SwitchTable", "KeyboardTable",
 		"KeycapSetTable", "BuildTable", "ProfileTable", "ProfileUsernameTable",
-		"ModerateFunction", "ModerationDLQ",
+		"ModerateFunction", "ModerationDLQ", "ImagesDistribution",
 	} {
 		if ids[logical] == "" {
 			return nil, fmt.Errorf("stack %s has no %s", name, logical)
@@ -68,6 +71,7 @@ func resolveStack(ctx context.Context, cfg aws.Config, name string) (*stack, err
 		logGroup:   ids["ModerateFunctionLogGroup"],
 		function:   ids["ModerateFunction"],
 		dlqURL:     ids["ModerationDLQ"],
+		cdn:        cloudfront.NewInvalidator(awscloudfront.NewFromConfig(cfg), ids["ImagesDistribution"]),
 		images: &moderation.Images{
 			Keyboards:  dynamo.NewKeyboardRepository(db, ids["KeyboardTable"]),
 			Builds:     dynamo.NewBuildRepository(db, ids["BuildTable"]),
@@ -102,5 +106,5 @@ func (st *stack) dlq() *moderation.DLQ {
 
 func (st *stack) overrides() *moderation.Overrides {
 	reviews := moderation.NewReviewLog(cloudwatchlogs.NewFromConfig(st.cfg), st.logGroup)
-	return moderation.NewOverrides(s3.NewFromConfig(st.cfg), st.images, reviews, st.bucket)
+	return moderation.NewOverrides(s3.NewFromConfig(st.cfg), st.images, reviews, st.bucket, st.cdn)
 }

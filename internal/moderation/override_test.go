@@ -26,6 +26,7 @@ type OverridesSuite struct {
 	logs      *mocks.MockLogsAPI
 	s3        *mocks.MockS3API
 	switches  *repomocks.MockSwitchRepository
+	cdn       *mocks.MockInvalidator
 	overrides *Overrides
 }
 
@@ -37,11 +38,15 @@ func (s *OverridesSuite) SetupTest() {
 	s.s3 = mocks.NewMockS3API(s.T())
 	s.switches = repomocks.NewMockSwitchRepository(s.T())
 	s.logs = mocks.NewMockLogsAPI(s.T())
+	s.cdn = mocks.NewMockInvalidator(s.T())
 	reviews := &ReviewLog{logs: s.logs, logGroup: testLogGroup, now: time.Now}
-	s.overrides = &Overrides{s3: s.s3, images: &Images{Switches: s.switches}, reviews: reviews, bucket: testBucket, now: time.Now}
+	s.overrides = &Overrides{s3: s.s3, images: &Images{Switches: s.switches}, reviews: reviews, bucket: testBucket, cdn: s.cdn, now: time.Now}
 }
 
-// recorded expects one review line for testKey.
+func (s *OverridesSuite) invalidated() {
+	s.cdn.EXPECT().Invalidate(mock.Anything, []string{"/" + testKey}).Return(nil)
+}
+
 func (s *OverridesSuite) recorded(action, reason string) {
 	s.logs.EXPECT().CreateLogStream(mock.Anything, mock.Anything).Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil)
 	s.logs.EXPECT().PutLogEvents(mock.Anything, mock.MatchedBy(func(in *cloudwatchlogs.PutLogEventsInput) bool {
@@ -119,7 +124,6 @@ func (s *OverridesSuite) TestApprove_AlreadyApproved() {
 	s.False(untagged)
 }
 
-// A rerun after the status write failed: approved, but still tagged.
 func (s *OverridesSuite) TestApprove_AlreadyApprovedStillTagged() {
 	s.exists()
 	s.stored(testKey, repository.ImageStatusApproved)
@@ -132,7 +136,6 @@ func (s *OverridesSuite) TestApprove_AlreadyApprovedStillTagged() {
 	s.True(untagged)
 }
 
-// The tag is left alone on an image that isn't rejected or approved.
 func (s *OverridesSuite) TestApprove_Pending() {
 	s.stored(testKey, repository.ImageStatusPending)
 
@@ -140,7 +143,6 @@ func (s *OverridesSuite) TestApprove_Pending() {
 	s.Require().ErrorContains(err, "is pending, not rejected")
 }
 
-// The tag is left alone on a file no item holds, so it still expires.
 func (s *OverridesSuite) TestApprove_Replaced() {
 	s.stored("switches/alice/sw1/image/up2", repository.ImageStatusRejected)
 
@@ -148,7 +150,6 @@ func (s *OverridesSuite) TestApprove_Replaced() {
 	s.Require().ErrorIs(err, ErrNotCurrent)
 }
 
-// The image changed between the read and the conditional write.
 func (s *OverridesSuite) TestApprove_ChangedDuringUpdate() {
 	s.exists()
 	s.stored(testKey, repository.ImageStatusRejected)
@@ -160,8 +161,6 @@ func (s *OverridesSuite) TestApprove_ChangedDuringUpdate() {
 	s.Require().ErrorIs(err, ErrNotCurrent)
 }
 
-// The status write never happens, so a failed untag leaves the image
-// rejected rather than approved and still expiring.
 func (s *OverridesSuite) TestApprove_UntagFails() {
 	s.exists()
 	s.stored(testKey, repository.ImageStatusRejected)
@@ -221,8 +220,6 @@ func (s *OverridesSuite) TestApprove_FileExpiresLater() {
 	s.Require().NoError(err)
 }
 
-// A key no item holds is reported as not current, whether or not a file
-// exists for it.
 func (s *OverridesSuite) TestApprove_NoItemNoFile() {
 	s.switches.EXPECT().Get(mock.Anything, "alice", "sw1").Return(nil, repository.ErrNotFound)
 
@@ -230,8 +227,6 @@ func (s *OverridesSuite) TestApprove_NoItemNoFile() {
 	s.Require().ErrorIs(err, ErrNotCurrent)
 }
 
-// The lifecycle rule deleted the file between the metadata read and the
-// tag read.
 func (s *OverridesSuite) TestApprove_FileDeletedMidRun() {
 	s.exists()
 	s.stored(testKey, repository.ImageStatusRejected)
@@ -266,8 +261,6 @@ func (s *OverridesSuite) TestUphold_NotCurrent() {
 	s.Require().ErrorIs(s.overrides.Uphold(s.T().Context(), testKey), ErrNotCurrent)
 }
 
-// The approval stands; running approve again finds it already approved
-// and records the review then.
 func (s *OverridesSuite) TestApprove_RecordFails() {
 	s.exists()
 	s.stored(testKey, repository.ImageStatusRejected)
@@ -285,6 +278,7 @@ func (s *OverridesSuite) TestReject_Approved() {
 	s.setStatus(repository.ImageStatusApproved, repository.ImageStatusRejected, &reason, true)
 	s.tags()
 	s.tagged()
+	s.invalidated()
 	s.recorded(ActionRejected, "manual")
 
 	already, gone, err := s.overrides.Reject(s.T().Context(), testKey, reason)
@@ -298,20 +292,20 @@ func (s *OverridesSuite) TestReject_AlreadyRejected() {
 	s.setStatus(repository.ImageStatusApproved, repository.ImageStatusRejected, &reason, false)
 	s.stored(testKey, repository.ImageStatusRejected)
 	s.tags(tag("moderation", "rejected"))
+	s.invalidated()
 
 	already, _, err := s.overrides.Reject(s.T().Context(), testKey, reason)
 	s.Require().NoError(err)
 	s.True(already)
 }
 
-// A rerun of a takedown whose tag write failed: rejected but untagged.
-// It's tagged now and the takedown recorded, completing it.
 func (s *OverridesSuite) TestReject_InterruptedTakedown() {
 	reason := "manual"
 	s.setStatus(repository.ImageStatusApproved, repository.ImageStatusRejected, &reason, false)
 	s.stored(testKey, repository.ImageStatusRejected)
 	s.tags()
 	s.tagged()
+	s.invalidated()
 	s.recorded(ActionRejected, "manual")
 
 	already, _, err := s.overrides.Reject(s.T().Context(), testKey, reason)
@@ -328,6 +322,7 @@ func (s *OverridesSuite) TestReject_KeepsOtherTags() {
 		return len(tags) == 2 && aws.ToString(tags[0].Key) == "team" &&
 			aws.ToString(tags[1].Key) == "moderation" && aws.ToString(tags[1].Value) == "rejected"
 	})).Return(&s3.PutObjectTaggingOutput{}, nil)
+	s.invalidated()
 	s.recorded(ActionRejected, "manual")
 
 	_, _, err := s.overrides.Reject(s.T().Context(), testKey, reason)
@@ -353,7 +348,6 @@ func (s *OverridesSuite) TestReject_TagFails() {
 	s.Require().ErrorContains(err, "boom")
 }
 
-// The SDK returns NoSuchKey from the tagging calls as a plain API error.
 func (s *OverridesSuite) TestReject_FileGone() {
 	reason := "manual"
 	s.setStatus(repository.ImageStatusApproved, repository.ImageStatusRejected, &reason, true)
@@ -364,6 +358,17 @@ func (s *OverridesSuite) TestReject_FileGone() {
 	_, gone, err := s.overrides.Reject(s.T().Context(), testKey, reason)
 	s.Require().NoError(err)
 	s.True(gone)
+}
+
+func (s *OverridesSuite) TestReject_InvalidationFails_ErrorsWithoutRecording() {
+	reason := "manual"
+	s.setStatus(repository.ImageStatusApproved, repository.ImageStatusRejected, &reason, true)
+	s.tags()
+	s.tagged()
+	s.cdn.EXPECT().Invalidate(mock.Anything, mock.Anything).Return(errors.New("cloudfront: throttled"))
+
+	_, _, err := s.overrides.Reject(s.T().Context(), testKey, reason)
+	s.Require().ErrorContains(err, "cloudfront: throttled")
 }
 
 func (s *OverridesSuite) TestReject_BlankReason() {

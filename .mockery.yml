@@ -73,9 +73,24 @@ packages:
       s3PresignAPI:
         config:
           structname: 'MockS3PresignAPI'
+      getSigner:
+        config:
+          structname: 'MockGetSigner'
+      invalidator:
+        config:
+          structname: 'MockInvalidator'
+  github.com/rogueserenity/kbdb/internal/repository/cloudfront:
+    config:
+      dir: '{{.InterfaceDir}}/mocks'
+      filename: 'mock_{{.InterfaceName}}.go'
+      pkgname: 'mocks'
+    interfaces:
       urlSigner:
         config:
           structname: 'MockURLSigner'
+      cloudfrontAPI:
+        config:
+          structname: 'MockCloudFrontAPI'
   github.com/rogueserenity/kbdb/internal/deletenotice:
     config:
       dir: '{{.InterfaceDir}}/mocks'
@@ -111,6 +126,9 @@ packages:
       sqsAPI:
         config:
           structname: 'MockSQSAPI'
+      invalidator:
+        config:
+          structname: 'MockInvalidator'
       lambdaAPI:
         config:
           structname: 'MockLambdaAPI'
