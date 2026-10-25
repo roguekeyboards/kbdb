@@ -14,8 +14,8 @@ import (
 	"github.com/rogueserenity/kbdb/test/functional/support"
 )
 
-// Invalidated reports whether any of the distribution's recent
-// invalidations covers path.
+// Invalidated reports whether any of the distribution's invalidations
+// covers path.
 func Invalidated(ctx context.Context, path string) (bool, error) {
 	cfg, err := awsconfig.LoadDefaultConfig(ctx)
 	if err != nil {
@@ -32,18 +32,24 @@ func Invalidated(ctx context.Context, path string) (bool, error) {
 	})
 
 	id := aws.String(support.ImagesDistributionID())
-	list, err := client.ListInvalidations(ctx, &cloudfront.ListInvalidationsInput{DistributionId: id})
-	if err != nil {
-		return false, err
-	}
-	for _, summary := range list.InvalidationList.Items {
-		inv, err := client.GetInvalidation(ctx, &cloudfront.GetInvalidationInput{DistributionId: id, Id: summary.Id})
+	var marker *string
+	for {
+		list, err := client.ListInvalidations(ctx, &cloudfront.ListInvalidationsInput{DistributionId: id, Marker: marker})
 		if err != nil {
 			return false, err
 		}
-		if slices.Contains(inv.Invalidation.InvalidationBatch.Paths.Items, path) {
-			return true, nil
+		for _, summary := range list.InvalidationList.Items {
+			inv, err := client.GetInvalidation(ctx, &cloudfront.GetInvalidationInput{DistributionId: id, Id: summary.Id})
+			if err != nil {
+				return false, err
+			}
+			if slices.Contains(inv.Invalidation.InvalidationBatch.Paths.Items, path) {
+				return true, nil
+			}
 		}
+		if !aws.ToBool(list.InvalidationList.IsTruncated) {
+			return false, nil
+		}
+		marker = list.InvalidationList.NextMarker
 	}
-	return false, nil
 }

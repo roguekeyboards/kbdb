@@ -140,8 +140,9 @@ var expiryDatePattern = regexp.MustCompile(`expiry-date="([^"]+)"`)
 // it was and nothing is recorded, so a queued rejection isn't cleared by
 // mistake (Uphold is for that).
 //
-// Unless the file is gone, every run invalidates the key's cached copies,
-// so a run whose invalidation failed is completed by running it again.
+// Every run invalidates the key's cached copies last, after the tag that
+// stops S3 serving the file and after the review is recorded, so a run
+// whose invalidation failed is completed by running it again.
 func (o *Overrides) Reject(ctx context.Context, key, reason string) (already, gone bool, err error) {
 	if strings.TrimSpace(reason) == "" {
 		return false, false, errors.New("a rejection reason can't be blank")
@@ -158,15 +159,16 @@ func (o *Overrides) Reject(ctx context.Context, key, reason string) (already, go
 	if err != nil {
 		return false, false, err
 	}
-	if !gone {
-		if err := o.cdn.Invalidate(ctx, "/"+key); err != nil {
+	already = already && !added
+	if !already {
+		if err := o.reviews.Record(ctx, key, ActionRejected, reason); err != nil {
 			return false, false, err
 		}
 	}
-	if already && !added {
-		return true, gone, nil
+	if err := o.cdn.Invalidate(ctx, "/"+key); err != nil {
+		return false, false, err
 	}
-	return false, gone, o.reviews.Record(ctx, key, ActionRejected, reason)
+	return already, gone, nil
 }
 
 // addRejectedTag adds the rejected tag to key's tags. added reports that

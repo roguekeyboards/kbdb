@@ -192,8 +192,12 @@ func Reject(ctx context.Context, key, reason string) error {
 	if region == "" {
 		region = os.Getenv("AWS_DEFAULT_REGION")
 	}
-	cmd := exec.CommandContext(ctx, "go", "run", "./cmd/kbdb-moderation", //nolint:gosec // test-controlled arguments
-		"--stack", support.StackName(), "--region", region, "reject", key, reason)
+	args := []string{"run", "./cmd/kbdb-moderation", "--stack", support.StackName()}
+	if region != "" {
+		args = append(args, "--region", region)
+	}
+	args = append(args, "reject", key, reason)
+	cmd := exec.CommandContext(ctx, "go", args...) //nolint:gosec // test-controlled arguments
 	cmd.Dir = support.RepoRoot()
 	cmd.Env = os.Environ()
 	if endpoint := support.AWSEndpointURL(); endpoint != "" {

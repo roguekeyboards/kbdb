@@ -354,17 +354,19 @@ func (s *OverridesSuite) TestReject_FileGone() {
 	s.s3.EXPECT().GetObjectTagging(mock.Anything, mock.Anything).
 		Return(nil, fmt.Errorf("operation error S3: GetObjectTagging: %w", &smithy.GenericAPIError{Code: "NoSuchKey"}))
 	s.recorded(ActionRejected, "manual")
+	s.invalidated()
 
 	_, gone, err := s.overrides.Reject(s.T().Context(), testKey, reason)
 	s.Require().NoError(err)
 	s.True(gone)
 }
 
-func (s *OverridesSuite) TestReject_InvalidationFails_ErrorsWithoutRecording() {
+func (s *OverridesSuite) TestReject_InvalidationFails_RecordsThenErrors() {
 	reason := "manual"
 	s.setStatus(repository.ImageStatusApproved, repository.ImageStatusRejected, &reason, true)
 	s.tags()
 	s.tagged()
+	s.recorded(ActionRejected, "manual")
 	s.cdn.EXPECT().Invalidate(mock.Anything, mock.Anything).Return(errors.New("cloudfront: throttled"))
 
 	_, _, err := s.overrides.Reject(s.T().Context(), testKey, reason)
