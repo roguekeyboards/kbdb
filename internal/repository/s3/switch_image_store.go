@@ -31,8 +31,8 @@ func NewSwitchImageStore(client *s3.Client, presign *s3.PresignClient, bucket st
 	}
 }
 
-// PresignGet implements repository.SwitchImageStore.
-func (s *SwitchImageStore) PresignGet(_ context.Context, key repository.SwitchImageKey) (url string, expiresAt time.Time, err error) {
+// SignGet implements repository.SwitchImageStore.
+func (s *SwitchImageStore) SignGet(_ context.Context, key repository.SwitchImageKey) (url string, expiresAt time.Time, err error) {
 	return s.get.sign(string(key))
 }
 

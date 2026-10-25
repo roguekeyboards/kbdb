@@ -144,7 +144,7 @@ func (s *KeycapSetToAPISuite) TestNonOwnerShowPriceToOthersFalse_OmitsKitPriceKe
 	ks.Kits = map[string]repository.KeycapKit{repoKit.KitID: repoKit}
 
 	images := mocks.NewMockKeycapKitImageStore(s.T())
-	images.EXPECT().PresignGet(mock.Anything, *repoKit.ImagePath).Return("https://example.com/presigned-get", presignExpiry(), nil)
+	images.EXPECT().SignGet(mock.Anything, *repoKit.ImagePath).Return("https://example.com/signed-get", signedExpiry(), nil)
 	repo := mocks.NewMockKeycapSetRepository(s.T())
 	repo.EXPECT().
 		SetKitImageGetCache(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -169,7 +169,7 @@ func (s *KeycapSetToAPISuite) TestNonOwnerShowPriceToOthersTrue_IncludesKitPrice
 	ks.Kits = map[string]repository.KeycapKit{repoKit.KitID: repoKit}
 
 	images := mocks.NewMockKeycapKitImageStore(s.T())
-	images.EXPECT().PresignGet(mock.Anything, *repoKit.ImagePath).Return("https://example.com/presigned-get", presignExpiry(), nil)
+	images.EXPECT().SignGet(mock.Anything, *repoKit.ImagePath).Return("https://example.com/signed-get", signedExpiry(), nil)
 	repo := mocks.NewMockKeycapSetRepository(s.T())
 	repo.EXPECT().
 		SetKitImageGetCache(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -191,7 +191,7 @@ func (s *KeycapSetToAPISuite) TestOwner_AlwaysIncludesKitPriceRegardlessOfShowPr
 	ks.Kits = map[string]repository.KeycapKit{repoKit.KitID: repoKit}
 
 	images := mocks.NewMockKeycapKitImageStore(s.T())
-	images.EXPECT().PresignGet(mock.Anything, *repoKit.ImagePath).Return("https://example.com/presigned-get", presignExpiry(), nil)
+	images.EXPECT().SignGet(mock.Anything, *repoKit.ImagePath).Return("https://example.com/signed-get", signedExpiry(), nil)
 	repo := mocks.NewMockKeycapSetRepository(s.T())
 	repo.EXPECT().
 		SetKitImageGetCache(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -218,8 +218,6 @@ func fullAPIKeycapSetInput() api.KeycapSetInput {
 	}
 }
 
-// pricedKeycapSet has two image-less kits priced 120 and 35, plus one with
-// no price.
 func pricedKeycapSet() repository.KeycapSet {
 	ks := fullRepoKeycapSet()
 	kit1 := fullRepoKeycapKit()
@@ -369,7 +367,7 @@ func TestKeycapKitToAPISuite(t *testing.T) {
 func (s *KeycapKitToAPISuite) TestFullRoundTrip_PreservesEveryField() {
 	k := fullRepoKeycapKit()
 	images := mocks.NewMockKeycapKitImageStore(s.T())
-	images.EXPECT().PresignGet(mock.Anything, *k.ImagePath).Return("https://example.com/presigned-get", presignExpiry(), nil)
+	images.EXPECT().SignGet(mock.Anything, *k.ImagePath).Return("https://example.com/signed-get", signedExpiry(), nil)
 	repo := mocks.NewMockKeycapSetRepository(s.T())
 	repo.EXPECT().
 		SetKitImageGetCache(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -382,7 +380,7 @@ func (s *KeycapKitToAPISuite) TestFullRoundTrip_PreservesEveryField() {
 	s.Equal(k.KitID, out.KitId)
 	s.Equal(k.Name, out.Name)
 	s.Require().NotNil(out.Image)
-	s.Equal("https://example.com/presigned-get", *out.Image.Url)
+	s.Equal("https://example.com/signed-get", *out.Image.Url)
 	s.Require().NotNil(out.Purchase)
 	s.Equal(k.Purchase.Vendor, out.Purchase.Vendor)
 	s.Equal(k.Purchase.Price, out.Purchase.Price)
@@ -419,7 +417,7 @@ func (s *KeycapKitToAPISuite) TestMalformedStoredDate_ReturnsError() {
 func (s *KeycapKitToAPISuite) TestNonOwnerShowPriceToOthersFalse_OmitsPriceKeepsRestOfPurchase() {
 	k := fullRepoKeycapKit()
 	images := mocks.NewMockKeycapKitImageStore(s.T())
-	images.EXPECT().PresignGet(mock.Anything, *k.ImagePath).Return("https://example.com/presigned-get", presignExpiry(), nil)
+	images.EXPECT().SignGet(mock.Anything, *k.ImagePath).Return("https://example.com/signed-get", signedExpiry(), nil)
 	repo := mocks.NewMockKeycapSetRepository(s.T())
 	repo.EXPECT().
 		SetKitImageGetCache(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -439,7 +437,7 @@ func (s *KeycapKitToAPISuite) TestNonOwnerShowPriceToOthersFalse_OmitsPriceKeeps
 func (s *KeycapKitToAPISuite) TestOwner_IncludesPrice() {
 	k := fullRepoKeycapKit()
 	images := mocks.NewMockKeycapKitImageStore(s.T())
-	images.EXPECT().PresignGet(mock.Anything, *k.ImagePath).Return("https://example.com/presigned-get", presignExpiry(), nil)
+	images.EXPECT().SignGet(mock.Anything, *k.ImagePath).Return("https://example.com/signed-get", signedExpiry(), nil)
 	repo := mocks.NewMockKeycapSetRepository(s.T())
 	repo.EXPECT().
 		SetKitImageGetCache(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -455,11 +453,11 @@ func (s *KeycapKitToAPISuite) TestOwner_IncludesPrice() {
 	s.Equal("EUR", *out.Purchase.Currency)
 }
 
-func (s *KeycapKitToAPISuite) TestPresignGetFails_ReturnsError() {
+func (s *KeycapKitToAPISuite) TestSignGetFails_ReturnsError() {
 	k := repository.KeycapKit{KitID: "kit1", Name: "Base", ImagePath: imageKeyPtr("keycap-sets/alice/ks1/kits/kit1/image/up1")}
 
 	images := mocks.NewMockKeycapKitImageStore(s.T())
-	images.EXPECT().PresignGet(mock.Anything, *k.ImagePath).Return("", time.Time{}, errors.New("s3: access denied"))
+	images.EXPECT().SignGet(mock.Anything, *k.ImagePath).Return("", time.Time{}, errors.New("s3: access denied"))
 
 	kr := KeycapSet{Images: images}
 	_, err := kr.KitToAPI(context.Background(), "alice", "ks1", k, true, repository.ProfilePreferences{Currency: "EUR"})

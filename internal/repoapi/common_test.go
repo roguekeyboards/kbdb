@@ -18,7 +18,7 @@ func TestResolveImageURLSuite(t *testing.T) {
 
 func (s *ResolveImageURLSuite) TestCacheHit_WithinFloor_ReusesCachedURLWithoutMintingOrWritingBack() {
 	cachedURL := "https://example.com/cached"
-	expiresAt := time.Now().Add(2 * getPresignRefreshFloor)
+	expiresAt := time.Now().Add(2 * getURLRefreshFloor)
 
 	mintCalled := false
 	writeBackCalled := false
@@ -69,8 +69,7 @@ func (s *ResolveImageURLSuite) TestCacheMiss_NoCachedURL_MintsAndWritesBack() {
 
 func (s *ResolveImageURLSuite) TestCacheExpired_BelowRefreshFloor_MintsFreshURL() {
 	cachedURL := "https://example.com/cached"
-	// Within the refresh floor - treated as not usable.
-	expiresAt := time.Now().Add(getPresignRefreshFloor / 2)
+	expiresAt := time.Now().Add(getURLRefreshFloor / 2)
 
 	mintCalled := false
 
@@ -106,9 +105,6 @@ func (s *ResolveImageURLSuite) TestWriteBackError_IsNonFatal_StillReturnsFreshUR
 	s.Equal("https://example.com/fresh", url)
 }
 
-// presignExpiry is a stand-in for the expiry a real image store reports
-// alongside a freshly signed URL. Far enough out that resolveImageURL treats
-// the URL as reusable rather than immediately re-signing it.
-func presignExpiry() time.Time {
-	return time.Now().Add(time.Hour)
+func signedExpiry() time.Time {
+	return time.Now().Add(24 * time.Hour)
 }

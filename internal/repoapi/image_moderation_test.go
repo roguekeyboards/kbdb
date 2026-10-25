@@ -11,9 +11,6 @@ import (
 	"github.com/rogueserenity/kbdb/internal/repository/mocks"
 )
 
-// ImageModerationSuite covers who sees which images by moderation status:
-// the owner sees every image with its status and no URL for a rejected
-// one; anyone else sees approved images only, with no status.
 type ImageModerationSuite struct {
 	suite.Suite
 }
@@ -40,10 +37,10 @@ func (s *ImageModerationSuite) keyboardImages() map[string]repository.KeyboardIm
 	}
 }
 
-func (s *ImageModerationSuite) keyboardMapper(presigned ...repository.KeyboardImageKey) Keyboard {
+func (s *ImageModerationSuite) keyboardMapper(signed ...repository.KeyboardImageKey) Keyboard {
 	images := mocks.NewMockKeyboardImageStore(s.T())
-	for _, key := range presigned {
-		images.EXPECT().PresignGetKeyboardImage(mock.Anything, key).Return("https://example.com/"+string(key), presignExpiry(), nil)
+	for _, key := range signed {
+		images.EXPECT().SignGetKeyboardImage(mock.Anything, key).Return("https://example.com/"+string(key), signedExpiry(), nil)
 	}
 	repo := mocks.NewMockKeyboardRepository(s.T())
 	repo.EXPECT().
@@ -94,10 +91,10 @@ func (s *ImageModerationSuite) TestKeyboard_NonOwner_NothingApproved_NoImages() 
 	s.Nil(out.Images)
 }
 
-func (s *ImageModerationSuite) buildMapper(presigned ...repository.BuildImageKey) Build {
+func (s *ImageModerationSuite) buildMapper(signed ...repository.BuildImageKey) Build {
 	images := mocks.NewMockBuildImageStore(s.T())
-	for _, key := range presigned {
-		images.EXPECT().PresignGetBuildImage(mock.Anything, key).Return("https://example.com/"+string(key), presignExpiry(), nil)
+	for _, key := range signed {
+		images.EXPECT().SignGetBuildImage(mock.Anything, key).Return("https://example.com/"+string(key), signedExpiry(), nil)
 	}
 	repo := mocks.NewMockBuildRepository(s.T())
 	repo.EXPECT().
@@ -133,7 +130,7 @@ func (s *ImageModerationSuite) TestBuild_NonOwner_SeesApprovedOnly() {
 	s.Equal([]api.BuildImage{{ImageId: "approved", Url: strPtr("https://example.com/" + approvedKey)}}, *out)
 }
 
-func (s *ImageModerationSuite) buildWithKeyboard(presigned ...repository.KeyboardImageKey) Build {
+func (s *ImageModerationSuite) buildWithKeyboard(signed ...repository.KeyboardImageKey) Build {
 	kb := fullRepoKeyboard()
 	kb.Images = map[string]repository.KeyboardImageEntry{
 		"rejected": {Path: rejectedKey, Seq: 0, Status: repository.ImageStatusRejected},
@@ -146,8 +143,8 @@ func (s *ImageModerationSuite) buildWithKeyboard(presigned ...repository.Keyboar
 		SetImageGetCache(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(true, nil).Maybe()
 	images := mocks.NewMockKeyboardImageStore(s.T())
-	for _, key := range presigned {
-		images.EXPECT().PresignGetKeyboardImage(mock.Anything, key).Return("https://example.com/"+string(key), presignExpiry(), nil)
+	for _, key := range signed {
+		images.EXPECT().SignGetKeyboardImage(mock.Anything, key).Return("https://example.com/"+string(key), signedExpiry(), nil)
 	}
 
 	return Build{KeyboardRepo: repo, KeyboardImages: images}
@@ -172,10 +169,10 @@ func (s *ImageModerationSuite) TestServedInRef() {
 	s.False(servedInRef(repository.ImageStatusRejected, true))
 }
 
-func (s *ImageModerationSuite) switchMapper(presigned ...repository.SwitchImageKey) Switch {
+func (s *ImageModerationSuite) switchMapper(signed ...repository.SwitchImageKey) Switch {
 	images := mocks.NewMockSwitchImageStore(s.T())
-	for _, key := range presigned {
-		images.EXPECT().PresignGet(mock.Anything, key).Return("https://example.com/"+string(key), presignExpiry(), nil)
+	for _, key := range signed {
+		images.EXPECT().SignGet(mock.Anything, key).Return("https://example.com/"+string(key), signedExpiry(), nil)
 	}
 	repo := mocks.NewMockSwitchRepository(s.T())
 	repo.EXPECT().

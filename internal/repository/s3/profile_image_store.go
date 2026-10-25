@@ -31,8 +31,8 @@ func NewProfileImageStore(client *s3.Client, presign *s3.PresignClient, bucket s
 	}
 }
 
-// PresignGet implements repository.ProfileImageStore.
-func (s *ProfileImageStore) PresignGet(_ context.Context, key repository.ProfileImageKey) (url string, expiresAt time.Time, err error) {
+// SignGet implements repository.ProfileImageStore.
+func (s *ProfileImageStore) SignGet(_ context.Context, key repository.ProfileImageKey) (url string, expiresAt time.Time, err error) {
 	return s.get.sign(string(key))
 }
 

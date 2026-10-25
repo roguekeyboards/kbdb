@@ -242,7 +242,7 @@ func (s *KeyboardToAPISuite) TestOwner_AlwaysIncludesPriceRegardlessOfShowPriceT
 	s.Equal("EUR", *out.Purchase.Currency)
 }
 
-func (s *KeyboardToAPISuite) TestImagesPresent_PresignsEachAndPreservesOrder() {
+func (s *KeyboardToAPISuite) TestImagesPresent_SignsEachAndPreservesOrder() {
 	kb := fullRepoKeyboard()
 	img1 := repository.KeyboardImageKey("keyboards/alice/kb1/images/img1")
 	img2 := repository.KeyboardImageKey("keyboards/alice/kb1/images/img2")
@@ -251,8 +251,8 @@ func (s *KeyboardToAPISuite) TestImagesPresent_PresignsEachAndPreservesOrder() {
 		"img2": {Path: img2, Seq: 1},
 	}
 	images := mocks.NewMockKeyboardImageStore(s.T())
-	images.EXPECT().PresignGetKeyboardImage(mock.Anything, img1).Return("https://example.com/img1", presignExpiry(), nil)
-	images.EXPECT().PresignGetKeyboardImage(mock.Anything, img2).Return("https://example.com/img2", presignExpiry(), nil)
+	images.EXPECT().SignGetKeyboardImage(mock.Anything, img1).Return("https://example.com/img1", signedExpiry(), nil)
+	images.EXPECT().SignGetKeyboardImage(mock.Anything, img2).Return("https://example.com/img2", signedExpiry(), nil)
 	repo := mocks.NewMockKeyboardRepository(s.T())
 	repo.EXPECT().
 		SetImageGetCache(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -280,12 +280,12 @@ func (s *KeyboardToAPISuite) TestNoImages_ImagesFieldNil() {
 	s.Nil(out.Images)
 }
 
-func (s *KeyboardToAPISuite) TestImagePresignError_Propagates() {
+func (s *KeyboardToAPISuite) TestImageSignError_Propagates() {
 	kb := fullRepoKeyboard()
 	imgPath := repository.KeyboardImageKey("keyboards/alice/kb1/images/img1")
 	kb.Images = map[string]repository.KeyboardImageEntry{"img1": {Path: imgPath}}
 	images := mocks.NewMockKeyboardImageStore(s.T())
-	images.EXPECT().PresignGetKeyboardImage(mock.Anything, imgPath).Return("", time.Time{}, errors.New("s3: access denied"))
+	images.EXPECT().SignGetKeyboardImage(mock.Anything, imgPath).Return("", time.Time{}, errors.New("s3: access denied"))
 
 	kr := Keyboard{Images: images}
 	_, err := kr.ToAPI(s.T().Context(), kb, true, repository.ProfilePreferences{})

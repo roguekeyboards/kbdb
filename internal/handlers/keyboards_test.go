@@ -224,7 +224,7 @@ func (s *ListKeyboardsSuite) TestListKeyboards_ReturnsEveryImage() {
 			{ImageID: "img1", Path: "keyboards/alice/kb1/images/img1"},
 			{ImageID: "img2", Path: "keyboards/alice/kb1/images/img2"},
 		})}}, "", nil)
-	s.mockImages.EXPECT().PresignGetKeyboardImage(mock.Anything, mock.Anything).
+	s.mockImages.EXPECT().SignGetKeyboardImage(mock.Anything, mock.Anything).
 		RunAndReturn(func(_ context.Context, key repository.KeyboardImageKey) (string, time.Time, error) {
 			return "https://example.com/" + string(key), time.Now().Add(time.Hour), nil
 		})
@@ -653,9 +653,6 @@ func (s *CreateKeyboardSuite) TestCreateKeyboard_LayoutWithoutSize_SkipsSizeChec
 }
 
 func (s *CreateKeyboardSuite) TestCreateKeyboard_MultipleInvalidFields_NamesAll() {
-	// size and design.top_case.material are both invalid here - the
-	// response must report both via invalid_params, not just the first one
-	// checked.
 	req := s.newRequest(s.ownerCtx(),
 		`{"brand":"Keychron","name":"Q1","visibility":"private","size":"NotApproved",`+
 			`"design":{"top_case":{"material":"AlsoNotApproved"}}}`)
@@ -677,7 +674,6 @@ func (s *CreateKeyboardSuite) TestCreateKeyboard_MultipleInvalidFields_NamesAll(
 }
 
 func (s *CreateKeyboardSuite) TestCreateKeyboard_InvalidSize_DoesNotCascadeIntoLayoutError() {
-	// layout ("WK") is genuinely valid despite size being invalid.
 	req := s.newRequest(s.ownerCtx(),
 		`{"brand":"Keychron","name":"Q1","visibility":"private","size":"NotApproved","layout":"WK"}`)
 	rec := httptest.NewRecorder()
@@ -915,9 +911,6 @@ func (s *UpdateKeyboardSuite) TestUpdateKeyboard_LayoutWithoutSize_SkipsSizeChec
 }
 
 func (s *UpdateKeyboardSuite) TestUpdateKeyboard_MultipleInvalidFields_NamesAll() {
-	// size and design.top_case.material are both invalid here - the
-	// response must report both via invalid_params, not just the first one
-	// checked.
 	req := s.newRequest(s.ownerCtx(),
 		`{"brand":"Keychron","name":"Q1","visibility":"private","size":"NotApproved",`+
 			`"design":{"top_case":{"material":"AlsoNotApproved"}}}`)
@@ -939,7 +932,6 @@ func (s *UpdateKeyboardSuite) TestUpdateKeyboard_MultipleInvalidFields_NamesAll(
 }
 
 func (s *UpdateKeyboardSuite) TestUpdateKeyboard_InvalidSize_DoesNotCascadeIntoLayoutError() {
-	// layout ("WK") is genuinely valid despite size being invalid.
 	req := s.newRequest(s.ownerCtx(),
 		`{"brand":"Keychron","name":"Q1","visibility":"private","size":"NotApproved","layout":"WK"}`)
 	rec := httptest.NewRecorder()
@@ -1193,8 +1185,6 @@ func (s *DeleteKeyboardSuite) TestDeleteKeyboard_ImageDeleteFails_Returns500_Doe
 
 	s.Equal(http.StatusInternalServerError, rec.Code)
 	s.Equal("application/problem+json", rec.Header().Get("Content-Type"))
-	// mockKeyboards has no .EXPECT() for Delete - verifies the DB record
-	// was never touched, so a retry can safely re-attempt the S3 delete.
 }
 
 type AddKeyboardImageSuite struct {
@@ -1347,8 +1337,6 @@ func (s *AddKeyboardImageSuite) TestAddKeyboardImage_PresignError_Returns500() {
 
 	s.Equal(http.StatusInternalServerError, rec.Code)
 	s.Equal("application/problem+json", rec.Header().Get("Content-Type"))
-	// mockKeyboardRepo has no .EXPECT() for AddImage - verifies the DB was
-	// never touched when presigning fails.
 }
 
 func (s *AddKeyboardImageSuite) TestAddKeyboardImage_RepositoryError_Returns500() {
@@ -1506,9 +1494,6 @@ func (s *DeleteKeyboardImageSuite) TestDeleteKeyboardImage_S3DeleteError_Returns
 
 	s.Equal(http.StatusInternalServerError, rec.Code)
 	s.Equal("application/problem+json", rec.Header().Get("Content-Type"))
-	// mockKeyboardRepo has no .EXPECT() for DeleteImage - verifies the DB
-	// record was never touched, so a retry can safely re-attempt the S3
-	// delete.
 }
 
 func (s *CreateKeyboardSuite) TestCreateKeyboard_ReturnsOwnersCurrencyWithPrice() {

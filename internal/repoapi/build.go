@@ -31,7 +31,7 @@ type Build struct {
 // Keyboard/Switch/KeycapSet references it carries into denormalized
 // objects so a client can render the build without follow-up requests. A
 // reference that can't be resolved, any other repository error, b.BuildDate
-// not matching dateLayout, or an image failing to presign fails it.
+// not matching dateLayout, or an image failing to sign fails it.
 //
 // The owner always sees their own Stabs.Price and TotalCost; a non-owner
 // sees them only if ownerPrefs.ShowPriceToOthers. A build's Keyboard,
@@ -258,7 +258,7 @@ func (b Build) keyboardRefToAPI(
 	if i := slices.IndexFunc(imgs, served); i >= 0 {
 		url, err := b.resolveKeyboardImageURL(ctx, ownerID, keyboardID, imgs[i])
 		if err != nil {
-			return api.BuildKeyboardRef{}, nil, fmt.Errorf("presigning keyboard image for keyboard %q: %w", keyboardID, err)
+			return api.BuildKeyboardRef{}, nil, fmt.Errorf("signing keyboard image for keyboard %q: %w", keyboardID, err)
 		}
 		ref.ImageUrl = &url
 	}
@@ -339,7 +339,7 @@ func (b Build) switchEntriesResolvedToAPI(
 			if sw.ImagePath != nil && servedInRef(sw.ImageStatus, isOwner) {
 				url, err := b.resolveSwitchImageURL(ctx, *sw)
 				if err != nil {
-					errs[i] = fmt.Errorf("presigning switch image for switch %q: %w", e.Switch, err)
+					errs[i] = fmt.Errorf("signing switch image for switch %q: %w", e.Switch, err)
 					return
 				}
 				out[i].Switch.ImageUrl = &url
@@ -436,7 +436,7 @@ func (b Build) keycapSetRefToAPI(
 		if kit.ImagePath != nil && servedInRef(kit.ImageStatus, isOwner) {
 			url, err := b.resolveKeycapKitImageURL(ctx, ownerID, ks.ID, kit)
 			if err != nil {
-				return api.BuildKeycapSetRef{}, nil, fmt.Errorf("presigning kit image for kit %q: %w", kitID, err)
+				return api.BuildKeycapSetRef{}, nil, fmt.Errorf("signing kit image for kit %q: %w", kitID, err)
 			}
 			ref.Kits[i].ImageUrl = &url
 		}
@@ -445,10 +445,8 @@ func (b Build) keycapSetRefToAPI(
 	return ref, costs, nil
 }
 
-// imagesToAPI keeps the images the caller may see and resolves a presigned
-// GET URL for each one not rejected, reusing each image's cached URL if
-// still fresh, mirroring [KeycapSet.KitToAPI]'s handling of a kit's image.
-// images is already ordered (by Seq) by the caller.
+// imagesToAPI keeps the images the caller may see and resolves a signed GET
+// URL for each one not rejected. images must already be ordered by Seq.
 func (b Build) imagesToAPI(ctx context.Context, ownerID, buildID string, images []repository.BuildImage, isOwner bool) (*[]api.BuildImage, error) {
 	images = visibleImages(images, func(img repository.BuildImage) repository.ImageStatus { return img.Status }, isOwner)
 	if len(images) == 0 {
@@ -471,7 +469,7 @@ func (b Build) imagesToAPI(ctx context.Context, ownerID, buildID string, images 
 			}
 			url, err := b.resolveBuildImageURL(ctx, ownerID, buildID, img)
 			if err != nil {
-				errs[i] = fmt.Errorf("presigning build image %q: %w", img.ImageID, err)
+				errs[i] = fmt.Errorf("signing build image %q: %w", img.ImageID, err)
 				return
 			}
 			out[i].Url = &url
@@ -486,10 +484,10 @@ func (b Build) imagesToAPI(ctx context.Context, ownerID, buildID string, images 
 	return &out, nil
 }
 
-// resolveBuildImageURL presigns img.Path, reusing its cached GET URL if
-// still fresh enough.
+// resolveBuildImageURL returns a signed GET URL for img.Path, reusing the
+// cached one if it was signed in the current window.
 func (b Build) resolveBuildImageURL(ctx context.Context, ownerID, buildID string, img repository.BuildImage) (string, error) {
-	return resolveImageURL(img.GetURL, img.GetURLExpiresAt, func() (string, time.Time, error) { return b.Images.PresignGetBuildImage(ctx, img.Path) },
+	return resolveImageURL(img.GetURL, img.GetURLExpiresAt, func() (string, time.Time, error) { return b.Images.SignGetBuildImage(ctx, img.Path) },
 		func(url string, expiresAt time.Time) error {
 			_, err := b.Repo.SetImageGetCache(ctx, ownerID, buildID, img.ImageID, img.Path, url, expiresAt)
 			return err
@@ -497,12 +495,10 @@ func (b Build) resolveBuildImageURL(ctx context.Context, ownerID, buildID string
 	)
 }
 
-// resolveKeyboardImageURL presigns img.Path, reusing its cached GET URL if
-// still fresh enough. Uses b.KeyboardImages/b.KeyboardRepo rather than
-// Keyboard's own resolver, since Build resolves a referenced keyboard's
-// image via its own store/repo fields, not a repoapi.Keyboard value.
+// resolveKeyboardImageURL returns a signed GET URL for img.Path, reusing the
+// cached one if it was signed in the current window.
 func (b Build) resolveKeyboardImageURL(ctx context.Context, ownerID, keyboardID string, img repository.KeyboardImage) (string, error) {
-	return resolveImageURL(img.GetURL, img.GetURLExpiresAt, func() (string, time.Time, error) { return b.KeyboardImages.PresignGetKeyboardImage(ctx, img.Path) },
+	return resolveImageURL(img.GetURL, img.GetURLExpiresAt, func() (string, time.Time, error) { return b.KeyboardImages.SignGetKeyboardImage(ctx, img.Path) },
 		func(url string, expiresAt time.Time) error {
 			_, err := b.KeyboardRepo.SetImageGetCache(ctx, ownerID, keyboardID, img.ImageID, img.Path, url, expiresAt)
 			return err
@@ -510,12 +506,13 @@ func (b Build) resolveKeyboardImageURL(ctx context.Context, ownerID, keyboardID 
 	)
 }
 
-// resolveSwitchImageURL presigns sw.ImagePath, reusing its cached GET URL
-// if still fresh enough. Callers must check sw.ImagePath != nil first.
+// resolveSwitchImageURL returns a signed GET URL for sw.ImagePath, reusing
+// the cached one if it was signed in the current window. sw.ImagePath must
+// be set.
 func (b Build) resolveSwitchImageURL(ctx context.Context, sw repository.Switch) (string, error) {
 	path := *sw.ImagePath
 
-	return resolveImageURL(sw.GetURL, sw.GetURLExpiresAt, func() (string, time.Time, error) { return b.SwitchImages.PresignGet(ctx, path) },
+	return resolveImageURL(sw.GetURL, sw.GetURLExpiresAt, func() (string, time.Time, error) { return b.SwitchImages.SignGet(ctx, path) },
 		func(url string, expiresAt time.Time) error {
 			_, err := b.SwitchRepo.SetImageGetCache(ctx, sw.UserID, sw.ID, path, url, expiresAt)
 			return err
@@ -523,12 +520,13 @@ func (b Build) resolveSwitchImageURL(ctx context.Context, sw repository.Switch) 
 	)
 }
 
-// resolveKeycapKitImageURL presigns k.ImagePath, reusing its cached GET URL
-// if still fresh enough. Callers must check k.ImagePath != nil first.
+// resolveKeycapKitImageURL returns a signed GET URL for k.ImagePath, reusing
+// the cached one if it was signed in the current window. k.ImagePath must be
+// set.
 func (b Build) resolveKeycapKitImageURL(ctx context.Context, ownerID, setID string, k repository.KeycapKit) (string, error) {
 	path := *k.ImagePath
 
-	return resolveImageURL(k.GetURL, k.GetURLExpiresAt, func() (string, time.Time, error) { return b.KitImages.PresignGet(ctx, path) },
+	return resolveImageURL(k.GetURL, k.GetURLExpiresAt, func() (string, time.Time, error) { return b.KitImages.SignGet(ctx, path) },
 		func(url string, expiresAt time.Time) error {
 			_, err := b.KeycapSetRepo.SetKitImageGetCache(ctx, ownerID, setID, k.KitID, path, url, expiresAt)
 			return err

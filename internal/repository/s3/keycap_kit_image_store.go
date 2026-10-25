@@ -31,8 +31,8 @@ func NewKeycapKitImageStore(client *s3.Client, presign *s3.PresignClient, bucket
 	}
 }
 
-// PresignGet implements repository.KeycapKitImageStore.
-func (s *KeycapKitImageStore) PresignGet(_ context.Context, key repository.KeycapKitImageKey) (url string, expiresAt time.Time, err error) {
+// SignGet implements repository.KeycapKitImageStore.
+func (s *KeycapKitImageStore) SignGet(_ context.Context, key repository.KeycapKitImageKey) (url string, expiresAt time.Time, err error) {
 	return s.get.sign(string(key))
 }
 

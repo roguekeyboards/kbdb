@@ -213,12 +213,12 @@ func (s *SwitchToAPISuite) TestOwner_AlwaysIncludesPriceRegardlessOfShowPriceToM
 	s.Equal("EUR", *out.Purchase.Currency)
 }
 
-func (s *SwitchToAPISuite) TestImagePresent_ReturnsPresignedURL() {
+func (s *SwitchToAPISuite) TestImagePresent_ReturnsSignedURL() {
 	sw := fullRepoSwitch()
 	switchImageKey := repository.SwitchImageKey("switches/alice/sw1/image/up1")
 	sw.ImagePath = &switchImageKey
 	images := mocks.NewMockSwitchImageStore(s.T())
-	images.EXPECT().PresignGet(mock.Anything, *sw.ImagePath).Return("https://example.com/img", presignExpiry(), nil)
+	images.EXPECT().SignGet(mock.Anything, *sw.ImagePath).Return("https://example.com/img", signedExpiry(), nil)
 	repo := mocks.NewMockSwitchRepository(s.T())
 	repo.EXPECT().
 		SetImageGetCache(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -242,12 +242,12 @@ func (s *SwitchToAPISuite) TestNoImage_ImageFieldNil() {
 	s.Nil(out.Image)
 }
 
-func (s *SwitchToAPISuite) TestImagePresignError_Propagates() {
+func (s *SwitchToAPISuite) TestImageSignError_Propagates() {
 	sw := fullRepoSwitch()
 	switchImageKey := repository.SwitchImageKey("switches/alice/sw1/image/up1")
 	sw.ImagePath = &switchImageKey
 	images := mocks.NewMockSwitchImageStore(s.T())
-	images.EXPECT().PresignGet(mock.Anything, *sw.ImagePath).Return("", time.Time{}, errors.New("s3: access denied"))
+	images.EXPECT().SignGet(mock.Anything, *sw.ImagePath).Return("", time.Time{}, errors.New("s3: access denied"))
 
 	sr := Switch{Images: images}
 	_, err := sr.ToAPI(s.T().Context(), sw, true, repository.ProfilePreferences{})

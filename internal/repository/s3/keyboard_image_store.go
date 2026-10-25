@@ -31,8 +31,8 @@ func NewKeyboardImageStore(client *s3.Client, presign *s3.PresignClient, bucket 
 	}
 }
 
-// PresignGetKeyboardImage implements repository.KeyboardImageStore.
-func (s *KeyboardImageStore) PresignGetKeyboardImage(_ context.Context, key repository.KeyboardImageKey) (url string, expiresAt time.Time, err error) {
+// SignGetKeyboardImage implements repository.KeyboardImageStore.
+func (s *KeyboardImageStore) SignGetKeyboardImage(_ context.Context, key repository.KeyboardImageKey) (url string, expiresAt time.Time, err error) {
 	return s.get.sign(string(key))
 }
 

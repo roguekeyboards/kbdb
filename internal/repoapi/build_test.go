@@ -51,8 +51,6 @@ func TestBuildToAPISuite(t *testing.T) {
 	suite.Run(t, new(BuildToAPISuite))
 }
 
-// buildToAPIDeps bundles the mocks BuildToAPI needs; the returned
-// EXPECT()s must be set up by the caller before invoking BuildToAPI.
 type buildToAPIDeps struct {
 	buildRepo      *mocks.MockBuildRepository
 	images         *mocks.MockBuildImageStore
@@ -82,9 +80,6 @@ func newBuildToAPIDeps(t interface {
 	return d
 }
 
-// expectCache stubs every entity's cache write-back method as a no-op
-// success, .Maybe() since not every test exercises a path that presigns an
-// image.
 func (d buildToAPIDeps) expectCache() {
 	d.buildRepo.EXPECT().
 		SetImageGetCache(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -121,8 +116,6 @@ func (d buildToAPIDeps) callWithPrefs(ctx context.Context, b repository.Build, i
 	return d.mapper().ToAPI(ctx, b, isOwner, ownerPrefs)
 }
 
-// expectFullyResolvable sets up every dependency in fullRepoBuild() (kb1,
-// sw1, ks1/kit1) to resolve successfully.
 func (d buildToAPIDeps) expectFullyResolvable() {
 	d.keyboardRepo.EXPECT().
 		Get(mock.Anything, "alice", "kb1").
@@ -231,7 +224,7 @@ func (s *BuildToAPISuite) TestMalformedStoredBuildDate_ReturnsError() {
 	s.Require().Error(err)
 }
 
-func (s *BuildToAPISuite) TestImagesPopulated_MintsFreshPresignedURLPerImage() {
+func (s *BuildToAPISuite) TestImagesPopulated_SignsURLPerImage() {
 	b := fullRepoBuild()
 	img1 := repository.BuildImageKey("builds/alice/build1/images/img1")
 	img2 := repository.BuildImageKey("builds/alice/build1/images/img2")
@@ -242,8 +235,8 @@ func (s *BuildToAPISuite) TestImagesPopulated_MintsFreshPresignedURLPerImage() {
 
 	d := newBuildToAPIDeps(s.T())
 	d.expectFullyResolvable()
-	d.images.EXPECT().PresignGetBuildImage(mock.Anything, img1).Return("https://example.com/img1", presignExpiry(), nil)
-	d.images.EXPECT().PresignGetBuildImage(mock.Anything, img2).Return("https://example.com/img2", presignExpiry(), nil)
+	d.images.EXPECT().SignGetBuildImage(mock.Anything, img1).Return("https://example.com/img1", signedExpiry(), nil)
+	d.images.EXPECT().SignGetBuildImage(mock.Anything, img2).Return("https://example.com/img2", signedExpiry(), nil)
 
 	out, err := d.call(context.Background(), b)
 	s.Require().NoError(err)
@@ -256,13 +249,13 @@ func (s *BuildToAPISuite) TestImagesPopulated_MintsFreshPresignedURLPerImage() {
 	s.Equal("https://example.com/img2", *(*out.Images)[1].Url)
 }
 
-func (s *BuildToAPISuite) TestPresignFails_ReturnsError() {
+func (s *BuildToAPISuite) TestSignFails_ReturnsError() {
 	b := fullRepoBuild()
 	imgPath := repository.BuildImageKey("builds/alice/build1/images/img1")
 	b.Images = map[string]repository.BuildImageEntry{"img1": {Path: imgPath}}
 
 	d := newBuildToAPIDeps(s.T())
-	d.images.EXPECT().PresignGetBuildImage(mock.Anything, imgPath).Return("", time.Time{}, errors.New("s3: access denied"))
+	d.images.EXPECT().SignGetBuildImage(mock.Anything, imgPath).Return("", time.Time{}, errors.New("s3: access denied"))
 
 	_, err := d.call(context.Background(), b)
 
@@ -414,7 +407,7 @@ func (s *BuildToAPISuite) TestKitsGroupedBySetInFirstAppearanceOrder_DuplicatesC
 	s.InDelta(142.5, *out.TotalCost, 0.0001, "kitA is priced once; stabs add 12.5")
 }
 
-func (s *BuildToAPISuite) TestKitWithImage_MintsFreshPresignedURL() {
+func (s *BuildToAPISuite) TestKitWithImage_SignsURL() {
 	b := fullRepoBuild()
 
 	d := newBuildToAPIDeps(s.T())
@@ -428,7 +421,7 @@ func (s *BuildToAPISuite) TestKitWithImage_MintsFreshPresignedURL() {
 			UserID: "alice", ID: "ks1", Brand: "GMK", Name: "Olivia",
 			Kits: map[string]repository.KeycapKit{"kit1": {KitID: "kit1", Name: "Base", ImagePath: &imgPath}},
 		}, nil)
-	d.kitImages.EXPECT().PresignGet(mock.Anything, imgPath).Return("https://example.com/kit1.png", presignExpiry(), nil)
+	d.kitImages.EXPECT().SignGet(mock.Anything, imgPath).Return("https://example.com/kit1.png", signedExpiry(), nil)
 
 	out, err := d.call(context.Background(), b)
 	s.Require().NoError(err)
@@ -440,7 +433,7 @@ func (s *BuildToAPISuite) TestKitWithImage_MintsFreshPresignedURL() {
 	s.Equal("https://example.com/kit1.png", *(*out.KeycapSets)[0].Kits[0].ImageUrl)
 }
 
-func (s *BuildToAPISuite) TestKitImagePresignFails_ReturnsError() {
+func (s *BuildToAPISuite) TestKitImageSignFails_ReturnsError() {
 	b := fullRepoBuild()
 
 	d := newBuildToAPIDeps(s.T())
@@ -454,13 +447,13 @@ func (s *BuildToAPISuite) TestKitImagePresignFails_ReturnsError() {
 			UserID: "alice", ID: "ks1", Brand: "GMK", Name: "Olivia",
 			Kits: map[string]repository.KeycapKit{"kit1": {KitID: "kit1", Name: "Base", ImagePath: &imgPath}},
 		}, nil)
-	d.kitImages.EXPECT().PresignGet(mock.Anything, imgPath).Return("", time.Time{}, errors.New("s3: access denied"))
+	d.kitImages.EXPECT().SignGet(mock.Anything, imgPath).Return("", time.Time{}, errors.New("s3: access denied"))
 
 	_, err := d.call(context.Background(), b)
 	s.Require().Error(err)
 }
 
-func (s *BuildToAPISuite) TestKeyboardWithImage_MintsFreshPresignedURLForFirstImage() {
+func (s *BuildToAPISuite) TestKeyboardWithImage_SignsURLForFirstImage() {
 	b := fullRepoBuild()
 
 	d := newBuildToAPIDeps(s.T())
@@ -477,7 +470,7 @@ func (s *BuildToAPISuite) TestKeyboardWithImage_MintsFreshPresignedURLForFirstIm
 		Return(&repository.Switch{UserID: "alice", ID: "sw1", Brand: "Gateron", Name: "Oil King", Type: "Linear"}, nil)
 	d.keycapSetRepo.EXPECT().Get(mock.Anything, "alice", "ks1").
 		Return(&repository.KeycapSet{UserID: "alice", ID: "ks1", Brand: "GMK", Name: "Olivia", Kits: map[string]repository.KeycapKit{"kit1": {KitID: "kit1", Name: "Base"}}}, nil)
-	d.keyboardImages.EXPECT().PresignGetKeyboardImage(mock.Anything, imgPath).Return("https://example.com/kb1-img1.png", presignExpiry(), nil)
+	d.keyboardImages.EXPECT().SignGetKeyboardImage(mock.Anything, imgPath).Return("https://example.com/kb1-img1.png", signedExpiry(), nil)
 
 	out, err := d.call(context.Background(), b)
 	s.Require().NoError(err)
@@ -500,7 +493,7 @@ func (s *BuildToAPISuite) TestKeyboardWithoutImages_OmitsImageUrl() {
 	s.Nil(out.Keyboard.ImageUrl)
 }
 
-func (s *BuildToAPISuite) TestKeyboardImagePresignFails_ReturnsError() {
+func (s *BuildToAPISuite) TestKeyboardImageSignFails_ReturnsError() {
 	b := fullRepoBuild()
 
 	d := newBuildToAPIDeps(s.T())
@@ -510,13 +503,13 @@ func (s *BuildToAPISuite) TestKeyboardImagePresignFails_ReturnsError() {
 			UserID: "alice", ID: "kb1", Brand: "Keychron", Name: "Q1",
 			Images: repository.KeyboardImagesMap([]repository.KeyboardImage{{ImageID: "img1", Path: imgPath}}),
 		}, nil)
-	d.keyboardImages.EXPECT().PresignGetKeyboardImage(mock.Anything, imgPath).Return("", time.Time{}, errors.New("s3: access denied"))
+	d.keyboardImages.EXPECT().SignGetKeyboardImage(mock.Anything, imgPath).Return("", time.Time{}, errors.New("s3: access denied"))
 
 	_, err := d.call(context.Background(), b)
 	s.Require().Error(err)
 }
 
-func (s *BuildToAPISuite) TestSwitchWithImage_MintsFreshPresignedURL() {
+func (s *BuildToAPISuite) TestSwitchWithImage_SignsURL() {
 	b := fullRepoBuild()
 
 	d := newBuildToAPIDeps(s.T())
@@ -527,7 +520,7 @@ func (s *BuildToAPISuite) TestSwitchWithImage_MintsFreshPresignedURL() {
 		Return(&repository.Switch{UserID: "alice", ID: "sw1", Brand: "Gateron", Name: "Oil King", Type: "Linear", ImagePath: &imgPath}, nil)
 	d.keycapSetRepo.EXPECT().Get(mock.Anything, "alice", "ks1").
 		Return(&repository.KeycapSet{UserID: "alice", ID: "ks1", Brand: "GMK", Name: "Olivia", Kits: map[string]repository.KeycapKit{"kit1": {KitID: "kit1", Name: "Base"}}}, nil)
-	d.switchImages.EXPECT().PresignGet(mock.Anything, imgPath).Return("https://example.com/sw1.png", presignExpiry(), nil)
+	d.switchImages.EXPECT().SignGet(mock.Anything, imgPath).Return("https://example.com/sw1.png", signedExpiry(), nil)
 
 	out, err := d.call(context.Background(), b)
 	s.Require().NoError(err)
@@ -554,7 +547,7 @@ func (s *BuildToAPISuite) TestSwitchWithoutImage_OmitsImageUrl() {
 	s.Nil((*out.Switches)[0].Switch.ImageUrl)
 }
 
-func (s *BuildToAPISuite) TestSwitchImagePresignFails_ReturnsError() {
+func (s *BuildToAPISuite) TestSwitchImageSignFails_ReturnsError() {
 	b := fullRepoBuild()
 
 	d := newBuildToAPIDeps(s.T())
@@ -563,7 +556,7 @@ func (s *BuildToAPISuite) TestSwitchImagePresignFails_ReturnsError() {
 	imgPath := repository.SwitchImageKey("switches/alice/sw1/image/up1")
 	d.switchRepo.EXPECT().Get(mock.Anything, "alice", "sw1").
 		Return(&repository.Switch{UserID: "alice", ID: "sw1", Brand: "Gateron", Name: "Oil King", Type: "Linear", ImagePath: &imgPath}, nil)
-	d.switchImages.EXPECT().PresignGet(mock.Anything, imgPath).Return("", time.Time{}, errors.New("s3: access denied"))
+	d.switchImages.EXPECT().SignGet(mock.Anything, imgPath).Return("", time.Time{}, errors.New("s3: access denied"))
 
 	_, err := d.call(context.Background(), b)
 	s.Require().Error(err)
@@ -592,8 +585,6 @@ func (s *BuildToAPISuite) TestTotalCost_SumsKeyboardSwitchesKitsAndStabs() {
 			}},
 		}, nil)
 
-	// fullRepoBuild: 70 switches, bulk price 45 for a 90-count order =
-	// 0.5/unit -> 35 for this build; stabs price 12.5.
 	out, err := d.call(context.Background(), b)
 	s.Require().NoError(err)
 
@@ -652,11 +643,6 @@ func (s *BuildToAPISuite) TestPartsNoLongerOnKeyboard_OmittedAndUnpriced() {
 	s.InDelta(200, *out.TotalCost, 0.0001)
 }
 
-// TestTotalCost_SwitchPriceWithoutQuantity_ExcludedFromSum guards against
-// treating SwitchPurchase.Price as a per-unit price - it's the price paid
-// for the whole bulk order (see SwitchPurchase.Quantity), so without a
-// quantity to divide by, the per-build cost can't be derived and must be
-// excluded rather than multiplied by the build's count directly.
 func (s *BuildToAPISuite) TestTotalCost_RoundedToCents() {
 	b := fullRepoBuild()
 	b.Stabs = nil
@@ -724,8 +710,6 @@ func (s *BuildToAPISuite) TestTotalCost_UnknownComponentsExcludedNotZeroed() {
 			Kits: map[string]repository.KeycapKit{"kit1": {KitID: "kit1", Name: "Base"}},
 		}, nil)
 
-	// Keyboard has no purchase price, keycap kit has no purchase price, and
-	// Stabs is nil - only the switches' 70 * (45/90) = 35 should be counted.
 	out, err := d.call(context.Background(), b)
 	s.Require().NoError(err)
 
