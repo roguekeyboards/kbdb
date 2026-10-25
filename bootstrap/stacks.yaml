@@ -1,0 +1,59 @@
+# Each account's bootstrap stacks, in deploy order. Read by
+# scripts/bootstrap.sh (mise run bootstrap), scripts/bootstrap-check.sh and
+# scripts/func-setup.sh, which deploys the floci ones.
+accounts:
+  dev: "992234857260"
+  ci: "475976462467"
+  prod: "416860882648"
+  floci: "000000000000"
+
+stacks:
+  - name: kbdb-bootstrap
+    template: bootstrap/artifact-bucket.yaml
+    accounts: [dev, ci, prod]
+
+  - name: kbdb-stack-boundary
+    template: bootstrap/stack-boundary.yaml
+    capabilities: CAPABILITY_NAMED_IAM
+    accounts: [dev, ci, prod, floci]
+
+  # image-delivery-setup generates the account's signing key pair before it
+  # deploys the template.
+  - name: kbdb-image-delivery
+    template: bootstrap/image-delivery.yaml
+    script: scripts/image-delivery-setup.sh
+    accounts: [dev, ci, prod, floci]
+
+  - name: kbdb-cost-budget
+    template: bootstrap/cost-budget.yaml
+    accounts: [dev, ci, prod]
+    parameters:
+      prod:
+        AlertEmail: kbdb-budget-prd@mykeebs.com
+
+  # One template, deployed under each account's own stack name.
+  - name: kbdb-ci-oidc
+    template: bootstrap/deploy-role.yaml
+    capabilities: CAPABILITY_NAMED_IAM
+    accounts: [ci]
+    parameters:
+      ci:
+        Environment: ci
+
+  - name: kbdb-prod-oidc
+    template: bootstrap/deploy-role.yaml
+    capabilities: CAPABILITY_NAMED_IAM
+    accounts: [prod]
+    parameters:
+      prod:
+        Environment: prod
+
+  - name: kbdb-bootstrap-jwks
+    template: bootstrap/jwks-bucket.yaml
+    accounts: [ci]
+
+  # CI's PR stacks share one repo; other environments get theirs from
+  # mise run setup.
+  - name: kbdb-ecr-bootstrap
+    template: bootstrap/ecr-repo.yaml
+    accounts: [ci]

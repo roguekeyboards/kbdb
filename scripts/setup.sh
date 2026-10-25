@@ -11,3 +11,4 @@ aws cloudformation deploy --template-file bootstrap/ecr-repo.yaml \
   --no-fail-on-empty-changeset
 
 "$(dirname "$0")/deploy.sh" "$KBDB_ENV"
+"$(dirname "$0")/dns.sh" "$KBDB_ENV"

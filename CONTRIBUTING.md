@@ -2,12 +2,14 @@
 
 ## Setup
 
-Tool versions (Go, AWS CLI, SAM CLI, mockery, golangci-lint) are pinned via [mise](https://mise.jdx.dev/):
+Tool versions (Go, AWS CLI, SAM CLI, the Cloudflare CLI `cf`, mockery, golangci-lint) are pinned via [mise](https://mise.jdx.dev/):
 
 ```sh
 mise install
 mise activate  # add to your shell profile so `go`, `sam`, `aws`, etc. resolve directly
 ```
+
+Deploying uses two logins: an AWS one (see [AWS accounts](#aws-accounts)), and a Cloudflare one for DNS, `cf auth login --use-keyring` once. The Cloudflare login can be narrowed to zone read and DNS edit on the consent page.
 
 `sam build` requires Docker running locally. On macOS with Docker Desktop, make sure `/Applications/Docker.app/Contents/Resources/bin` is on your `PATH` — otherwise `sam build`/`docker push` fail with a credential-store error.
 
@@ -124,42 +126,14 @@ Test is for dev/personal stacks only — never point a dev stack at a live/produ
 
 A comma-separated list of browser origins (each scheme + host + port) allowed to call your stack's `HttpApi` cross-origin, e.g. `http://localhost:5173,https://jay.mykeebs.dev` to cover both a local frontend dev server and its deployed counterpart. Without this, browser preflight (`OPTIONS`) requests 404 before the authorizer is ever reached — API Gateway auto-generates CORS `OPTIONS` routes and exempts them from the JWT authorizer only when `HttpApi.Properties.CorsConfiguration` is set.
 
-### Custom domain (`api.<your-name>.mykeebs.dev`)
+### Custom domains (`<your-name>.api.mykeebs.dev`, `<your-name>.images.mykeebs.dev`)
 
-Optional. `template.yaml`'s `CustomDomainName`/`CustomDomainCertificateArn` parameters (both default to empty) map a stack to a stable domain instead of its default `execute-api.amazonaws.com` URL. `<your-name>.mykeebs.dev` itself is intentionally left free (e.g. for a future web UI hosted elsewhere, like Render) - `api.` is a real subdomain label in front of your name, not a wildcard-coverable suffix of it, so `*.mykeebs.dev` does **not** match `api.jay.mykeebs.dev` (wildcards only cover one label deep). Each developer needs their own certificate for their own `api.<name>.mykeebs.dev`, not one shared wildcard.
+Optional. They give your stack stable domains instead of its default `execute-api.amazonaws.com` and `*.cloudfront.net` ones, which a web app's CSP can name. There's nothing to request per developer: two wildcard certificates in the `kbdb-dev` account cover everyone. `*.api.mykeebs.dev` is in `us-east-2`, for API Gateway. `*.images.mykeebs.dev` is in `us-east-1`, because CloudFront only takes certificates from there. Their ARNs are in `[dev-jay.deploy.parameters]`.
 
-DNS for `mykeebs.dev` is hosted on Cloudflare, not Route53, so the ACM certificate can't self-validate the way it would with a Route53-hosted zone — it needs a one-time manual step instead. There's nothing to automate or renew afterward: once issued, a DNS-validated ACM certificate auto-renews forever as long as its validation CNAME record stays in place.
+1. **Add `CustomDomainName=<your-name>.api.mykeebs.dev`, `ImagesDomainName=<your-name>.images.mykeebs.dev` and the two certificate ARNs** to your section's `parameter_overrides`.
+2. **Run `mise run setup`** (or `mise run dns` if the stack already exists). After deploying, it creates the DNS-only `<your-name>.api` and `<your-name>.images` CNAMEs in the `mykeebs.dev` Cloudflare zone, pointed at the stack's `ApiCustomDomainTarget` and `ImagesDomainTarget` outputs. It needs a Cloudflare login: `cf auth login --use-keyring` once (see [Setup](#setup)).
 
-Each developer who wants this does it once for their own name:
-
-1. **Request a certificate for your own subdomain**, region-matched to where you deploy (`api.<name>.mykeebs.dev` needs a *regional* API Gateway custom domain cert, unlike CloudFront/edge certs which require `us-east-1`):
-   ```sh
-   aws acm request-certificate --domain-name 'api.<your-name>.mykeebs.dev' \
-     --validation-method DNS --region us-east-2 --profile kbdb-dev-admin
-   ```
-2. **Read the validation CNAME** ACM wants:
-   ```sh
-   aws acm describe-certificate --certificate-arn <arn-from-step-1> \
-     --region us-east-2 --profile kbdb-dev-admin \
-     --query 'Certificate.DomainValidationOptions[0].ResourceRecord'
-   ```
-3. **Create that CNAME in the `mykeebs.dev` Cloudflare zone**, DNS-only (not proxied) — via the Cloudflare dashboard, or the API/MCP tooling if you have it available.
-4. **Wait for issuance**:
-   ```sh
-   aws acm wait certificate-validated --certificate-arn <arn-from-step-1> \
-     --region us-east-2 --profile kbdb-dev-admin
-   ```
-5. **Add `CustomDomainName=api.<your-name>.mykeebs.dev` and `CustomDomainCertificateArn=<arn-from-step-1>`** to your section's `parameter_overrides` in `samconfig.toml` (see `[dev-jay.deploy.parameters]`). Leaving both out (the default) means no custom domain.
-6. **Deploy** (`mise run deploy`), then read the stack's `ApiCustomDomainTarget` output and create a matching `api.<your-name>` CNAME in the `mykeebs.dev` Cloudflare zone (DNS-only, not proxied), pointed at that value. This one is a normal, static record — created once, not rewritten on later deploys.
-
-#### Images domain (`<your-name>.images.mykeebs.dev`)
-
-Also optional, and needed only if a web app with a CSP loads your stack's images: its `img-src` can then name a domain you own instead of `*.cloudfront.net`. Unlike the API's domain, there's no certificate to request: one wildcard certificate for `*.images.mykeebs.dev`, in `us-east-1` in the `kbdb-dev` account (CloudFront only takes certificates from there), covers every developer.
-
-1. **Add `ImagesDomainName=<your-name>.images.mykeebs.dev` and `ImagesDomainCertificateArn=<the wildcard certificate's ARN>`** to your section's `parameter_overrides`. The ARN is in `[dev-jay.deploy.parameters]`.
-2. **Deploy**, then create a DNS-only `<your-name>.images` CNAME in the `mykeebs.dev` zone pointed at the stack's `ImagesDomainTarget` output.
-
-The zone's CAA records include `issuewild "amazon.com"`, without which ACM can't issue the wildcard.
+DNS for `mykeebs.dev` is on Cloudflare, not Route53. The wildcard certificates were validated once with CNAMEs there, and renew on their own as long as those records stay. The zone's CAA records include `issuewild "amazon.com"`, without which ACM can't issue them.
 
 ### AWS accounts
 
@@ -176,41 +150,39 @@ There's no default AWS profile — commands will fail with `NoCredentials` unles
 
 ### First-time account bootstrap
 
-New AWS account, never deployed to before? One-time steps, done once per account by whoever's setting it up (not needed for everyday `deploy`). **If you're forking this repo to deploy to your own account, you only need steps 1, 2 and 7** — steps 4-6 and 8 exist for this project's own separate CI and prod accounts and don't apply to a single-account personal deploy; `.github/workflows/` is entirely specific to this project's own CI and isn't something you need to set up or replicate.
+New AWS account, never deployed to before? With an admin profile for it:
 
-1. **Artifact bucket** (needed by everyone): `aws cloudformation deploy --template-file bootstrap/artifact-bucket.yaml --stack-name kbdb-bootstrap --profile <profile>`. Its name is `kbdb-sam-artifacts-<your-account-id>`; that's the `s3_bucket` value in your `samconfig.toml` section.
-2. **Stack permissions boundary** (needed by everyone): `aws cloudformation deploy --template-file bootstrap/stack-boundary.yaml --stack-name kbdb-stack-boundary --capabilities CAPABILITY_NAMED_IAM --profile <profile>`. `template.yaml` puts this managed policy on every role it creates, and the deploy fails without it. It's the most any stack role can do, so a change that needs a new AWS permission updates this template in every account (kbdb-ci first, or the PR's functional tests fail), then merges. CI and the prod deploy both run `mise run bootstrap-check`, which stops them when this stack, the account's OIDC role stack or its image delivery stack (step 7) is behind the repo.
-3. **ECR repo**: each environment's repo is created by `mise run setup` — nothing manual to do. For `kbdb-ci`'s shared repo, see [ECR repo for `kbdb-ci`](#ecr-repo-for-kbdb-ci) below.
-4. **Cost budget** (only needed for accounts without their own app stack, e.g. `kbdb-ci`): `aws cloudformation deploy --template-file bootstrap/cost-budget.yaml --stack-name kbdb-cost-budget --profile <profile>`.
-5. **(`kbdb-ci` only) GitHub Actions OIDC role**, so CI can authenticate to AWS: `aws cloudformation deploy --template-file bootstrap/ci-oidc-role.yaml --stack-name kbdb-ci-oidc --capabilities CAPABILITY_NAMED_IAM --profile kbdb-ci-admin`.
-6. **(`kbdb-ci` only) JWKS bucket**, so CI's functional-test job can publish a publicly-fetchable OIDC discovery document + JWKS (generated by `oidc-testkit-gen`) for its per-PR stacks' native JWT authorizer to verify against: `aws cloudformation deploy --template-file bootstrap/jwks-bucket.yaml --stack-name kbdb-bootstrap-jwks --profile kbdb-ci-admin`. Then set the resulting `JWKSBucketName` output as the `JWKS_BUCKET_NAME` GitHub Actions repo variable (Settings → Secrets and variables → Actions → Variables) — `ci.yml`'s functional-test job fails at its "Generate OIDC signing material" step until that's set.
-7. **Image delivery** (needed by everyone): `AWS_PROFILE=<profile> mise run image-delivery-setup`. It generates the account's image signing key pair into SSM (`/kbdb/image-delivery/private-key` and `/kbdb/image-delivery/public-key`), once, then deploys `bootstrap/image-delivery.yaml` as `kbdb-image-delivery`: the CloudFront public key, key group and response headers policy that every stack's images distribution shares. They're per account because an account holds at most 10 key groups. Rerunning it keeps the existing key pair and redeploys the stack.
-8. **(`kbdb-prod` only) GitHub Actions deploy role**, which `deploy-prod.yml` assumes to deploy each release tag: `aws cloudformation deploy --template-file bootstrap/prod-oidc-role.yaml --stack-name kbdb-prod-oidc --capabilities CAPABILITY_NAMED_IAM --profile kbdb-prod-admin`. Then set its `GitHubActionsProdDeployRoleArn` output as the `PROD_DEPLOY_ROLE_ARN` repo variable.
+```sh
+AWS_PROFILE=<profile> mise run bootstrap <dev|ci|prod>
+```
 
-After all bootstraps, ordinary `sam deploy` calls (and, for `kbdb-ci`, CI's own workflow) work.
+It checks the credentials belong to that account, then deploys its bootstrap stacks in order. `bootstrap/stacks.yaml` lists them per account: the artifact bucket, the [stack permissions boundary](#stack-permissions-boundary), image delivery (the image signing key pair, generated once, and the CloudFront key group and response headers policy every stack's distribution shares), the cost budget, and for `ci` and `prod` the GitHub Actions deploy role. Rerunning it is safe. **If you're forking this repo** to deploy to your own account, add your account to `stacks.yaml` as `dev` and run `mise run bootstrap dev`; the `ci` and `prod` stacks are this project's own.
+
+Then the steps a script can't do:
+
+- **`kbdb-ci`:** set the `kbdb-bootstrap-jwks` stack's `JWKSBucketName` output as the `JWKS_BUCKET_NAME` GitHub Actions repo variable (Settings → Secrets and variables → Actions → Variables). `ci.yml`'s functional-test job fails at "Generate OIDC signing material" until it's set.
+- **`kbdb-prod`:** set the `kbdb-prod-oidc` stack's `GitHubActionsDeployRoleArn` output as the `PROD_DEPLOY_ROLE_ARN` repo variable. CI's role ARN is in `.github/actions/kbdb-pr-stack/action.yml`.
+- **Every account:** confirm the cost budget's email subscription. Its link only works while you're signed in to that account's console.
+
+CI and the prod deploy both run `mise run bootstrap-check`, which stops them when one of the account's bootstrap stacks is behind the repo. After merging a change to a bootstrap template, run `mise run bootstrap` for each account it's in.
+
+#### Stack permissions boundary
+
+`template.yaml` puts `bootstrap/stack-boundary.yaml`'s managed policy on every role it creates. It's the most any stack role can do, so a change that needs a new AWS permission updates this template in every account (`kbdb-ci` first, or the PR's functional tests fail), then merges.
 
 #### Setting up `kbdb-prod`
 
-After steps 1, 2, 7 and 8 above:
+After `mise run bootstrap prod`:
 
 1. **Raise the Lambda concurrency quota.** A new account's limit of 10 is below the API's `ApiReservedConcurrency` of 15. Request 1000 in Service Quotas (Lambda → Concurrent executions).
-2. **Certificate for `api.mykeebs.info`**, the same way as for a [custom domain](#custom-domain-apiyour-namemykeebsdev): request it in `us-east-2`, add ACM's validation CNAME to the `mykeebs.info` Cloudflare zone (DNS only), and wait for it to be issued. Its ARN goes in `CustomDomainCertificateArn`.
-3. **Certificate for `images.mykeebs.info`**, the same way but in `us-east-1`, because CloudFront only takes certificates from there. Its ARN goes in `ImagesDomainCertificateArn`.
-4. **Fill in the `[prod]` section of `samconfig.toml`.**
-5. **First deploy, by hand:** `AWS_PROFILE=kbdb-prod-admin mise run setup prod`.
-6. **Point `api.mykeebs.info` and `images.mykeebs.info` at the stack:** create CNAMEs in the `mykeebs.info` zone (DNS only) to the stack's `ApiCustomDomainTarget` and `ImagesDomainTarget` outputs.
-7. **Confirm the two email subscriptions.** The budget one's link only works while you're signed in to the `kbdb-prod` console.
+2. **Certificates for `api.mykeebs.info` (in `us-east-2`) and `images.mykeebs.info` (in `us-east-1`).** Request each in ACM with DNS validation, add its validation CNAME to the `mykeebs.info` Cloudflare zone (DNS only, for example with `cf dns records create`), and wait for it to be issued. Their ARNs go in `CustomDomainCertificateArn` and `ImagesDomainCertificateArn`.
+3. **Fill in the `[prod]` section of `samconfig.toml`.**
+4. **First deploy, by hand:** `AWS_PROFILE=kbdb-prod-admin mise run setup prod`. It also points `api.mykeebs.info` and `images.mykeebs.info` at the stack.
+5. **Confirm the alarm email subscription.**
 
-#### ECR repo for `kbdb-ci`
+#### ECR repos
 
-`sam deploy` pushes the function's image before it creates or updates the stack, so the repo can't live in `template.yaml` — it's in its own permanent stack from `bootstrap/ecr-repo.yaml`. `mise run setup` deploys one per environment. CI's per-PR stacks all share one repo, deployed by hand, once:
-
-```sh
-aws cloudformation deploy --template-file bootstrap/ecr-repo.yaml \
-  --stack-name kbdb-ecr-bootstrap --profile kbdb-ci-admin
-```
-
-Its defaults (`RepositoryName=kbdb-api`, `ExpireBy=age`) are CI's: images expire 2 days after push, since nothing there is long-lived.
+`sam deploy` pushes the function's image before it creates or updates the stack, so a repo can't live in `template.yaml`: it's in its own permanent stack from `bootstrap/ecr-repo.yaml`. `mise run setup` deploys one per environment. CI's per-PR stacks all share one, `kbdb-ecr-bootstrap`, which `mise run bootstrap ci` deploys. Its defaults (`RepositoryName=kbdb-api`, `ExpireBy=age`) are CI's: images expire 2 days after push, since nothing there is long-lived.
 
 ## Testing strategy
 

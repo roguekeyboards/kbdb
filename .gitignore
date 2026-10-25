@@ -221,3 +221,6 @@ bin/
 
 # Scratch output of mise run client-gen - dev-only, never committed
 ts-client/
+
+# cf CLI cache
+.cloudflare/

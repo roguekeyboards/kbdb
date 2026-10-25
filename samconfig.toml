@@ -58,8 +58,7 @@ parameter_overrides = """\
   ThrottleRateLimit=5 \
   ThrottleBurstLimit=50 \
   ApiReservedConcurrency=15 \
-  AlarmEmail=kbdb-alerts-prd@mykeebs.com \
-  BudgetEmail=kbdb-budget-prd@mykeebs.com\
+  AlarmEmail=kbdb-alerts-prd@mykeebs.com\
   """
 
 # CI deploys per-PR stacks into the separate kbdb-ci account (475976462467),
