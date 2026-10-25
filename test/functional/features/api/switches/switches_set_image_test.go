@@ -151,7 +151,7 @@ var _ = Describe("Setting a switch's image", func() {
 				When("setting the switch's image again", func() {
 					BeforeEach(func(ctx SpecContext) {
 						var err error
-						resp, err = client.SetImage(ctx, ownerID, switchID, ownerToken, api.ImageUploadBody(approvedImageContentType))
+						resp, err = client.SetImage(ctx, ownerID, switchID, ownerToken, api.JPEGUploadBody())
 						Expect(err).NotTo(HaveOccurred())
 					})
 
@@ -165,9 +165,8 @@ var _ = Describe("Setting a switch's image", func() {
 						Expect(json.NewDecoder(resp.Body).Decode(&created)).To(Succeed())
 
 						By("accepting the replacement bytes at the new upload URL")
-						replacement := bytes.Clone(api.TestImageBytes)
-						replacement[0] = 'F'
-						putResp, err := api.DoPresigned(ctx, http.MethodPut, created.UploadURL, approvedImageContentType, bytes.NewReader(replacement))
+						replacement := api.TestJPEG
+						putResp, err := api.DoPresigned(ctx, http.MethodPut, created.UploadURL, "image/jpeg", bytes.NewReader(replacement))
 						Expect(err).NotTo(HaveOccurred())
 						Expect(putResp.StatusCode).To(Equal(http.StatusOK))
 
