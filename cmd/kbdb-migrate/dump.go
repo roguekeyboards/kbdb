@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// imageRef is one image to download: its presigned GET URL, plus the
+// imageRef is one image to download: its signed image URL, plus the
 // server-generated id for array-image entities (empty for single-slot).
 type imageRef struct {
 	imageID string

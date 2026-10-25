@@ -3,9 +3,13 @@ package api
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"sync"
 
 	"github.com/rogueserenity/kbdb/test/functional/support"
 )
@@ -52,10 +56,37 @@ func (c *Client) Do(ctx context.Context, method, path, token string, body io.Rea
 	return resp, nil
 }
 
-// DoPresigned sends a request to a presigned S3 URL. body and contentType
-// are only meaningful for a PUT, which also sends the If-None-Match: *
-// every presigned PUT requires. Package-level, not a Client method: unlike
-// Do, it doesn't target support.BaseURL(), so it needs no client state.
+// blobClient trusts support.CACertPath() on top of the system roots, so
+// image URLs on floci's HTTPS alias verify.
+var blobClient = sync.OnceValue(func() *http.Client {
+	path := support.CACertPath()
+	if path == "" {
+		return http.DefaultClient
+	}
+
+	pem, err := os.ReadFile(path) //nolint:gosec // path is the test CA func-setup writes, not caller input.
+	if err != nil {
+		panic(fmt.Sprintf("reading %s: %v", path, err))
+	}
+	pool, err := x509.SystemCertPool()
+	if err != nil {
+		panic(fmt.Sprintf("loading system roots: %v", err))
+	}
+	if !pool.AppendCertsFromPEM(pem) {
+		panic("no certificates in " + path)
+	}
+
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.TLSClientConfig = &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12}
+
+	return &http.Client{Transport: transport}
+})
+
+// DoPresigned sends a request to a presigned S3 upload URL or a signed image
+// URL. body and contentType are only meaningful for a PUT, which also sends
+// the If-None-Match: * every presigned PUT requires. Package-level, not a
+// Client method: unlike Do, it doesn't target support.BaseURL(), so it needs
+// no client state.
 func DoPresigned(ctx context.Context, method, presignedURL, contentType string, body io.Reader) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, method, presignedURL, body)
 	if err != nil {
@@ -68,7 +99,7 @@ func DoPresigned(ctx context.Context, method, presignedURL, contentType string, 
 		req.Header.Set("If-None-Match", "*")
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := blobClient().Do(req)
 	if err != nil {
 		return nil, err
 	}

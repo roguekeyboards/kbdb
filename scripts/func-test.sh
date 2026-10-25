@@ -22,6 +22,7 @@ fi
 : "${KBDB_OIDC_ISSUER:?run scripts/func-setup.sh first}"
 : "${KBDB_OIDC_AUDIENCE:?run scripts/func-setup.sh first}"
 : "${KBDB_OIDC_SIGNING_KEY_PATH:?run scripts/func-setup.sh first}"
+: "${KBDB_IMAGES_DOMAIN:?run scripts/func-setup.sh first}"
 export AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID:-test}"
 export AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY:-test}"
 export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-us-east-2}"

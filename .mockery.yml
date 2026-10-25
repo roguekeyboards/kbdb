@@ -73,6 +73,9 @@ packages:
       s3PresignAPI:
         config:
           structname: 'MockS3PresignAPI'
+      urlSigner:
+        config:
+          structname: 'MockURLSigner'
   github.com/rogueserenity/kbdb/internal/deletenotice:
     config:
       dir: '{{.InterfaceDir}}/mocks'

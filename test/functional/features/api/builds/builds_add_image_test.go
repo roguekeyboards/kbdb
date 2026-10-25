@@ -101,7 +101,7 @@ var _ = Describe("Adding an image to a build", func() {
 						Expect(err).NotTo(HaveOccurred())
 						Expect(putResp.StatusCode).To(Equal(http.StatusOK))
 
-						By("showing the image, as a presigned GET URL, embedded in a follow-up GetBuild")
+						By("showing the image, as a signed image URL, embedded in a follow-up GetBuild")
 						getResp, err := client.Get(ctx, ownerID, buildID, ownerToken)
 						Expect(err).NotTo(HaveOccurred())
 
@@ -116,7 +116,7 @@ var _ = Describe("Adding an image to a build", func() {
 						Expect(build.Images[0].ImageID).To(Equal(created.ImageID))
 						Expect(build.Images[0].URL).NotTo(BeEmpty())
 
-						By("fetching the presigned GET URL and getting back the exact bytes that were uploaded")
+						By("fetching the signed image URL and getting back the exact bytes that were uploaded")
 						getImageResp, err := api.DoPresigned(ctx, http.MethodGet, build.Images[0].URL, "", nil)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(getImageResp.StatusCode).To(Equal(http.StatusOK))

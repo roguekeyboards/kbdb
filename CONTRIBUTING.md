@@ -44,7 +44,7 @@ Most iteration just needs `mise run func-test` again — Go code and test change
 
 ## Backing up / moving a user's data (`kbdb-migrate`)
 
-`cmd/kbdb-migrate` is a standalone CLI that dumps a user's profile and every entity they own (keyboards, switches, keycap sets, builds) plus every S3 image to a local directory, and restores such a dump into another environment through the same public REST API. Use it to take a verifiable backup before a data-model change, to move a user's data between environments, or to export someone's account for a data request (see [Exporting another user's account](#exporting-another-users-account)). It uses **no AWS credentials** — image bytes move over presigned URLs — and never touches lookups (they're a static catalog built into the API; the dump captures `lookups/lookups.json` for diffing only).
+`cmd/kbdb-migrate` is a standalone CLI that dumps a user's profile and every entity they own (keyboards, switches, keycap sets, builds) plus every S3 image to a local directory, and restores such a dump into another environment through the same public REST API. Use it to take a verifiable backup before a data-model change, to move a user's data between environments, or to export someone's account for a data request (see [Exporting another user's account](#exporting-another-users-account)). It uses **no AWS credentials** — image bytes move over the URLs the API signs — and never touches lookups (they're a static catalog built into the API; the dump captures `lookups/lookups.json` for diffing only).
 
 ```sh
 mise run migrate-build          # -> bin/kbdb-migrate

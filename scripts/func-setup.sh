@@ -120,6 +120,20 @@ aws cloudformation deploy --template-file bootstrap/stack-boundary.yaml \
 # writes to SSM.
 scripts/image-delivery-setup.sh >/dev/null
 
+# floci serves a distribution's aliases on its own port, which the
+# distribution's domain can't carry, so ImagesBaseUrl adds it. floci's ACM
+# issues the alias's certificate at once, with no validation, and the test CA
+# above already covers the name.
+ENDPOINT_HOST=${ENDPOINT#*://}
+IMAGES_DOMAIN="images.${ENDPOINT_HOST%%:*}"
+IMAGES_CERT=$(aws acm list-certificates --region us-east-1 \
+  --query "CertificateSummaryList[?DomainName=='$IMAGES_DOMAIN'].CertificateArn | [0]" --output text)
+if [[ -z "$IMAGES_CERT" || "$IMAGES_CERT" == None ]]; then
+  IMAGES_CERT=$(aws acm request-certificate --region us-east-1 \
+    --domain-name "$IMAGES_DOMAIN" --validation-method DNS \
+    --query CertificateArn --output text)
+fi
+
 # ApiReservedConcurrency is set only because floci can't deploy its empty
 # default: it resolves the AWS::NoValue to "" and fails to parse it as an
 # integer. Drop it once floci omits the property instead.
@@ -136,6 +150,9 @@ sam deploy \
     "IdpConsentPublicToken=public-token-test-local-kbdb" \
     "CorsAllowOrigins=http://localhost:5173" \
     "DailyUploadLimit=1000000" \
+    "ImagesDomainName=$IMAGES_DOMAIN" \
+    "ImagesDomainCertificateArn=$IMAGES_CERT" \
+    "ImagesBaseUrl=https://images.$ENDPOINT_HOST" \
     "ApiReservedConcurrency=50"
 
 out() {
@@ -167,9 +184,11 @@ export KBDB_PROFILE_TABLE_NAME=$(out ProfileTableName)
 export KBDB_PROFILE_USERNAME_TABLE_NAME=$(out ProfileUsernameTableName)
 export KBDB_UPLOAD_COUNTER_TABLE_NAME=$(out UploadCounterTableName)
 export KBDB_IMAGES_BUCKET_NAME=$IMAGES_BUCKET
+export KBDB_IMAGES_DOMAIN=$(out ImagesDomain)
 export KBDB_ALARM_TOPIC_ARN=$(out AlarmTopicArn)
 export KBDB_STACK_NAME=$STACK
 export KBDB_AWS_ENDPOINT_URL=$ENDPOINT
+export KBDB_CA_CERT_PATH='$CERT_DIR/ca.crt'
 export KBDB_AI_MOCK_CONFIG='$AI_MOCK_DIR/mock.json'
 export KBDB_OIDC_ISSUER='$ISSUER'
 export KBDB_OIDC_AUDIENCE='$AUDIENCE'

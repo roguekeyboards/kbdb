@@ -6,20 +6,23 @@ package main
 
 import (
 	"context"
+	"crypto"
+	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/alecthomas/kong"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
+	"github.com/aws/aws-sdk-go-v2/feature/cloudfront/sign"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
-	"github.com/aws/aws-sdk-go-v2/service/sts"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
 
 	"github.com/rogueserenity/kbdb/internal/accountdelete"
 	"github.com/rogueserenity/kbdb/internal/auth"
@@ -81,24 +84,17 @@ func main() {
 	// All entities' images currently live in the same bucket.
 	presignClient := s3.NewPresignClient(s3Client)
 
-	// Presigned GETs are signed by an assumed role rather than the ambient
-	// Lambda credentials - see Config.PresignRoleARN. CredentialsCache keeps
-	// this to one AssumeRole per session, not one per signature.
-	presignCreds := awsCfg.Credentials
-	if cfg.PresignRoleARN != "" {
-		presignCreds = aws.NewCredentialsCache(
-			stscreds.NewAssumeRoleProvider(sts.NewFromConfig(awsCfg), cfg.PresignRoleARN,
-				func(o *stscreds.AssumeRoleOptions) {
-					o.RoleSessionName = "kbdb-presign"
-					o.Duration = cfg.PresignSessionDuration
-				}),
-		)
+	keyID, key, err := loadImageSigningKey(ctx, ssm.NewFromConfig(awsCfg), cfg.ImagesSigningKeyParam, cfg.ImagesSigningKeyIDParam)
+	if err != nil {
+		log.Fatalf("loading image signing key: %v", err)
 	}
-	keycapKitImageStore := imagestore.NewKeycapKitImageStore(s3Client, presignClient, cfg.ImagesBucketName, presignCreds)
-	buildImageStore := imagestore.NewBuildImageStore(s3Client, presignClient, cfg.ImagesBucketName, presignCreds)
-	keyboardImageStore := imagestore.NewKeyboardImageStore(s3Client, presignClient, cfg.ImagesBucketName, presignCreds)
-	switchImageStore := imagestore.NewSwitchImageStore(s3Client, presignClient, cfg.ImagesBucketName, presignCreds)
-	profileImageStore := imagestore.NewProfileImageStore(s3Client, presignClient, cfg.ImagesBucketName, presignCreds)
+	getSigner := imagestore.NewGetSigner(cfg.ImagesBaseURL, keyID, key)
+
+	keycapKitImageStore := imagestore.NewKeycapKitImageStore(s3Client, presignClient, cfg.ImagesBucketName, getSigner)
+	buildImageStore := imagestore.NewBuildImageStore(s3Client, presignClient, cfg.ImagesBucketName, getSigner)
+	keyboardImageStore := imagestore.NewKeyboardImageStore(s3Client, presignClient, cfg.ImagesBucketName, getSigner)
+	switchImageStore := imagestore.NewSwitchImageStore(s3Client, presignClient, cfg.ImagesBucketName, getSigner)
+	profileImageStore := imagestore.NewProfileImageStore(s3Client, presignClient, cfg.ImagesBucketName, getSigner)
 	ownerImageStore := imagestore.NewOwnerImageStore(s3Client, cfg.ImagesBucketName)
 
 	var deleteNotices accountdelete.Notifier
@@ -120,4 +116,31 @@ func main() {
 	if err := srv.ListenAndServe(); err != nil {
 		log.Fatalf("server error: %v", err)
 	}
+}
+
+// loadImageSigningKey reads the image signing key and its CloudFront public
+// key ID in one call, so a key rotation can't pair a new key with an old ID.
+func loadImageSigningKey(ctx context.Context, client *ssm.Client, keyParam, keyIDParam string) (string, crypto.Signer, error) {
+	out, err := client.GetParameters(ctx, &ssm.GetParametersInput{
+		Names:          []string{keyParam, keyIDParam},
+		WithDecryption: aws.Bool(true),
+	})
+	if err != nil {
+		return "", nil, fmt.Errorf("reading SSM parameters %s and %s: %w", keyParam, keyIDParam, err)
+	}
+	if len(out.InvalidParameters) > 0 {
+		return "", nil, fmt.Errorf("SSM parameters not found: %v", out.InvalidParameters)
+	}
+
+	values := make(map[string]string, len(out.Parameters))
+	for _, p := range out.Parameters {
+		values[aws.ToString(p.Name)] = aws.ToString(p.Value)
+	}
+
+	key, err := sign.LoadPEMPrivKeyPKCS8AsSigner(strings.NewReader(values[keyParam]))
+	if err != nil {
+		return "", nil, fmt.Errorf("parsing %s: %w", keyParam, err)
+	}
+
+	return values[keyIDParam], key, nil
 }

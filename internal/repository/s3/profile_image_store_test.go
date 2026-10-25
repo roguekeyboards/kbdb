@@ -3,7 +3,6 @@ package s3
 import (
 	"errors"
 	"testing"
-	"time"
 
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -18,6 +17,7 @@ type ProfileImageStoreSuite struct {
 
 	mockClient  *mocks.MockS3API
 	mockPresign *mocks.MockS3PresignAPI
+	mockSigner  *mocks.MockURLSigner
 	store       *ProfileImageStore
 }
 
@@ -28,109 +28,36 @@ func TestProfileImageStoreSuite(t *testing.T) {
 func (s *ProfileImageStoreSuite) SetupTest() {
 	s.mockClient = mocks.NewMockS3API(s.T())
 	s.mockPresign = mocks.NewMockS3PresignAPI(s.T())
+	s.mockSigner = mocks.NewMockURLSigner(s.T())
 	s.store = &ProfileImageStore{
 		client:  s.mockClient,
 		presign: s.mockPresign,
 		bucket:  "images-bucket",
-		creds:   expiringCredentials(time.Hour),
+		get:     testGetSigner(s.mockSigner),
 	}
 }
 
-func (s *ProfileImageStoreSuite) TestPresignGet_Succeeds() {
-	s.mockPresign.EXPECT().
-		PresignGetObject(mock.Anything, mock.MatchedBy(func(in *s3.GetObjectInput) bool {
-			return *in.Bucket == "images-bucket" && *in.Key == "profiles/user-alice/avatar/up1"
-		}), mock.Anything).
-		Return(&v4.PresignedHTTPRequest{URL: "https://example.com/presigned-get"}, nil)
-
-	before := time.Now()
+func (s *ProfileImageStoreSuite) TestPresignGet_SignsKeyOnImagesDomain() {
+	s.mockSigner.EXPECT().
+		Sign("https://images.example.com/profiles/user-alice/avatar/up1", testGetExpiry).
+		Return("https://images.example.com/signed", nil)
 
 	url, expiresAt, err := s.store.PresignGet(s.T().Context(), "profiles/user-alice/avatar/up1")
 
 	s.Require().NoError(err)
-	s.Equal("https://example.com/presigned-get", url)
-	s.WithinDuration(before.Add(time.Hour-presignMargin), expiresAt, 5*time.Second,
-		"expiresAt must track the signing credentials lifetime, less the safety margin")
+	s.Equal("https://images.example.com/signed", url)
+	s.Equal(testGetExpiry, expiresAt)
 }
 
-func (s *ProfileImageStoreSuite) TestPresignGet_CapsExpiryToCredentialLifetime() {
-	s.store.creds = expiringCredentials(10 * time.Minute)
+func (s *ProfileImageStoreSuite) TestPresignGet_SignerError_Propagates() {
+	s.mockSigner.EXPECT().
+		Sign(mock.Anything, mock.Anything).
+		Return("", errors.New("crypto/rsa: verification error"))
 
-	s.mockPresign.EXPECT().
-		PresignGetObject(mock.Anything, mock.Anything, mock.MatchedBy(func(optFns []func(*s3.PresignOptions)) bool {
-			var opts s3.PresignOptions
-			for _, fn := range optFns {
-				fn(&opts)
-			}
+	url, _, err := s.store.PresignGet(s.T().Context(), "profiles/user-alice/avatar/up1")
 
-			want := 10*time.Minute - presignMargin
-
-			return opts.Expires > want-2*time.Second && opts.Expires <= want
-		})).
-		Return(&v4.PresignedHTTPRequest{URL: "https://example.com/presigned-get"}, nil)
-
-	_, _, err := s.store.PresignGet(s.T().Context(), "profiles/user-alice/avatar/up1")
-
-	s.Require().NoError(err)
-}
-
-func (s *ProfileImageStoreSuite) TestPresignGet_StaticCredentials_UsesFixedTTL() {
-	s.store.creds = staticCredentials()
-
-	s.mockPresign.EXPECT().
-		PresignGetObject(mock.Anything, mock.Anything, mock.MatchedBy(func(optFns []func(*s3.PresignOptions)) bool {
-			var opts s3.PresignOptions
-			for _, fn := range optFns {
-				fn(&opts)
-			}
-
-			return opts.Expires == staticCredentialsTTL
-		})).
-		Return(&v4.PresignedHTTPRequest{URL: "https://example.com/presigned-get"}, nil)
-
-	_, _, err := s.store.PresignGet(s.T().Context(), "profiles/user-alice/avatar/up1")
-
-	s.Require().NoError(err)
-}
-
-func (s *ProfileImageStoreSuite) TestPresignGet_CredentialsInsideMargin_StillSignsForWhatIsLeft() {
-	window := presignMargin / 2
-	s.store.creds = expiringCredentials(window)
-
-	s.mockPresign.EXPECT().
-		PresignGetObject(mock.Anything, mock.Anything, mock.MatchedBy(func(optFns []func(*s3.PresignOptions)) bool {
-			var opts s3.PresignOptions
-			for _, fn := range optFns {
-				fn(&opts)
-			}
-
-			return opts.Expires == window/2
-		})).
-		Return(&v4.PresignedHTTPRequest{URL: "https://example.com/presigned-get"}, nil)
-
-	url, expiresAt, err := s.store.PresignGet(s.T().Context(), "profiles/user-alice/avatar/up1")
-
-	s.Require().NoError(err)
-	s.Equal("https://example.com/presigned-get", url)
-	s.WithinDuration(time.Now().Add(window/2), expiresAt, 2*time.Second)
-}
-
-func (s *ProfileImageStoreSuite) TestPresignGet_CredentialsAlreadyExpired_Fails() {
-	s.store.creds = expiringCredentials(-time.Minute)
-
-	_, _, err := s.store.PresignGet(s.T().Context(), "profiles/user-alice/avatar/up1")
-
-	s.Require().ErrorContains(err, "signing credentials expired")
-}
-
-func (s *ProfileImageStoreSuite) TestPresignGet_SDKError_Propagates() {
-	s.mockPresign.EXPECT().
-		PresignGetObject(mock.Anything, mock.Anything, mock.Anything).
-		Return(nil, errors.New("s3: access denied"))
-
-	_, _, err := s.store.PresignGet(s.T().Context(), "profiles/user-alice/avatar/up1")
-
-	s.Require().ErrorContains(err, "s3: access denied")
+	s.Require().ErrorContains(err, "crypto/rsa: verification error")
+	s.Empty(url)
 }
 
 func (s *ProfileImageStoreSuite) TestPresignPut_Succeeds() {

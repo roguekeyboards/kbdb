@@ -73,7 +73,7 @@ var _ = Describe("Setting a switch's image", func() {
 						Expect(err).NotTo(HaveOccurred())
 						Expect(putResp.StatusCode).To(Equal(http.StatusPreconditionFailed))
 
-						By("showing the image, as a presigned GET URL, embedded in a follow-up GetSwitch")
+						By("showing the image, as a signed image URL, embedded in a follow-up GetSwitch")
 						getResp, err := client.Get(ctx, ownerID, switchID, ownerToken)
 						Expect(err).NotTo(HaveOccurred())
 
@@ -86,7 +86,7 @@ var _ = Describe("Setting a switch's image", func() {
 						Expect(sw.Image).NotTo(BeNil())
 						Expect(sw.Image.URL).NotTo(BeEmpty())
 
-						By("fetching the presigned GET URL and getting back the exact bytes that were uploaded")
+						By("fetching the signed image URL and getting back the exact bytes that were uploaded")
 						getImageResp, err := api.DoPresigned(ctx, http.MethodGet, sw.Image.URL, "", nil)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(getImageResp.StatusCode).To(Equal(http.StatusOK))

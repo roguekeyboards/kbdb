@@ -39,7 +39,7 @@
 // keeps its username, which is what moving data between two accounts in one
 // environment needs.
 //
-// It uses no AWS credentials. Image bytes move over presigned URLs the REST
+// It uses no AWS credentials. Image bytes move over signed URLs the REST
 // API mints, so it works identically against any environment the caller can
 // reach.
 package main

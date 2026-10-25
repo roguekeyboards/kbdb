@@ -84,7 +84,7 @@ The budget is $10 a month, emailing at 80% and 100%. Prod normally costs pennies
 
 1. **Find what's costing money:** Cost Explorer in the `kbdb-prod` console, grouped by service, daily.
 2. **If it's Rekognition**: pause moderation (`mise run moderation-pause prod`; see the [moderation guide](moderation.md#pausing-moderation)).
-3. **If it's S3 data transfer**: use the image switch below.
+3. **If it's CloudFront data transfer**: use the image switch below.
 4. **If you need to stop spending right now**, use one of the emergency switches below. Both are made outside the template: undo them by hand, and check they're still in place after any deploy.
 
 Emergency switches:
@@ -98,16 +98,16 @@ aws lambda put-function-concurrency --function-name kbdb-api-kbdb-prod \
   --reserved-concurrent-executions 15
 ```
 
-That stops new image links being issued too, but links already handed out keep working until they expire (up to an hour). To stop those immediately, deny the role that signs them:
+That stops new image links being issued too, but links already handed out keep working until they expire (up to 24 hours). To stop those immediately, disable the images distribution:
 
 ```sh
-ROLE=$(aws cloudformation describe-stack-resource --stack-name kbdb-prod \
-  --logical-resource-id PresignSigningRole \
-  --query StackResourceDetail.PhysicalResourceId --output text)
-aws iam put-role-policy --role-name "$ROLE" --policy-name emergency-deny-images \
-  --policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Deny","Action":"s3:GetObject","Resource":"*"}]}'
-# Undo:
-aws iam delete-role-policy --role-name "$ROLE" --policy-name emergency-deny-images
+DIST=$(aws cloudformation describe-stacks --stack-name kbdb-prod \
+  --query "Stacks[0].Outputs[?OutputKey=='ImagesDistributionId'].OutputValue" --output text)
+aws cloudfront get-distribution-config --id "$DIST" > dist.json
+jq '.DistributionConfig.Enabled = false | .DistributionConfig' dist.json > disabled.json
+aws cloudfront update-distribution --id "$DIST" --if-match "$(jq -r .ETag dist.json)" \
+  --distribution-config file://disabled.json
+# Undo: the same with Enabled = true. The next deploy also re-enables it.
 ```
 
 ## Releases and deploys

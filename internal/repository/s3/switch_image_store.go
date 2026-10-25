@@ -16,24 +16,24 @@ type SwitchImageStore struct {
 	client  s3API
 	presign s3PresignAPI
 	bucket  string
-	creds   credentialsProvider
+	get     *GetSigner
 }
 
 var _ repository.SwitchImageStore = (*SwitchImageStore)(nil)
 
 // NewSwitchImageStore returns a SwitchImageStore backed by client.
-func NewSwitchImageStore(client *s3.Client, presign *s3.PresignClient, bucket string, creds aws.CredentialsProvider) *SwitchImageStore {
+func NewSwitchImageStore(client *s3.Client, presign *s3.PresignClient, bucket string, get *GetSigner) *SwitchImageStore {
 	return &SwitchImageStore{
 		client:  client,
 		presign: presign,
 		bucket:  bucket,
-		creds:   creds,
+		get:     get,
 	}
 }
 
 // PresignGet implements repository.SwitchImageStore.
-func (s *SwitchImageStore) PresignGet(ctx context.Context, key repository.SwitchImageKey) (url string, expiresAt time.Time, err error) {
-	return presignGet(ctx, s.creds, s.presign, s.bucket, string(key))
+func (s *SwitchImageStore) PresignGet(_ context.Context, key repository.SwitchImageKey) (url string, expiresAt time.Time, err error) {
+	return s.get.sign(string(key))
 }
 
 // PresignPut implements repository.SwitchImageStore.

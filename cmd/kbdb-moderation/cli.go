@@ -232,13 +232,13 @@ func (c *RejectCmd) Run(ctx context.Context, st *stack) error {
 	case gone:
 		fmt.Printf("Rejected %s (%s). Its file is already gone.\n", key, c.Reason)
 	default:
-		fmt.Printf("Rejected %s (%s). Download links issued before now keep working until they expire, within an hour.\n", key, c.Reason)
+		fmt.Printf("Rejected %s (%s). Download links issued before now keep working while CloudFront has the image cached, up to a day.\n", key, c.Reason)
 	}
 	return nil
 }
 
 // keyArg returns the object key an argument names: the key itself, or an
-// image link such as the presigned GET the site loads it from, expired or
+// image link such as the signed URL the site loads it from, expired or
 // not. A link's path is the key, after the bucket for a path-style one.
 func keyArg(arg, bucket string) (string, error) {
 	if !strings.HasPrefix(arg, "https://") && !strings.HasPrefix(arg, "http://") {

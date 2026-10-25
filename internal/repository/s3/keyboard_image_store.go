@@ -16,24 +16,24 @@ type KeyboardImageStore struct {
 	client  s3API
 	presign s3PresignAPI
 	bucket  string
-	creds   credentialsProvider
+	get     *GetSigner
 }
 
 var _ repository.KeyboardImageStore = (*KeyboardImageStore)(nil)
 
 // NewKeyboardImageStore returns a KeyboardImageStore backed by client.
-func NewKeyboardImageStore(client *s3.Client, presign *s3.PresignClient, bucket string, creds aws.CredentialsProvider) *KeyboardImageStore {
+func NewKeyboardImageStore(client *s3.Client, presign *s3.PresignClient, bucket string, get *GetSigner) *KeyboardImageStore {
 	return &KeyboardImageStore{
 		client:  client,
 		presign: presign,
 		bucket:  bucket,
-		creds:   creds,
+		get:     get,
 	}
 }
 
 // PresignGetKeyboardImage implements repository.KeyboardImageStore.
-func (s *KeyboardImageStore) PresignGetKeyboardImage(ctx context.Context, key repository.KeyboardImageKey) (url string, expiresAt time.Time, err error) {
-	return presignGet(ctx, s.creds, s.presign, s.bucket, string(key))
+func (s *KeyboardImageStore) PresignGetKeyboardImage(_ context.Context, key repository.KeyboardImageKey) (url string, expiresAt time.Time, err error) {
+	return s.get.sign(string(key))
 }
 
 // PresignPutKeyboardImage implements repository.KeyboardImageStore.
