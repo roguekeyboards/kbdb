@@ -77,7 +77,7 @@ var _ = Describe("Setting a keycap kit's image", func() {
 
 						By("uploading a PNG to the presigned PUT URL")
 						imageBytes := api.TestImageBytes
-						putResp, err := api.DoPresigned(ctx, http.MethodPut, created.UploadURL, "image/png", bytes.NewReader(imageBytes))
+						putResp, err := api.DoBlob(ctx, http.MethodPut, created.UploadURL, "image/png", bytes.NewReader(imageBytes))
 						Expect(err).NotTo(HaveOccurred())
 						Expect(putResp.StatusCode).To(Equal(http.StatusOK))
 
@@ -100,7 +100,7 @@ var _ = Describe("Setting a keycap kit's image", func() {
 						Expect(set.Kits[0].Image.URL).NotTo(BeEmpty())
 
 						By("fetching the signed image URL and getting back the exact bytes that were uploaded")
-						getImageResp, err := api.DoPresigned(ctx, http.MethodGet, set.Kits[0].Image.URL, "", nil)
+						getImageResp, err := api.DoBlob(ctx, http.MethodGet, set.Kits[0].Image.URL, "", nil)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(getImageResp.StatusCode).To(Equal(http.StatusOK))
 

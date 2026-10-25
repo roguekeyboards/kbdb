@@ -60,11 +60,6 @@ var _ = Describe("Listing keycap sets", func() {
 		resp = nil
 		client = api.NewKeycapSetsClient()
 
-		// Derived from a freshly minted token, not a fixed fixture subject:
-		// AuthToken mints a real subject from the oidc-testkit-signed token
-		// rather than a fixed fixture subject string, so the owner used
-		// to seed fixture data below must match whatever subject this
-		// environment's token actually carries.
 		var err error
 		ownerToken, ownerID, err = api.NewAuthIdentity(ctx)
 		Expect(err).NotTo(HaveOccurred())
@@ -88,11 +83,6 @@ var _ = Describe("Listing keycap sets", func() {
 		var publicID, authenticatedID, privateID string
 
 		BeforeEach(func(ctx SpecContext) {
-			// Fresh IDs per spec run, not fixed literals: AuthToken is a
-			// shared, real emulator identity in CI (provisioning one per
-			// spec isn't practical there), so specs sharing an identity
-			// must namespace their own data to stay collision-proof under
-			// concurrent/out-of-order runs.
 			publicID = "public-keycap-set-" + uuid.NewString()
 			authenticatedID = "authenticated-keycap-set-" + uuid.NewString()
 			privateID = "private-keycap-set-" + uuid.NewString()
@@ -192,7 +182,7 @@ var _ = Describe("Listing keycap sets", func() {
 			Expect(json.NewDecoder(setImageResp.Body).Decode(&created)).To(Succeed())
 
 			imageBytes = api.TestImageBytes
-			putResp, err := api.DoPresigned(ctx, http.MethodPut, created.UploadURL, "image/png", bytes.NewReader(imageBytes))
+			putResp, err := api.DoBlob(ctx, http.MethodPut, created.UploadURL, "image/png", bytes.NewReader(imageBytes))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(putResp.StatusCode).To(Equal(http.StatusOK))
 		})
@@ -228,7 +218,7 @@ var _ = Describe("Listing keycap sets", func() {
 					Expect(kit.Image).NotTo(BeNil())
 					Expect(kit.Image.URL).NotTo(BeEmpty())
 
-					getImageResp, err := api.DoPresigned(ctx, http.MethodGet, kit.Image.URL, "", nil)
+					getImageResp, err := api.DoBlob(ctx, http.MethodGet, kit.Image.URL, "", nil)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(getImageResp.StatusCode).To(Equal(http.StatusOK))
 				}

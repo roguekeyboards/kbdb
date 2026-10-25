@@ -134,7 +134,7 @@ var _ = Describe("Deleting a keycap kit", func() {
 					}
 					Expect(json.NewDecoder(setResp.Body).Decode(&upload)).To(Succeed())
 
-					putResp, err := api.DoPresigned(ctx, http.MethodPut, upload.UploadURL, "image/png", bytes.NewReader(api.TestImageBytes))
+					putResp, err := api.DoBlob(ctx, http.MethodPut, upload.UploadURL, "image/png", bytes.NewReader(api.TestImageBytes))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(putResp.StatusCode).To(Equal(http.StatusOK))
 
@@ -164,11 +164,8 @@ var _ = Describe("Deleting a keycap kit", func() {
 					It("returns 204 and the kit's image is actually gone from S3", func(ctx SpecContext) {
 						Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 
-						getImageResp, err := api.DoPresigned(ctx, http.MethodGet, imageGetURL, "", nil)
+						getImageResp, err := api.DoBlob(ctx, http.MethodGet, imageGetURL, "", nil)
 						Expect(err).NotTo(HaveOccurred())
-						// Real S3 returns 403 (not 404) for GetObject against a
-						// missing key when the caller lacks s3:ListBucket;
-						// floci returns 404.
 						Expect(getImageResp.StatusCode).To(BeElementOf(http.StatusNotFound, http.StatusForbidden))
 					})
 				})

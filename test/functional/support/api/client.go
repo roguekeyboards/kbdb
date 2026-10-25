@@ -82,12 +82,10 @@ var blobClient = sync.OnceValue(func() *http.Client {
 	return &http.Client{Transport: transport}
 })
 
-// DoPresigned sends a request to a presigned S3 upload URL or a signed image
+// DoBlob sends a request to a presigned S3 upload URL or a signed image
 // URL. body and contentType are only meaningful for a PUT, which also sends
-// the If-None-Match: * every presigned PUT requires. Package-level, not a
-// Client method: unlike Do, it doesn't target support.BaseURL(), so it needs
-// no client state.
-func DoPresigned(ctx context.Context, method, rawURL, contentType string, body io.Reader) (*http.Response, error) {
+// the If-None-Match: * every presigned PUT requires.
+func DoBlob(ctx context.Context, method, rawURL, contentType string, body io.Reader) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, method, rawURL, body)
 	if err != nil {
 		return nil, err

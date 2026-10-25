@@ -641,7 +641,7 @@ func (s *ListProfilesSuite) TestReturnsNextCursor_WhenPresent() {
 	s.Equal("next-page", *got.NextCursor)
 }
 
-func (s *ListProfilesSuite) TestAvatarPresigned_WhenSet() {
+func (s *ListProfilesSuite) TestAvatarSigned_WhenSet() {
 	key := repository.ProfileImageKey("profiles/user-alice/avatar/up1")
 	s.mockRepo.EXPECT().
 		ListPublic(mock.Anything, "", "", 20, "").

@@ -64,7 +64,7 @@ var _ = Describe("Adding an image to a keyboard over MCP", func() {
 
 						By("uploading a PNG to the presigned PUT URL")
 						imageBytes := api.TestImageBytes
-						putResp, putErr := api.DoPresigned(ctx, http.MethodPut, out.UploadURL, approvedImageContentType, bytes.NewReader(imageBytes))
+						putResp, putErr := api.DoBlob(ctx, http.MethodPut, out.UploadURL, approvedImageContentType, bytes.NewReader(imageBytes))
 						Expect(putErr).NotTo(HaveOccurred())
 						Expect(putResp.StatusCode).To(Equal(http.StatusOK))
 

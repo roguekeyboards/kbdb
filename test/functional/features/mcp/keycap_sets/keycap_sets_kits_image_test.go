@@ -73,7 +73,7 @@ var _ = Describe("Managing a keycap kit's image over MCP", func() {
 
 						By("uploading a PNG to the presigned PUT URL")
 						imageBytes := api.TestImageBytes
-						putResp, putErr := api.DoPresigned(ctx, http.MethodPut, uploadURL, approvedImageContentType, bytes.NewReader(imageBytes))
+						putResp, putErr := api.DoBlob(ctx, http.MethodPut, uploadURL, approvedImageContentType, bytes.NewReader(imageBytes))
 						Expect(putErr).NotTo(HaveOccurred())
 						Expect(putResp.StatusCode).To(Equal(http.StatusOK))
 
@@ -151,7 +151,7 @@ var _ = Describe("Managing a keycap kit's image over MCP", func() {
 					Expect(setResult.IsError).To(BeFalse())
 					uploadURL := decodeUploadURL(setResult)
 
-					putResp, putErr := api.DoPresigned(ctx, http.MethodPut, uploadURL, approvedImageContentType, bytes.NewReader(api.TestImageBytes))
+					putResp, putErr := api.DoBlob(ctx, http.MethodPut, uploadURL, approvedImageContentType, bytes.NewReader(api.TestImageBytes))
 					Expect(putErr).NotTo(HaveOccurred())
 					Expect(putResp.StatusCode).To(Equal(http.StatusOK))
 				})

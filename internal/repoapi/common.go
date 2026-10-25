@@ -24,9 +24,8 @@ func parseAPIDate(s string) (*openapi_types.Date, error) {
 }
 
 // getURLRefreshFloor is how long a cached image URL must have left to be
-// reused. A URL expires 24h after the start of the 12h window it was signed
-// in, so more than 12h left means it was signed in the current window.
-const getURLRefreshFloor = 12 * time.Hour
+// reused: more than this means it was signed in the current window.
+const getURLRefreshFloor = repository.ImageURLLifetime - repository.ImageURLWindow
 
 // resolveImageURL returns cachedURL if it has more than getURLRefreshFloor
 // left before cachedExpiresAt, and otherwise signs a new one with mint and

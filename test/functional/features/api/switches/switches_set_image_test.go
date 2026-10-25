@@ -64,12 +64,12 @@ var _ = Describe("Setting a switch's image", func() {
 
 						By("uploading a PNG to the presigned PUT URL")
 						imageBytes := api.TestImageBytes
-						putResp, err := api.DoPresigned(ctx, http.MethodPut, created.UploadURL, approvedImageContentType, bytes.NewReader(imageBytes))
+						putResp, err := api.DoBlob(ctx, http.MethodPut, created.UploadURL, approvedImageContentType, bytes.NewReader(imageBytes))
 						Expect(err).NotTo(HaveOccurred())
 						Expect(putResp.StatusCode).To(Equal(http.StatusOK))
 
 						By("rejecting a second PUT to the same upload URL")
-						putResp, err = api.DoPresigned(ctx, http.MethodPut, created.UploadURL, approvedImageContentType, bytes.NewReader(imageBytes))
+						putResp, err = api.DoBlob(ctx, http.MethodPut, created.UploadURL, approvedImageContentType, bytes.NewReader(imageBytes))
 						Expect(err).NotTo(HaveOccurred())
 						Expect(putResp.StatusCode).To(Equal(http.StatusPreconditionFailed))
 
@@ -87,7 +87,7 @@ var _ = Describe("Setting a switch's image", func() {
 						Expect(sw.Image.URL).NotTo(BeEmpty())
 
 						By("fetching the signed image URL and getting back the exact bytes that were uploaded")
-						getImageResp, err := api.DoPresigned(ctx, http.MethodGet, sw.Image.URL, "", nil)
+						getImageResp, err := api.DoBlob(ctx, http.MethodGet, sw.Image.URL, "", nil)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(getImageResp.StatusCode).To(Equal(http.StatusOK))
 
@@ -141,7 +141,7 @@ var _ = Describe("Setting a switch's image", func() {
 					}
 					Expect(json.NewDecoder(firstResp.Body).Decode(&first)).To(Succeed())
 
-					putResp, err := api.DoPresigned(ctx, http.MethodPut, first.UploadURL, approvedImageContentType, bytes.NewReader(api.TestImageBytes))
+					putResp, err := api.DoBlob(ctx, http.MethodPut, first.UploadURL, approvedImageContentType, bytes.NewReader(api.TestImageBytes))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(putResp.StatusCode).To(Equal(http.StatusOK))
 
@@ -166,12 +166,12 @@ var _ = Describe("Setting a switch's image", func() {
 
 						By("accepting the replacement bytes at the new upload URL")
 						replacement := api.TestJPEG
-						putResp, err := api.DoPresigned(ctx, http.MethodPut, created.UploadURL, "image/jpeg", bytes.NewReader(replacement))
+						putResp, err := api.DoBlob(ctx, http.MethodPut, created.UploadURL, "image/jpeg", bytes.NewReader(replacement))
 						Expect(err).NotTo(HaveOccurred())
 						Expect(putResp.StatusCode).To(Equal(http.StatusOK))
 
 						By("serving the replacement bytes from a follow-up GetSwitch")
-						getImageResp, err := api.DoPresigned(ctx, http.MethodGet, getImageURL(ctx, client, ownerID, switchID, ownerToken), "", nil)
+						getImageResp, err := api.DoBlob(ctx, http.MethodGet, getImageURL(ctx, client, ownerID, switchID, ownerToken), "", nil)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(getImageResp.StatusCode).To(Equal(http.StatusOK))
 						gotBytes, err := io.ReadAll(getImageResp.Body)
@@ -179,10 +179,8 @@ var _ = Describe("Setting a switch's image", func() {
 						Expect(gotBytes).To(Equal(replacement))
 
 						By("no longer serving the previous image's object")
-						previousResp, err := api.DoPresigned(ctx, http.MethodGet, previousImageURL, "", nil)
+						previousResp, err := api.DoBlob(ctx, http.MethodGet, previousImageURL, "", nil)
 						Expect(err).NotTo(HaveOccurred())
-						// Real S3 returns 403 (not 404) for GetObject against a
-						// missing key when the caller lacks s3:ListBucket.
 						Expect(previousResp.StatusCode).To(BeElementOf(http.StatusNotFound, http.StatusForbidden))
 					})
 				})

@@ -18,7 +18,6 @@ import (
 	"github.com/rogueserenity/kbdb/test/functional/support/moderation"
 )
 
-// switchImage is GET .../switches/{switchId}'s image field.
 type switchImage struct {
 	URL             *string `json:"url"`
 	Status          *string `json:"status"`
@@ -47,8 +46,6 @@ var _ = Describe("Moderating an uploaded switch image", func() {
 		return sw.Image
 	}
 
-	// issueUpload has the owner set the switch's image, keeping the upload
-	// URL and the object key it was issued for.
 	issueUpload := func(ctx SpecContext, body string) {
 		GinkgoHelper()
 		resp, err := client.SetImage(ctx, ownerID, switchID, ownerToken, body)
@@ -67,7 +64,7 @@ var _ = Describe("Moderating an uploaded switch image", func() {
 
 	put := func(ctx SpecContext, contentType string, data []byte) {
 		GinkgoHelper()
-		resp, err := api.DoPresigned(ctx, http.MethodPut, uploadURL, contentType, bytes.NewReader(data))
+		resp, err := api.DoBlob(ctx, http.MethodPut, uploadURL, contentType, bytes.NewReader(data))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 	}
@@ -76,8 +73,6 @@ var _ = Describe("Moderating an uploaded switch image", func() {
 		put(ctx, "image/jpeg", api.TestJPEG)
 	}
 
-	// The moderation function runs asynchronously after the upload, and its
-	// first invocation includes a cold start.
 	awaitStatus := func(ctx SpecContext, want ...types.GomegaMatcher) {
 		GinkgoHelper()
 		Eventually(func() (db.SwitchImage, error) {

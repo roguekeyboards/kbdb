@@ -51,7 +51,7 @@ var _ = Describe("Deleting an image from a keyboard over MCP", func() {
 				out := decodeAddImageOutput(addResult)
 				imageID = out.ImageID
 
-				putResp, putErr := api.DoPresigned(ctx, http.MethodPut, out.UploadURL, approvedImageContentType, bytes.NewReader(api.TestImageBytes))
+				putResp, putErr := api.DoBlob(ctx, http.MethodPut, out.UploadURL, approvedImageContentType, bytes.NewReader(api.TestImageBytes))
 				Expect(putErr).NotTo(HaveOccurred())
 				Expect(putResp.StatusCode).To(Equal(http.StatusOK))
 			})

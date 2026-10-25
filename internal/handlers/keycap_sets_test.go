@@ -350,7 +350,7 @@ func (s *GetKeycapSetSuite) TestGetKeycapSet_Owner_Succeeds() {
 	s.Equal(repository.VisibilityPrivate, got.Visibility)
 }
 
-func (s *GetKeycapSetSuite) TestGetKeycapSet_KitWithImagePath_IncludesPresignedURL() {
+func (s *GetKeycapSetSuite) TestGetKeycapSet_KitWithImagePath_IncludesSignedURL() {
 	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
 	s.prefs = repository.DefaultProfilePreferences()
 	imagePath := repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit1/image/up1")
