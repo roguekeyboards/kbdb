@@ -136,7 +136,7 @@ type KeyboardImageEntry struct {
 	Status          ImageStatus `dynamodbav:"status,omitempty" json:"-"`
 	RejectionReason *string     `dynamodbav:"rejection_reason,omitempty" json:"-"`
 
-	// GetURL/GetURLExpiresAt cache the last presigned GET URL for Path.
+	// GetURL/GetURLExpiresAt cache the last signed GET URL for Path.
 	GetURL          *string    `dynamodbav:"get_url,omitempty" json:"-"`
 	GetURLExpiresAt *time.Time `dynamodbav:"get_url_expires_at,omitempty" json:"-"`
 }
@@ -372,20 +372,17 @@ type KeyboardRepository interface {
 	DeleteImage(ctx context.Context, keyboardID, imageID string) (*KeyboardImageKey, error)
 
 	// SetImageGetCache stores url/expiresAt as the matching image's cached
-	// GET URL, conditioned on its Path still equalling forPath. Takes an
-	// explicit ownerID, unlike AddImage/DeleteImage, since this is called
-	// from read paths that may be viewing another user's keyboard. Returns
-	// ok=false (not an error) if that condition fails or
-	// keyboardID/imageID doesn't exist.
+	// GET URL, conditioned on its Path still equalling forPath. Returns
+	// ok=false (not an error) if that condition fails or keyboardID/imageID
+	// doesn't exist.
 	SetImageGetCache(ctx context.Context, ownerID, keyboardID, imageID string, forPath KeyboardImageKey, url string, expiresAt time.Time) (ok bool, err error)
 
 	// SetImageStatus sets the matching image's moderation status to `to` and
 	// its rejection reason to reason (cleared when nil), conditioned on Path
 	// still equalling forPath and the status still being from (a missing
-	// status counts as approved). A rejection also drops any cached GET URL. Takes an
-	// explicit ownerID: the moderation Lambda and operator CLI act on any
-	// owner's images. Returns ok=false (not an error) if that condition fails
-	// or the item doesn't exist.
+	// status counts as approved). A rejection also drops any cached GET URL.
+	// Returns ok=false (not an error) if that condition fails or the item
+	// doesn't exist.
 	SetImageStatus(ctx context.Context, ownerID, keyboardID, imageID string, forPath KeyboardImageKey, from, to ImageStatus, reason *string) (ok bool, err error)
 }
 
@@ -409,9 +406,9 @@ func NewKeyboardImageKey(ctx context.Context, keyboardID, imageID string) (Keybo
 // shared, since a keyboard's images are a growable array of
 // server-generated ids rather than a single optional slot.
 type KeyboardImageStore interface {
-	// PresignGetKeyboardImage returns a signed GET URL for key on the images
+	// SignGetKeyboardImage returns a signed GET URL for key on the images
 	// distribution, and when it stops working.
-	PresignGetKeyboardImage(ctx context.Context, key KeyboardImageKey) (url string, expiresAt time.Time, err error)
+	SignGetKeyboardImage(ctx context.Context, key KeyboardImageKey) (url string, expiresAt time.Time, err error)
 
 	// PresignPutKeyboardImage returns a short-lived presigned PUT URL for
 	// key, locked to contentType and size via the Content-Type and

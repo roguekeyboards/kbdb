@@ -37,24 +37,24 @@ func (s *ProfileImageStoreSuite) SetupTest() {
 	}
 }
 
-func (s *ProfileImageStoreSuite) TestPresignGet_SignsKeyOnImagesDomain() {
+func (s *ProfileImageStoreSuite) TestSignGet_SignsKeyOnImagesDomain() {
 	s.mockSigner.EXPECT().
 		Sign("https://images.example.com/profiles/user-alice/avatar/up1", testGetExpiry).
 		Return("https://images.example.com/signed", nil)
 
-	url, expiresAt, err := s.store.PresignGet(s.T().Context(), "profiles/user-alice/avatar/up1")
+	url, expiresAt, err := s.store.SignGet(s.T().Context(), "profiles/user-alice/avatar/up1")
 
 	s.Require().NoError(err)
 	s.Equal("https://images.example.com/signed", url)
 	s.Equal(testGetExpiry, expiresAt)
 }
 
-func (s *ProfileImageStoreSuite) TestPresignGet_SignerError_Propagates() {
+func (s *ProfileImageStoreSuite) TestSignGet_SignerError_Propagates() {
 	s.mockSigner.EXPECT().
 		Sign(mock.Anything, mock.Anything).
 		Return("", errors.New("crypto/rsa: verification error"))
 
-	url, _, err := s.store.PresignGet(s.T().Context(), "profiles/user-alice/avatar/up1")
+	url, _, err := s.store.SignGet(s.T().Context(), "profiles/user-alice/avatar/up1")
 
 	s.Require().ErrorContains(err, "crypto/rsa: verification error")
 	s.Empty(url)

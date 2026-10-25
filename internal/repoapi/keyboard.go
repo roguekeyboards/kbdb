@@ -21,7 +21,7 @@ type Keyboard struct {
 // always sees their own prices (purchase.price, each part's purchase.price,
 // total_cost); a non-owner sees them only if ownerPrefs.ShowPriceToOthers.
 // The rest of each purchase is unaffected. Returns an error if a stored
-// purchase date doesn't match dateLayout, or an image fails to presign.
+// purchase date doesn't match dateLayout, or an image fails to sign.
 func (k Keyboard) ToAPI(ctx context.Context, kb repository.Keyboard, isOwner bool, ownerPrefs repository.ProfilePreferences) (api.Keyboard, error) {
 	purchase, err := k.purchaseToAPI(kb.Purchase, isOwner, ownerPrefs)
 	if err != nil {
@@ -65,10 +65,8 @@ func (k Keyboard) ToAPI(ctx context.Context, kb repository.Keyboard, isOwner boo
 	return out, nil
 }
 
-// imagesToAPI keeps the images the caller may see and resolves a presigned
-// GET URL for each one not rejected, reusing each image's cached URL if
-// still fresh, mirroring [Build.imagesToAPI]. images is already ordered
-// (by Seq) by the caller.
+// imagesToAPI keeps the images the caller may see and resolves a signed GET
+// URL for each one not rejected. images must already be ordered by Seq.
 func (k Keyboard) imagesToAPI(ctx context.Context, ownerID, keyboardID string, images []repository.KeyboardImage, isOwner bool) (*[]api.KeyboardImage, error) {
 	images = visibleImages(images, func(img repository.KeyboardImage) repository.ImageStatus { return img.Status }, isOwner)
 	if len(images) == 0 {
@@ -91,7 +89,7 @@ func (k Keyboard) imagesToAPI(ctx context.Context, ownerID, keyboardID string, i
 			}
 			url, err := k.resolveKeyboardImageURL(ctx, ownerID, keyboardID, img)
 			if err != nil {
-				errs[i] = fmt.Errorf("presigning keyboard image %q: %w", img.ImageID, err)
+				errs[i] = fmt.Errorf("signing keyboard image %q: %w", img.ImageID, err)
 				return
 			}
 			out[i].Url = &url
@@ -155,11 +153,11 @@ func (k Keyboard) stripPurchasePrice(p *api.Purchase) *api.Purchase {
 	return p
 }
 
-// resolveKeyboardImageURL presigns img.Path, reusing its cached GET URL if
-// still fresh enough.
+// resolveKeyboardImageURL returns a signed GET URL for img.Path, reusing the
+// cached one if it was signed in the current window.
 func (k Keyboard) resolveKeyboardImageURL(ctx context.Context, ownerID, keyboardID string, img repository.KeyboardImage) (string, error) {
 	return resolveImageURL(img.GetURL, img.GetURLExpiresAt,
-		func() (string, time.Time, error) { return k.Images.PresignGetKeyboardImage(ctx, img.Path) },
+		func() (string, time.Time, error) { return k.Images.SignGetKeyboardImage(ctx, img.Path) },
 		func(url string, expiresAt time.Time) error {
 			_, err := k.Repo.SetImageGetCache(ctx, ownerID, keyboardID, img.ImageID, img.Path, url, expiresAt)
 			return err

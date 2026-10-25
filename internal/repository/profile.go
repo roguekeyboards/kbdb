@@ -82,8 +82,8 @@ type Profile struct {
 	AvatarStatus          ImageStatus `dynamodbav:"avatar_status,omitempty" json:"-"`
 	AvatarRejectionReason *string     `dynamodbav:"avatar_rejection_reason,omitempty" json:"-"`
 
-	// GetURL/GetURLExpiresAt cache the last presigned GET URL for
-	// AvatarPath. SetAvatarPath clears both when AvatarPath changes.
+	// GetURL/GetURLExpiresAt cache the last signed GET URL for AvatarPath.
+	// SetAvatarPath clears both when AvatarPath changes.
 	GetURL          *string    `dynamodbav:"get_url,omitempty" json:"-"`
 	GetURLExpiresAt *time.Time `dynamodbav:"get_url_expires_at,omitempty" json:"-"`
 
@@ -157,20 +157,17 @@ type ProfileRepository interface {
 	ClearAvatarPath(ctx context.Context) (*ProfileImageKey, error)
 
 	// SetImageGetCache stores url/expiresAt as ownerID's cached avatar GET
-	// URL, conditioned on AvatarPath still equalling forPath. Takes an
-	// explicit ownerID, unlike the other Set*/Clear* methods here, since
-	// this is called from read paths that may be viewing another user's
-	// profile, not just self-writes. Returns ok=false (not an error) if
-	// that condition fails or ownerID has no profile.
+	// URL, conditioned on AvatarPath still equalling forPath. Returns
+	// ok=false (not an error) if that condition fails or ownerID has no
+	// profile.
 	SetImageGetCache(ctx context.Context, ownerID string, forPath ProfileImageKey, url string, expiresAt time.Time) (ok bool, err error)
 
 	// SetAvatarStatus sets ownerID's avatar's moderation status to `to` and
 	// its rejection reason to reason (cleared when nil), conditioned on
 	// AvatarPath still equalling forPath and the status still being from (a
-	// missing status counts as approved). A rejection also drops any cached GET URL. Takes
-	// an explicit ownerID: the moderation Lambda and operator CLI act on any
-	// owner's images. Returns ok=false (not an error) if that condition fails
-	// or the item doesn't exist.
+	// missing status counts as approved). A rejection also drops any cached
+	// GET URL. Returns ok=false (not an error) if that condition fails or the
+	// item doesn't exist.
 	SetAvatarStatus(ctx context.Context, ownerID string, forPath ProfileImageKey, from, to ImageStatus, reason *string) (ok bool, err error)
 }
 
@@ -193,9 +190,9 @@ func NewProfileImageKey(ctx context.Context, uploadID string) (ProfileImageKey, 
 // ProfileImageStore stores a profile's avatar object in a private object
 // store, addressed by ProfileImageKey.
 type ProfileImageStore interface {
-	// PresignGet returns a signed GET URL for key on the images
+	// SignGet returns a signed GET URL for key on the images
 	// distribution, and when it stops working.
-	PresignGet(ctx context.Context, key ProfileImageKey) (url string, expiresAt time.Time, err error)
+	SignGet(ctx context.Context, key ProfileImageKey) (url string, expiresAt time.Time, err error)
 
 	// PresignPut returns a short-lived presigned PUT URL for key, locked to
 	// contentType and size via the Content-Type and Content-Length the upload

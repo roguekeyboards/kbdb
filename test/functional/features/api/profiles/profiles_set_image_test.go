@@ -14,8 +14,6 @@ import (
 	"github.com/rogueserenity/kbdb/test/functional/support/db"
 )
 
-// approvedImageContentType is a value seeded in the image_content_type
-// lookup category.
 const approvedImageContentType = "image/png"
 
 var _ = Describe("Setting a profile's avatar", func() {
@@ -70,7 +68,7 @@ var _ = Describe("Setting a profile's avatar", func() {
 
 						By("uploading a PNG to the presigned PUT URL")
 						imageBytes := api.TestImageBytes
-						putResp, err := api.DoPresigned(ctx, http.MethodPut, created.UploadURL, approvedImageContentType, bytes.NewReader(imageBytes))
+						putResp, err := api.DoBlob(ctx, http.MethodPut, created.UploadURL, approvedImageContentType, bytes.NewReader(imageBytes))
 						Expect(err).NotTo(HaveOccurred())
 						Expect(putResp.StatusCode).To(Equal(http.StatusOK))
 
@@ -88,7 +86,7 @@ var _ = Describe("Setting a profile's avatar", func() {
 						Expect(p.Avatar.URL).NotTo(BeEmpty())
 
 						By("fetching the signed image URL and getting back the exact bytes that were uploaded")
-						getImageResp, err := api.DoPresigned(ctx, http.MethodGet, p.Avatar.URL, "", nil)
+						getImageResp, err := api.DoBlob(ctx, http.MethodGet, p.Avatar.URL, "", nil)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(getImageResp.StatusCode).To(Equal(http.StatusOK))
 

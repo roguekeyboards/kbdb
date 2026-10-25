@@ -50,7 +50,7 @@ var _ = Describe("Signed image URLs for a switch", func() {
 			}
 			Expect(json.NewDecoder(setResp.Body).Decode(&created)).To(Succeed())
 
-			putResp, err := api.DoPresigned(ctx, http.MethodPut, created.UploadURL, approvedImageContentType, bytes.NewReader(api.TestImageBytes))
+			putResp, err := api.DoBlob(ctx, http.MethodPut, created.UploadURL, approvedImageContentType, bytes.NewReader(api.TestImageBytes))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(putResp.StatusCode).To(Equal(http.StatusOK))
 		})
@@ -69,7 +69,7 @@ var _ = Describe("Signed image URLs for a switch", func() {
 				Expect(imageURL.Hostname()).To(Equal(support.ImagesDomain()))
 				Expect(imageURL.Query().Get("Signature")).NotTo(BeEmpty())
 
-				resp, err := api.DoPresigned(ctx, http.MethodGet, imageURL.String(), "", nil)
+				resp, err := api.DoBlob(ctx, http.MethodGet, imageURL.String(), "", nil)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 				got, err := io.ReadAll(resp.Body)
@@ -81,7 +81,7 @@ var _ = Describe("Signed image URLs for a switch", func() {
 				unsigned := *imageURL
 				unsigned.RawQuery = ""
 
-				resp, err := api.DoPresigned(ctx, http.MethodGet, unsigned.String(), "", nil)
+				resp, err := api.DoBlob(ctx, http.MethodGet, unsigned.String(), "", nil)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
 			})

@@ -105,78 +105,6 @@ func (_c *MockKeyboardImageStore_DeleteKeyboardImage_Call) RunAndReturn(run func
 	return _c
 }
 
-// PresignGetKeyboardImage provides a mock function for the type MockKeyboardImageStore
-func (_mock *MockKeyboardImageStore) PresignGetKeyboardImage(ctx context.Context, key repository.KeyboardImageKey) (string, time.Time, error) {
-	ret := _mock.Called(ctx, key)
-
-	if len(ret) == 0 {
-		panic("no return value specified for PresignGetKeyboardImage")
-	}
-
-	var r0 string
-	var r1 time.Time
-	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, repository.KeyboardImageKey) (string, time.Time, error)); ok {
-		return returnFunc(ctx, key)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, repository.KeyboardImageKey) string); ok {
-		r0 = returnFunc(ctx, key)
-	} else {
-		r0 = ret.Get(0).(string)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, repository.KeyboardImageKey) time.Time); ok {
-		r1 = returnFunc(ctx, key)
-	} else {
-		r1 = ret.Get(1).(time.Time)
-	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, repository.KeyboardImageKey) error); ok {
-		r2 = returnFunc(ctx, key)
-	} else {
-		r2 = ret.Error(2)
-	}
-	return r0, r1, r2
-}
-
-// MockKeyboardImageStore_PresignGetKeyboardImage_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PresignGetKeyboardImage'
-type MockKeyboardImageStore_PresignGetKeyboardImage_Call struct {
-	*mock.Call
-}
-
-// PresignGetKeyboardImage is a helper method to define mock.On call
-//   - ctx context.Context
-//   - key repository.KeyboardImageKey
-func (_e *MockKeyboardImageStore_Expecter) PresignGetKeyboardImage(ctx any, key any) *MockKeyboardImageStore_PresignGetKeyboardImage_Call {
-	return &MockKeyboardImageStore_PresignGetKeyboardImage_Call{Call: _e.mock.On("PresignGetKeyboardImage", ctx, key)}
-}
-
-func (_c *MockKeyboardImageStore_PresignGetKeyboardImage_Call) Run(run func(ctx context.Context, key repository.KeyboardImageKey)) *MockKeyboardImageStore_PresignGetKeyboardImage_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 repository.KeyboardImageKey
-		if args[1] != nil {
-			arg1 = args[1].(repository.KeyboardImageKey)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *MockKeyboardImageStore_PresignGetKeyboardImage_Call) Return(url string, expiresAt time.Time, err error) *MockKeyboardImageStore_PresignGetKeyboardImage_Call {
-	_c.Call.Return(url, expiresAt, err)
-	return _c
-}
-
-func (_c *MockKeyboardImageStore_PresignGetKeyboardImage_Call) RunAndReturn(run func(ctx context.Context, key repository.KeyboardImageKey) (string, time.Time, error)) *MockKeyboardImageStore_PresignGetKeyboardImage_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // PresignPutKeyboardImage provides a mock function for the type MockKeyboardImageStore
 func (_mock *MockKeyboardImageStore) PresignPutKeyboardImage(ctx context.Context, key repository.KeyboardImageKey, contentType string, size int64) (string, error) {
 	ret := _mock.Called(ctx, key, contentType, size)
@@ -251,6 +179,78 @@ func (_c *MockKeyboardImageStore_PresignPutKeyboardImage_Call) Return(url string
 }
 
 func (_c *MockKeyboardImageStore_PresignPutKeyboardImage_Call) RunAndReturn(run func(ctx context.Context, key repository.KeyboardImageKey, contentType string, size int64) (string, error)) *MockKeyboardImageStore_PresignPutKeyboardImage_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SignGetKeyboardImage provides a mock function for the type MockKeyboardImageStore
+func (_mock *MockKeyboardImageStore) SignGetKeyboardImage(ctx context.Context, key repository.KeyboardImageKey) (string, time.Time, error) {
+	ret := _mock.Called(ctx, key)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SignGetKeyboardImage")
+	}
+
+	var r0 string
+	var r1 time.Time
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, repository.KeyboardImageKey) (string, time.Time, error)); ok {
+		return returnFunc(ctx, key)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, repository.KeyboardImageKey) string); ok {
+		r0 = returnFunc(ctx, key)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, repository.KeyboardImageKey) time.Time); ok {
+		r1 = returnFunc(ctx, key)
+	} else {
+		r1 = ret.Get(1).(time.Time)
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, repository.KeyboardImageKey) error); ok {
+		r2 = returnFunc(ctx, key)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// MockKeyboardImageStore_SignGetKeyboardImage_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SignGetKeyboardImage'
+type MockKeyboardImageStore_SignGetKeyboardImage_Call struct {
+	*mock.Call
+}
+
+// SignGetKeyboardImage is a helper method to define mock.On call
+//   - ctx context.Context
+//   - key repository.KeyboardImageKey
+func (_e *MockKeyboardImageStore_Expecter) SignGetKeyboardImage(ctx any, key any) *MockKeyboardImageStore_SignGetKeyboardImage_Call {
+	return &MockKeyboardImageStore_SignGetKeyboardImage_Call{Call: _e.mock.On("SignGetKeyboardImage", ctx, key)}
+}
+
+func (_c *MockKeyboardImageStore_SignGetKeyboardImage_Call) Run(run func(ctx context.Context, key repository.KeyboardImageKey)) *MockKeyboardImageStore_SignGetKeyboardImage_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 repository.KeyboardImageKey
+		if args[1] != nil {
+			arg1 = args[1].(repository.KeyboardImageKey)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockKeyboardImageStore_SignGetKeyboardImage_Call) Return(url string, expiresAt time.Time, err error) *MockKeyboardImageStore_SignGetKeyboardImage_Call {
+	_c.Call.Return(url, expiresAt, err)
+	return _c
+}
+
+func (_c *MockKeyboardImageStore_SignGetKeyboardImage_Call) RunAndReturn(run func(ctx context.Context, key repository.KeyboardImageKey) (string, time.Time, error)) *MockKeyboardImageStore_SignGetKeyboardImage_Call {
 	_c.Call.Return(run)
 	return _c
 }

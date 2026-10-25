@@ -23,27 +23,21 @@ func parseAPIDate(s string) (*openapi_types.Date, error) {
 	return &openapi_types.Date{Time: t}, nil
 }
 
-// getPresignRefreshFloor is the minimum remaining validity a cached
-// presigned GET URL must have to be reused; below this, resolveImageURL
-// signs a fresh one instead of risking a URL that expires mid-use.
-const getPresignRefreshFloor = 60 * time.Second
+// getURLRefreshFloor is how long a cached image URL must have left to be
+// reused: more than this means it was signed in the current window.
+const getURLRefreshFloor = repository.ImageURLLifetime - repository.ImageURLWindow
 
-// resolveImageURL returns a presigned GET URL for an image, reusing
-// cachedURL if it has more than getPresignRefreshFloor left before
-// cachedExpiresAt, and otherwise minting a fresh one via mint and
-// persisting it via writeBack. writeBack's own failure isn't fatal - the
-// freshly minted url is still valid and returned regardless.
-//
-// mint reports its own expiry rather than taking a lifetime: only the signer
-// knows when the URL dies, and caching any other value serves URLs S3 has
-// already started rejecting.
+// resolveImageURL returns cachedURL if it has more than getURLRefreshFloor
+// left before cachedExpiresAt, and otherwise signs a new one with mint and
+// stores it with writeBack. A writeBack failure isn't an error: the new URL
+// is returned regardless.
 func resolveImageURL(
 	cachedURL *string,
 	cachedExpiresAt *time.Time,
 	mint func() (url string, expiresAt time.Time, err error),
 	writeBack func(url string, expiresAt time.Time) error,
 ) (string, error) {
-	if cachedURL != nil && cachedExpiresAt != nil && time.Until(*cachedExpiresAt) > getPresignRefreshFloor {
+	if cachedURL != nil && cachedExpiresAt != nil && time.Until(*cachedExpiresAt) > getURLRefreshFloor {
 		return *cachedURL, nil
 	}
 

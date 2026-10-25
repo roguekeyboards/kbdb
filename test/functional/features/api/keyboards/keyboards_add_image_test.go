@@ -17,14 +17,11 @@ import (
 	"github.com/rogueserenity/kbdb/test/functional/support/db"
 )
 
-// A signed image URL expires 24h after the start of its 12h window.
 const (
 	minSignedGetLifetime = 12 * time.Hour
 	maxSignedGetLifetime = 24 * time.Hour
 )
 
-// imageIDs GETs the keyboard and returns its image ids in the order the API
-// presents them.
 func imageIDs(ctx SpecContext, client *api.KeyboardsClient, ownerID, keyboardID, token string) []string {
 	GinkgoHelper()
 	getResp, err := client.Get(ctx, ownerID, keyboardID, token)
@@ -98,7 +95,7 @@ var _ = Describe("Adding an image to a keyboard", func() {
 
 						By("uploading a PNG to the presigned PUT URL")
 						imageBytes := api.TestImageBytes
-						putResp, err := api.DoPresigned(ctx, http.MethodPut, created.UploadURL, approvedImageContentType, bytes.NewReader(imageBytes))
+						putResp, err := api.DoBlob(ctx, http.MethodPut, created.UploadURL, approvedImageContentType, bytes.NewReader(imageBytes))
 						Expect(err).NotTo(HaveOccurred())
 						Expect(putResp.StatusCode).To(Equal(http.StatusOK))
 
@@ -118,7 +115,7 @@ var _ = Describe("Adding an image to a keyboard", func() {
 						Expect(keyboard.Images[0].URL).NotTo(BeEmpty())
 
 						By("fetching the signed image URL and getting back the exact bytes that were uploaded")
-						getImageResp, err := api.DoPresigned(ctx, http.MethodGet, keyboard.Images[0].URL, "", nil)
+						getImageResp, err := api.DoBlob(ctx, http.MethodGet, keyboard.Images[0].URL, "", nil)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(getImageResp.StatusCode).To(Equal(http.StatusOK))
 
@@ -131,8 +128,6 @@ var _ = Describe("Adding an image to a keyboard", func() {
 						Expect(err).NotTo(HaveOccurred())
 						expires, err := strconv.ParseInt(signed.Query().Get("Expires"), 10, 64)
 						Expect(err).NotTo(HaveOccurred())
-						// Less a minute: a URL signed just before a window ends has
-						// barely over 12h left by the time it's checked.
 						Expect(time.Until(time.Unix(expires, 0))).To(BeNumerically(">", minSignedGetLifetime-time.Minute))
 						Expect(time.Until(time.Unix(expires, 0))).To(BeNumerically("<=", maxSignedGetLifetime))
 					})
@@ -189,7 +184,7 @@ var _ = Describe("Adding an image to a keyboard", func() {
 					BeforeEach(func(ctx SpecContext) {
 						var err error
 						oversized := append(append([]byte{}, api.TestImageBytes...), "-and-then-some"...)
-						resp, err = api.DoPresigned(ctx, http.MethodPut, uploadURL, approvedImageContentType, bytes.NewReader(oversized))
+						resp, err = api.DoBlob(ctx, http.MethodPut, uploadURL, approvedImageContentType, bytes.NewReader(oversized))
 						Expect(err).NotTo(HaveOccurred())
 					})
 

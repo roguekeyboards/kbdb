@@ -13,8 +13,6 @@ import (
 	"github.com/rogueserenity/kbdb/test/functional/support/db"
 )
 
-// getImageURL GETs the switch and returns its image.url, failing the spec
-// if the switch has no image.
 func getImageURL(ctx SpecContext, client *api.SwitchesClient, ownerID, switchID, token string) string {
 	resp, err := client.Get(ctx, ownerID, switchID, token)
 	Expect(err).NotTo(HaveOccurred())
@@ -58,7 +56,7 @@ var _ = Describe("Presigned image GET URL caching for a switch", func() {
 		}
 		Expect(json.NewDecoder(setResp.Body).Decode(&created)).To(Succeed())
 
-		putResp, err := api.DoPresigned(ctx, http.MethodPut, created.UploadURL, approvedImageContentType, bytes.NewReader(api.TestImageBytes))
+		putResp, err := api.DoBlob(ctx, http.MethodPut, created.UploadURL, approvedImageContentType, bytes.NewReader(api.TestImageBytes))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(putResp.StatusCode).To(Equal(http.StatusOK))
 	})
@@ -78,14 +76,4 @@ var _ = Describe("Presigned image GET URL caching for a switch", func() {
 		})
 	})
 
-	// Invalidation-on-replace (a fresh presign happens, not a stale cached
-	// URL) is covered at the unit level instead - see
-	// TestSetImagePath_AlsoClearsCachedGetURL and friends in
-	// internal/repository/dynamo/switch_test.go. A functional assertion
-	// that the *URL string* differs after a replace is unreliable here:
-	// AWS SigV4 presigned URLs for the same S3 key are byte-identical when
-	// minted within the same UTC second (no nonce in the signature), and
-	// this spec's replace-then-GET happens fast enough in CI to
-	// occasionally land in that window even when invalidation works
-	// correctly - a false failure, not a real regression signal.
 })

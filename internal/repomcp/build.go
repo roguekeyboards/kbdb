@@ -15,9 +15,9 @@ type Build struct {
 	KeycapSetRepo repository.KeycapSetRepository
 }
 
-// ToMCP never presigns an image URL, unlike
+// ToMCP never signs an image URL, unlike
 // [github.com/rogueserenity/kbdb/internal/repoapi.Build.ToAPI] - it reports
-// only HasImages, so this can't fail on a presign error. The owner always
+// only HasImages, so this can't fail on a signing error. The owner always
 // sees their own Stabs.Price; a non-owner sees it only if
 // ownerPrefs.ShowPriceToOthers.
 func (b Build) ToMCP(build repository.Build, isOwner bool, ownerPrefs repository.ProfilePreferences) schema.Build {
@@ -95,7 +95,7 @@ func (b Build) FromMCP(in schema.BuildInput) repository.Build {
 }
 
 // ToMCPSummary denormalizes the keyboard via KeyboardRepo.Get and reports
-// HasImage rather than a presigned URL. Unlike [Build.ToMCP], the owner
+// HasImage rather than a signed URL. Unlike [Build.ToMCP], the owner
 // isn't unconditionally shown price here. Switches and keycap kits are only
 // fetched when TotalCost will be shown, since cost is all this uses them
 // for.

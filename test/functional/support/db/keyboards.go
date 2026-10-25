@@ -66,11 +66,10 @@ func SeedKeyboard(ctx context.Context, ownerID, id, visibility string) error {
 	})
 }
 
-// SeedKeyboardWithImage is [SeedKeyboard] plus a single Images entry, whose
-// path doesn't need a real S3 object behind it - presigning a GET URL
-// doesn't check the object exists, only specs that fetch the URL's content
-// would need that. Images is a map keyed by image id, each entry carrying a
-// seq ordering key (see repository.KeyboardImageEntry).
+// SeedKeyboardWithImage is [SeedKeyboard] plus a single Images entry with
+// no S3 object behind it, so the keyboard gets an image URL that can't be
+// fetched. Images is a map keyed by image id, each entry carrying a seq
+// ordering key (see repository.KeyboardImageEntry).
 func SeedKeyboardWithImage(ctx context.Context, ownerID, id, imageID, visibility string) error {
 	table := NewDynamoTable(ctx, support.KeyboardTableName())
 	return table.PutItem(ctx, map[string]any{

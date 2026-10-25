@@ -15,9 +15,9 @@ type Profile struct {
 	Repo   repository.ProfileRepository
 }
 
-// ToAPI maps a repository.Profile to its wire shape, presigning the avatar
-// if set and the caller may see it (see [repository.ImageStatus]). Errors
-// only if presigning fails.
+// ToAPI maps a repository.Profile to its wire shape, signing the avatar's
+// URL if set and the caller may see it (see [repository.ImageStatus]).
+// Errors only if signing fails.
 func (p Profile) ToAPI(ctx context.Context, prof repository.Profile, isOwner bool) (api.Profile, error) {
 	out := api.Profile{
 		Username:        prof.Username,
@@ -38,7 +38,7 @@ func (p Profile) ToAPI(ctx context.Context, prof repository.Profile, isOwner boo
 		if prof.AvatarStatus.Downloadable() {
 			url, err := p.resolveProfileImageURL(ctx, prof)
 			if err != nil {
-				return api.Profile{}, fmt.Errorf("presigning profile avatar: %w", err)
+				return api.Profile{}, fmt.Errorf("signing profile avatar: %w", err)
 			}
 			out.Avatar.Url = &url
 		}
@@ -47,14 +47,14 @@ func (p Profile) ToAPI(ctx context.Context, prof repository.Profile, isOwner boo
 	return out, nil
 }
 
-// resolveProfileImageURL presigns prof.AvatarPath, reusing its cached GET
-// URL if still fresh enough. Callers must check prof.AvatarPath != nil
-// first.
+// resolveProfileImageURL returns a signed GET URL for prof.AvatarPath,
+// reusing the cached one if it was signed in the current window.
+// prof.AvatarPath must be set.
 func (p Profile) resolveProfileImageURL(ctx context.Context, prof repository.Profile) (string, error) {
 	path := *prof.AvatarPath
 
 	return resolveImageURL(prof.GetURL, prof.GetURLExpiresAt,
-		func() (string, time.Time, error) { return p.Images.PresignGet(ctx, path) },
+		func() (string, time.Time, error) { return p.Images.SignGet(ctx, path) },
 		func(url string, expiresAt time.Time) error {
 			_, err := p.Repo.SetImageGetCache(ctx, prof.OwnerID, path, url, expiresAt)
 			return err

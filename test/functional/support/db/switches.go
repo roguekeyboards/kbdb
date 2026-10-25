@@ -32,9 +32,8 @@ func SeedSwitch(ctx context.Context, ownerID, id, visibility string) error {
 	})
 }
 
-// SeedSwitchWithImage is [SeedSwitch] plus an ImagePath, whose path doesn't
-// need a real S3 object behind it - presigning a GET URL doesn't check the
-// object exists, only specs that fetch the URL's content would need that.
+// SeedSwitchWithImage is [SeedSwitch] plus an ImagePath with no S3 object
+// behind it, so the switch gets an image URL that can't be fetched.
 func SeedSwitchWithImage(ctx context.Context, ownerID, id, visibility string) error {
 	table := NewDynamoTable(ctx, support.SwitchTableName())
 	return table.PutItem(ctx, switchWithImage(ownerID, id, visibility))

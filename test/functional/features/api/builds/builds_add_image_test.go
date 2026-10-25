@@ -14,8 +14,6 @@ import (
 	"github.com/rogueserenity/kbdb/test/functional/support/db"
 )
 
-// buildImageIDs GETs the build and returns its image ids in the order the
-// API presents them.
 func buildImageIDs(ctx SpecContext, client *api.BuildsClient, ownerID, buildID, token string) []string {
 	GinkgoHelper()
 	getResp, err := client.Get(ctx, ownerID, buildID, token)
@@ -97,7 +95,7 @@ var _ = Describe("Adding an image to a build", func() {
 
 						By("uploading a PNG to the presigned PUT URL")
 						imageBytes := api.TestImageBytes
-						putResp, err := api.DoPresigned(ctx, http.MethodPut, created.UploadURL, approvedImageContentType, bytes.NewReader(imageBytes))
+						putResp, err := api.DoBlob(ctx, http.MethodPut, created.UploadURL, approvedImageContentType, bytes.NewReader(imageBytes))
 						Expect(err).NotTo(HaveOccurred())
 						Expect(putResp.StatusCode).To(Equal(http.StatusOK))
 
@@ -117,7 +115,7 @@ var _ = Describe("Adding an image to a build", func() {
 						Expect(build.Images[0].URL).NotTo(BeEmpty())
 
 						By("fetching the signed image URL and getting back the exact bytes that were uploaded")
-						getImageResp, err := api.DoPresigned(ctx, http.MethodGet, build.Images[0].URL, "", nil)
+						getImageResp, err := api.DoBlob(ctx, http.MethodGet, build.Images[0].URL, "", nil)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(getImageResp.StatusCode).To(Equal(http.StatusOK))
 

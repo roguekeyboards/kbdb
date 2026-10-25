@@ -18,8 +18,6 @@ import (
 type ProfileSuite struct {
 	suite.Suite
 
-	// profile is the fake API's stored profile body, without the avatar;
-	// nil means the caller has none.
 	profile map[string]any
 	avatar  []byte
 	calls   []string
@@ -41,7 +39,6 @@ func (s *ProfileSuite) TearDownTest() {
 	s.srv.Close()
 }
 
-// serve fakes the profile routes and the presigned avatar URLs.
 func (s *ProfileSuite) serve(w http.ResponseWriter, r *http.Request) {
 	s.calls = append(s.calls, r.Method+" "+r.URL.Path)
 	switch {
@@ -82,8 +79,6 @@ func (s *ProfileSuite) serve(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// writeDump writes a dumped profile, plus an avatar unless avatar is nil, and
-// returns the dump dir.
 func (s *ProfileSuite) writeDump(profile string, avatar []byte) string {
 	dumpDir := s.T().TempDir()
 	dir := filepath.Join(dumpDir, profileDir)

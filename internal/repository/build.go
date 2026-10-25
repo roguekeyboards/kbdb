@@ -54,7 +54,7 @@ type BuildImageEntry struct {
 	Status          ImageStatus `dynamodbav:"status,omitempty" json:"-"`
 	RejectionReason *string     `dynamodbav:"rejection_reason,omitempty" json:"-"`
 
-	// GetURL/GetURLExpiresAt cache the last presigned GET URL for Path.
+	// GetURL/GetURLExpiresAt cache the last signed GET URL for Path.
 	GetURL          *string    `dynamodbav:"get_url,omitempty" json:"-"`
 	GetURLExpiresAt *time.Time `dynamodbav:"get_url_expires_at,omitempty" json:"-"`
 }
@@ -176,9 +176,7 @@ type BuildRepository interface {
 	DeleteImage(ctx context.Context, buildID, imageID string) (*BuildImageKey, error)
 
 	// SetImageGetCache stores url/expiresAt as the matching image's cached
-	// GET URL, conditioned on its Path still equalling forPath. Takes an
-	// explicit ownerID, unlike AddImage/DeleteImage, since this is called
-	// from read paths that may be viewing another user's build. Returns
+	// GET URL, conditioned on its Path still equalling forPath. Returns
 	// ok=false (not an error) if that condition fails or buildID/imageID
 	// doesn't exist.
 	SetImageGetCache(ctx context.Context, ownerID, buildID, imageID string, forPath BuildImageKey, url string, expiresAt time.Time) (ok bool, err error)
@@ -186,10 +184,9 @@ type BuildRepository interface {
 	// SetImageStatus sets the matching image's moderation status to `to` and
 	// its rejection reason to reason (cleared when nil), conditioned on Path
 	// still equalling forPath and the status still being from (a missing
-	// status counts as approved). A rejection also drops any cached GET URL. Takes an
-	// explicit ownerID: the moderation Lambda and operator CLI act on any
-	// owner's images. Returns ok=false (not an error) if that condition fails
-	// or the item doesn't exist.
+	// status counts as approved). A rejection also drops any cached GET URL.
+	// Returns ok=false (not an error) if that condition fails or the item
+	// doesn't exist.
 	SetImageStatus(ctx context.Context, ownerID, buildID, imageID string, forPath BuildImageKey, from, to ImageStatus, reason *string) (ok bool, err error)
 
 	// FindBuildsReferencingKeyboard returns the ids of every build owned by
@@ -235,9 +232,9 @@ func NewBuildImageKey(ctx context.Context, buildID, imageID string) (BuildImageK
 // shared, since a build's images are a growable array of server-generated
 // ids rather than a single optional slot.
 type BuildImageStore interface {
-	// PresignGetBuildImage returns a signed GET URL for key on the images
+	// SignGetBuildImage returns a signed GET URL for key on the images
 	// distribution, and when it stops working.
-	PresignGetBuildImage(ctx context.Context, key BuildImageKey) (url string, expiresAt time.Time, err error)
+	SignGetBuildImage(ctx context.Context, key BuildImageKey) (url string, expiresAt time.Time, err error)
 
 	// PresignPutBuildImage returns a short-lived presigned PUT URL for key,
 	// locked to contentType and size via the Content-Type and Content-Length

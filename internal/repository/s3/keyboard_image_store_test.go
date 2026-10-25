@@ -37,24 +37,24 @@ func (s *KeyboardImageStoreSuite) SetupTest() {
 	}
 }
 
-func (s *KeyboardImageStoreSuite) TestPresignGetKeyboardImage_SignsKeyOnImagesDomain() {
+func (s *KeyboardImageStoreSuite) TestSignGetKeyboardImage_SignsKeyOnImagesDomain() {
 	s.mockSigner.EXPECT().
 		Sign("https://images.example.com/keyboards/alice/kb1/images/img1", testGetExpiry).
 		Return("https://images.example.com/signed", nil)
 
-	url, expiresAt, err := s.store.PresignGetKeyboardImage(s.T().Context(), "keyboards/alice/kb1/images/img1")
+	url, expiresAt, err := s.store.SignGetKeyboardImage(s.T().Context(), "keyboards/alice/kb1/images/img1")
 
 	s.Require().NoError(err)
 	s.Equal("https://images.example.com/signed", url)
 	s.Equal(testGetExpiry, expiresAt)
 }
 
-func (s *KeyboardImageStoreSuite) TestPresignGetKeyboardImage_SignerError_Propagates() {
+func (s *KeyboardImageStoreSuite) TestSignGetKeyboardImage_SignerError_Propagates() {
 	s.mockSigner.EXPECT().
 		Sign(mock.Anything, mock.Anything).
 		Return("", errors.New("crypto/rsa: verification error"))
 
-	url, _, err := s.store.PresignGetKeyboardImage(s.T().Context(), "keyboards/alice/kb1/images/img1")
+	url, _, err := s.store.SignGetKeyboardImage(s.T().Context(), "keyboards/alice/kb1/images/img1")
 
 	s.Require().ErrorContains(err, "crypto/rsa: verification error")
 	s.Empty(url)

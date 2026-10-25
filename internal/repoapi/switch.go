@@ -18,7 +18,7 @@ type Switch struct {
 // ToAPI maps a repository.Switch to its wire representation. The owner
 // always sees their own purchase.price; a non-owner sees it only if
 // ownerPrefs.ShowPriceToOthers. Returns an error if a stored Purchase date
-// doesn't match dateLayout, or an image fails to presign.
+// doesn't match dateLayout, or an image fails to sign.
 func (s Switch) ToAPI(ctx context.Context, sw repository.Switch, isOwner bool, ownerPrefs repository.ProfilePreferences) (api.Switch, error) {
 	purchase, err := s.purchaseToAPI(sw.Purchase, isOwner, ownerPrefs)
 	if err != nil {
@@ -32,7 +32,7 @@ func (s Switch) ToAPI(ctx context.Context, sw repository.Switch, isOwner bool, o
 		if sw.ImageStatus.Downloadable() {
 			url, err := s.resolveSwitchImageURL(ctx, sw)
 			if err != nil {
-				return api.Switch{}, fmt.Errorf("presigning switch image: %w", err)
+				return api.Switch{}, fmt.Errorf("signing switch image: %w", err)
 			}
 			image.Url = &url
 		}
@@ -89,13 +89,14 @@ func (s Switch) StripPrices(out *api.Switch) {
 	}
 }
 
-// resolveSwitchImageURL presigns sw.ImagePath, reusing its cached GET URL
-// if still fresh enough. Callers must check sw.ImagePath != nil first.
+// resolveSwitchImageURL returns a signed GET URL for sw.ImagePath, reusing
+// the cached one if it was signed in the current window. sw.ImagePath must
+// be set.
 func (s Switch) resolveSwitchImageURL(ctx context.Context, sw repository.Switch) (string, error) {
 	path := *sw.ImagePath
 
 	return resolveImageURL(sw.GetURL, sw.GetURLExpiresAt,
-		func() (string, time.Time, error) { return s.Images.PresignGet(ctx, path) },
+		func() (string, time.Time, error) { return s.Images.SignGet(ctx, path) },
 		func(url string, expiresAt time.Time) error {
 			_, err := s.Repo.SetImageGetCache(ctx, sw.UserID, sw.ID, path, url, expiresAt)
 			return err

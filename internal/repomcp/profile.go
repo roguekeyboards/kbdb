@@ -6,7 +6,7 @@ import (
 )
 
 // Profile maps repository.Profile to and from its MCP tool shape. It has
-// no dependencies - unlike repoapi.Profile, this never presigns the
+// no dependencies - unlike repoapi.Profile, this never signs the
 // avatar; ToMCP reports only HasAvatar.
 type Profile struct{}
 

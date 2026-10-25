@@ -57,8 +57,6 @@ func (s *ProfileMapperSuite) TestProfileToAPI_FullProfile_NoAvatar() {
 }
 
 func (s *ProfileMapperSuite) TestProfileToAPI_ExposesSubjectAsUserID() {
-	// user_id is on the single-profile response so callers can address the
-	// {userId}-keyed collection routes.
 	pr := Profile{Images: mocks.NewMockProfileImageStore(s.T())}
 	out, err := pr.ToAPI(s.T().Context(), repository.Profile{
 		OwnerID:  "user-alice",
@@ -70,11 +68,11 @@ func (s *ProfileMapperSuite) TestProfileToAPI_ExposesSubjectAsUserID() {
 	s.Equal("user-alice", out.UserId)
 }
 
-func (s *ProfileMapperSuite) TestProfileToAPI_PresignsAvatar() {
+func (s *ProfileMapperSuite) TestProfileToAPI_SignsAvatar() {
 	images := mocks.NewMockProfileImageStore(s.T())
 	images.EXPECT().
-		PresignGet(mock.Anything, repository.ProfileImageKey("profiles/user-alice/avatar/up1")).
-		Return("https://example.com/avatar", presignExpiry(), nil)
+		SignGet(mock.Anything, repository.ProfileImageKey("profiles/user-alice/avatar/up1")).
+		Return("https://example.com/avatar", signedExpiry(), nil)
 	repo := mocks.NewMockProfileRepository(s.T())
 	repo.EXPECT().
 		SetImageGetCache(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -93,9 +91,9 @@ func (s *ProfileMapperSuite) TestProfileToAPI_PresignsAvatar() {
 	s.Equal("https://example.com/avatar", *out.Avatar.Url)
 }
 
-func (s *ProfileMapperSuite) TestProfileToAPI_PresignError_Propagates() {
+func (s *ProfileMapperSuite) TestProfileToAPI_SignError_Propagates() {
 	images := mocks.NewMockProfileImageStore(s.T())
-	images.EXPECT().PresignGet(mock.Anything, mock.Anything).Return("", time.Time{}, errors.New("s3 down"))
+	images.EXPECT().SignGet(mock.Anything, mock.Anything).Return("", time.Time{}, errors.New("s3 down"))
 
 	pr := Profile{Images: images}
 	_, err := pr.ToAPI(s.T().Context(), repository.Profile{
@@ -131,7 +129,6 @@ func (s *ProfileMapperSuite) TestProfileToRepo_MapsBodyFields_NotAvatarOrDerived
 	s.Equal("alice_kb", *p.DiscordUsername)
 	s.Require().Len(p.Links, 1)
 	s.Equal(repository.ProfileLink{Name: "Twitch", URL: "https://twitch.tv/alice"}, p.Links[0])
-	// Not set from the body:
 	s.Empty(p.OwnerID)
 	s.Nil(p.AvatarPath)
 	s.Nil(p.DiscoverablePK)

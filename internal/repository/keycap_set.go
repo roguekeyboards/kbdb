@@ -38,8 +38,8 @@ type KeycapKit struct {
 	ImageStatus          ImageStatus `dynamodbav:"image_status,omitempty" json:"-"`
 	ImageRejectionReason *string     `dynamodbav:"image_rejection_reason,omitempty" json:"-"`
 
-	// GetURL/GetURLExpiresAt cache the last presigned GET URL for
-	// ImagePath. SetKitImagePath clears both when ImagePath changes.
+	// GetURL/GetURLExpiresAt cache the last signed GET URL for ImagePath.
+	// SetKitImagePath clears both when ImagePath changes.
 	GetURL          *string    `dynamodbav:"get_url,omitempty" json:"-"`
 	GetURLExpiresAt *time.Time `dynamodbav:"get_url_expires_at,omitempty" json:"-"`
 }
@@ -223,21 +223,18 @@ type KeycapSetRepository interface {
 	// not an error. Returns ErrNotFound if setID or the kit doesn't exist.
 	ClearKitImagePath(ctx context.Context, setID, kitID string) (*KeycapKitImageKey, error)
 
-	// SetKitImageGetCache stores url/expiresAt as the matching kit's
-	// cached GET URL, conditioned on ImagePath still equalling forPath.
-	// Takes an explicit ownerID, unlike Set/ClearKitImagePath, since this
-	// is called from read paths that may be viewing another user's set.
-	// Returns ok=false (not an error) if that condition fails or setID/the
-	// kit doesn't exist.
+	// SetKitImageGetCache stores url/expiresAt as the matching kit's cached
+	// GET URL, conditioned on ImagePath still equalling forPath. Returns
+	// ok=false (not an error) if that condition fails or setID/the kit
+	// doesn't exist.
 	SetKitImageGetCache(ctx context.Context, ownerID, setID, kitID string, forPath KeycapKitImageKey, url string, expiresAt time.Time) (ok bool, err error)
 
 	// SetKitImageStatus sets the matching kit's image's moderation status to
 	// `to` and its rejection reason to reason (cleared when nil), conditioned
 	// on ImagePath still equalling forPath and the status still being from (a
-	// missing status counts as approved). A rejection also drops any cached GET URL. Takes
-	// an explicit ownerID: the moderation Lambda and operator CLI act on any
-	// owner's images. Returns ok=false (not an error) if that condition fails
-	// or the item doesn't exist.
+	// missing status counts as approved). A rejection also drops any cached
+	// GET URL. Returns ok=false (not an error) if that condition fails or the
+	// item doesn't exist.
 	SetKitImageStatus(ctx context.Context, ownerID, setID, kitID string, forPath KeycapKitImageKey, from, to ImageStatus, reason *string) (ok bool, err error)
 }
 
@@ -259,14 +256,12 @@ func NewKeycapKitImageKey(ctx context.Context, setID, kitID, uploadID string) (K
 	return KeycapKitImageKey(fmt.Sprintf("keycap-sets/%s/%s/kits/%s/image/%s", ownerID, setID, kitID, uploadID)), nil
 }
 
-// KeycapKitImageStore stores a kit's image object in a private object
-// store, addressed by KeycapKitImageKey. Never called with the
-// caller-facing presigned URL - that's minted fresh per request, never
-// persisted.
+// KeycapKitImageStore stores a kit's image object in a private object store,
+// addressed by KeycapKitImageKey.
 type KeycapKitImageStore interface {
-	// PresignGet returns a signed GET URL for key on the images
+	// SignGet returns a signed GET URL for key on the images
 	// distribution, and when it stops working.
-	PresignGet(ctx context.Context, key KeycapKitImageKey) (url string, expiresAt time.Time, err error)
+	SignGet(ctx context.Context, key KeycapKitImageKey) (url string, expiresAt time.Time, err error)
 
 	// PresignPut returns a short-lived presigned PUT URL for key, locked
 	// to contentType and size via the Content-Type and Content-Length the

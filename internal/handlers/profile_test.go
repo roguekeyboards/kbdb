@@ -155,12 +155,8 @@ func (s *CreateProfileSuite) SetupTest() {
 	s.handler = CreateProfile(s.mockRepo, repoapi.Profile{Images: s.mockImages, Repo: s.mockRepo})
 }
 
-// profileUserID is the {userId} path value every test posts to; owner vs.
-// not-owner is varied via the ctx caller identity, not this.
 const profileUserID = "user-alice"
 
-// post builds a POST request with body as JSON and ctx caller set to caller
-// (empty for anonymous).
 func (s *CreateProfileSuite) post(caller string, body any) *httptest.ResponseRecorder {
 	s.T().Helper()
 
@@ -329,8 +325,6 @@ func (s *UpdateProfileSuite) SetupTest() {
 	s.handler = UpdateProfile(s.mockRepo, repoapi.Profile{Images: s.mockImages, Repo: s.mockRepo})
 }
 
-// put builds a PUT request with body as JSON and ctx caller set to caller
-// (empty for anonymous).
 func (s *UpdateProfileSuite) put(caller string, body any) *httptest.ResponseRecorder {
 	s.T().Helper()
 
@@ -464,13 +458,10 @@ func (s *DeleteProfileSuite) SetupTest() {
 	})
 }
 
-// emptyItemStore is an accountdelete.ItemStore with nothing to delete.
 type emptyItemStore struct{}
 
 func (emptyItemStore) DeleteAll(context.Context) error { return nil }
 
-// del builds a DELETE request with ctx caller set to caller (empty for
-// anonymous).
 func (s *DeleteProfileSuite) del(caller string) *httptest.ResponseRecorder {
 	s.T().Helper()
 
@@ -650,14 +641,14 @@ func (s *ListProfilesSuite) TestReturnsNextCursor_WhenPresent() {
 	s.Equal("next-page", *got.NextCursor)
 }
 
-func (s *ListProfilesSuite) TestAvatarPresigned_WhenSet() {
+func (s *ListProfilesSuite) TestAvatarSigned_WhenSet() {
 	key := repository.ProfileImageKey("profiles/user-alice/avatar/up1")
 	s.mockRepo.EXPECT().
 		ListPublic(mock.Anything, "", "", 20, "").
 		Return([]repository.Profile{
 			{OwnerID: "user-alice", Username: "alice", Discoverable: true, AvatarPath: &key},
 		}, "", nil)
-	s.mockImages.EXPECT().PresignGet(mock.Anything, key).Return("https://signed/avatar", time.Now().Add(time.Hour), nil)
+	s.mockImages.EXPECT().SignGet(mock.Anything, key).Return("https://signed/avatar", time.Now().Add(time.Hour), nil)
 	s.mockRepo.EXPECT().
 		SetImageGetCache(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(true, nil).Maybe()
@@ -727,8 +718,6 @@ func (s *SetProfileImageSuite) ownerCtx() context.Context {
 
 const previousProfileImageTestKey = repository.ProfileImageKey("profiles/user-alice/avatar/old-upload")
 
-// newProfileImageKey matches a freshly minted per-upload avatar key, which
-// must never be the previous avatar's key.
 func newProfileImageKey() any {
 	return mock.MatchedBy(func(k repository.ProfileImageKey) bool {
 		return strings.HasPrefix(string(k), "profiles/user-alice/avatar/") && k != previousProfileImageTestKey
@@ -786,8 +775,6 @@ func (s *SetProfileImageSuite) TestNotOwner_404() {
 }
 
 func (s *SetProfileImageSuite) TestUsernameIdentifier_404() {
-	// A username can never be the caller's own subject, so authz.IsOwner
-	// rejects it - writes address the profile by IdP subject only.
 	rec := httptest.NewRecorder()
 	s.handler(rec, s.newRequest(s.ownerCtx(), "alice", `{"content_type":"image/png","size_bytes":524288}`))
 
@@ -844,8 +831,6 @@ func (s *SetProfileImageSuite) TestPresignError_500() {
 	s.handler(rec, s.newRequest(s.ownerCtx(), "user-alice", `{"content_type":"image/png","size_bytes":524288}`))
 
 	s.Equal(http.StatusInternalServerError, rec.Code)
-	// No .EXPECT() for Delete or SetAvatarPath - verifies neither the
-	// previous object nor the DB was touched when presigning fails.
 }
 
 func (s *SetProfileImageSuite) TestDeletePreviousError_500() {
@@ -861,8 +846,6 @@ func (s *SetProfileImageSuite) TestDeletePreviousError_500() {
 	s.handler(rec, s.newRequest(s.ownerCtx(), "user-alice", `{"content_type":"image/png","size_bytes":524288}`))
 
 	s.Equal(http.StatusInternalServerError, rec.Code)
-	// No .EXPECT() for SetAvatarPath - the pointer stays on the previous
-	// avatar, which still exists.
 }
 
 type DeleteProfileImageSuite struct {
@@ -966,8 +949,6 @@ func (s *DeleteProfileImageSuite) TestS3DeleteError_500_DoesNotClearDBRecord() {
 	s.handler(rec, s.newRequest(s.ownerCtx()))
 
 	s.Equal(http.StatusInternalServerError, rec.Code)
-	// No .EXPECT() for ClearAvatarPath - the DB record must survive so a
-	// retry can re-attempt the S3 delete.
 }
 
 func (s *SetProfileImageSuite) TestUploadLimitReached_Returns429() {

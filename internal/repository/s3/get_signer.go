@@ -7,22 +7,13 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/feature/cloudfront/sign"
+
+	"github.com/rogueserenity/kbdb/internal/repository"
 )
 
 type urlSigner interface {
 	Sign(url string, expires time.Time) (string, error)
 }
-
-const (
-	// Every URL signed within one window gets the same expiry, and RSA
-	// signatures are deterministic, so the URL itself is identical and
-	// browsers cache the image across requests.
-	getURLWindow = 12 * time.Hour
-
-	// Counted from the window's start, so a URL has between
-	// getURLLifetime-getURLWindow and getURLLifetime left when issued.
-	getURLLifetime = 24 * time.Hour
-)
 
 // GetSigner signs image GET URLs on the images CloudFront distribution.
 type GetSigner struct {
@@ -46,7 +37,7 @@ func NewGetSigner(baseURL, keyID string, key crypto.Signer) *GetSigner {
 
 // sign returns a signed URL for key and when it stops working.
 func (g *GetSigner) sign(key string) (string, time.Time, error) {
-	expiresAt := g.now().Truncate(getURLWindow).Add(getURLLifetime)
+	expiresAt := g.now().Truncate(repository.ImageURLWindow).Add(repository.ImageURLLifetime)
 
 	url, err := g.signer.Sign(g.baseURL+"/"+key, expiresAt)
 	if err != nil {

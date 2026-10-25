@@ -1934,9 +1934,10 @@ components:
           type: string
           format: uri
           description: >
-            A freshly-minted, short-lived presigned S3 GET URL. Generated
-            new on every fetch of the keyboard — do not cache or persist
-            this value, it expires. Absent when the image was rejected.
+            A signed URL for the image, valid for 12 to 24 hours and
+            unchanged for up to 12. Don't persist it; fetch the item again
+            for a new one once it expires. Absent when the image was
+            rejected.
         status:
           $ref: "#/components/schemas/ImageStatus"
         rejection_reason:
@@ -2187,9 +2188,10 @@ components:
           type: string
           format: uri
           description: >
-            A freshly-minted, short-lived presigned S3 GET URL. Generated
-            new on every fetch — do not cache or persist this value, it
-            expires. Absent when the image was rejected.
+            A signed URL for the image, valid for 12 to 24 hours and
+            unchanged for up to 12. Don't persist it; fetch the item again
+            for a new one once it expires. Absent when the image was
+            rejected.
         status:
           $ref: "#/components/schemas/ImageStatus"
         rejection_reason:
@@ -2292,9 +2294,10 @@ components:
           type: string
           format: uri
           description: >
-            A freshly-minted, short-lived presigned S3 GET URL for the
-            avatar. Generated new on every fetch — do not cache or persist
-            it. Absent when the avatar was rejected.
+            A signed URL for the avatar, valid for 12 to 24 hours and
+            unchanged for up to 12. Don't persist it; fetch the item again
+            for a new one once it expires. Absent when the avatar was
+            rejected.
         status:
           $ref: "#/components/schemas/ImageStatus"
         rejection_reason:
@@ -2477,9 +2480,10 @@ components:
           type: string
           format: uri
           description: >
-            A freshly-minted, short-lived presigned S3 GET URL. Generated
-            new on every fetch — do not cache or persist this value, it
-            expires. Absent when the image was rejected.
+            A signed URL for the image, valid for 12 to 24 hours and
+            unchanged for up to 12. Don't persist it; fetch the item again
+            for a new one once it expires. Absent when the image was
+            rejected.
         status:
           $ref: "#/components/schemas/ImageStatus"
         rejection_reason:
@@ -2661,11 +2665,11 @@ components:
           type: string
           format: uri
           description: >
-            A freshly-minted, short-lived presigned S3 GET URL for the
-            referenced keyboard's first image the caller may see (any but a
-            rejected one for the owner, approved only for anyone else), if
-            it has one. Generated new on every fetch of the build — do not
-            cache or persist this value, it expires.
+            A signed URL for the referenced keyboard's first image the
+            caller may see (any but a rejected one for the owner, approved
+            only for anyone else), if it has one. It's valid for 12 to 24
+            hours and unchanged for up to 12. Don't persist it; fetch the
+            item again for a new one once it expires.
 
     BuildPlateRef:
       type: object
@@ -2724,10 +2728,10 @@ components:
           type: string
           format: uri
           description: >
-            A freshly-minted, short-lived presigned S3 GET URL for the
-            referenced switch's image, if it has one the caller may see
-            (see BuildKeyboardRef.image_url). Generated new on every fetch
-            of the build — do not cache or persist this value, it expires.
+            A signed URL for the referenced switch's image, if it has one
+            the caller may see (see BuildKeyboardRef.image_url). It's valid
+            for 12 to 24 hours and unchanged for up to 12. Don't persist it;
+            fetch the item again for a new one once it expires.
 
     BuildSwitchEntryResolved:
       type: object
@@ -2774,10 +2778,10 @@ components:
           type: string
           format: uri
           description: >
-            A freshly-minted, short-lived presigned S3 GET URL for the
-            referenced kit's image, if it has one the caller may see (see
-            BuildKeyboardRef.image_url). Generated new on every fetch of the
-            build — do not cache or persist this value, it expires.
+            A signed URL for the referenced kit's image, if it has one the
+            caller may see (see BuildKeyboardRef.image_url). It's valid for
+            12 to 24 hours and unchanged for up to 12. Don't persist it;
+            fetch the item again for a new one once it expires.
 
     BuildStabsInput:
       type: object
@@ -2880,9 +2884,10 @@ components:
           type: string
           format: uri
           description: >
-            A freshly-minted, short-lived presigned S3 GET URL. Generated
-            new on every fetch of the build — do not cache or persist this
-            value, it expires. Absent when the image was rejected.
+            A signed URL for the image, valid for 12 to 24 hours and
+            unchanged for up to 12. Don't persist it; fetch the item again
+            for a new one once it expires. Absent when the image was
+            rejected.
         status:
           $ref: "#/components/schemas/ImageStatus"
         rejection_reason:

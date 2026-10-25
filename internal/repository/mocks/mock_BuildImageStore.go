@@ -105,78 +105,6 @@ func (_c *MockBuildImageStore_DeleteBuildImage_Call) RunAndReturn(run func(ctx c
 	return _c
 }
 
-// PresignGetBuildImage provides a mock function for the type MockBuildImageStore
-func (_mock *MockBuildImageStore) PresignGetBuildImage(ctx context.Context, key repository.BuildImageKey) (string, time.Time, error) {
-	ret := _mock.Called(ctx, key)
-
-	if len(ret) == 0 {
-		panic("no return value specified for PresignGetBuildImage")
-	}
-
-	var r0 string
-	var r1 time.Time
-	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, repository.BuildImageKey) (string, time.Time, error)); ok {
-		return returnFunc(ctx, key)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, repository.BuildImageKey) string); ok {
-		r0 = returnFunc(ctx, key)
-	} else {
-		r0 = ret.Get(0).(string)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, repository.BuildImageKey) time.Time); ok {
-		r1 = returnFunc(ctx, key)
-	} else {
-		r1 = ret.Get(1).(time.Time)
-	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, repository.BuildImageKey) error); ok {
-		r2 = returnFunc(ctx, key)
-	} else {
-		r2 = ret.Error(2)
-	}
-	return r0, r1, r2
-}
-
-// MockBuildImageStore_PresignGetBuildImage_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PresignGetBuildImage'
-type MockBuildImageStore_PresignGetBuildImage_Call struct {
-	*mock.Call
-}
-
-// PresignGetBuildImage is a helper method to define mock.On call
-//   - ctx context.Context
-//   - key repository.BuildImageKey
-func (_e *MockBuildImageStore_Expecter) PresignGetBuildImage(ctx any, key any) *MockBuildImageStore_PresignGetBuildImage_Call {
-	return &MockBuildImageStore_PresignGetBuildImage_Call{Call: _e.mock.On("PresignGetBuildImage", ctx, key)}
-}
-
-func (_c *MockBuildImageStore_PresignGetBuildImage_Call) Run(run func(ctx context.Context, key repository.BuildImageKey)) *MockBuildImageStore_PresignGetBuildImage_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 repository.BuildImageKey
-		if args[1] != nil {
-			arg1 = args[1].(repository.BuildImageKey)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *MockBuildImageStore_PresignGetBuildImage_Call) Return(url string, expiresAt time.Time, err error) *MockBuildImageStore_PresignGetBuildImage_Call {
-	_c.Call.Return(url, expiresAt, err)
-	return _c
-}
-
-func (_c *MockBuildImageStore_PresignGetBuildImage_Call) RunAndReturn(run func(ctx context.Context, key repository.BuildImageKey) (string, time.Time, error)) *MockBuildImageStore_PresignGetBuildImage_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // PresignPutBuildImage provides a mock function for the type MockBuildImageStore
 func (_mock *MockBuildImageStore) PresignPutBuildImage(ctx context.Context, key repository.BuildImageKey, contentType string, size int64) (string, error) {
 	ret := _mock.Called(ctx, key, contentType, size)
@@ -251,6 +179,78 @@ func (_c *MockBuildImageStore_PresignPutBuildImage_Call) Return(url string, err 
 }
 
 func (_c *MockBuildImageStore_PresignPutBuildImage_Call) RunAndReturn(run func(ctx context.Context, key repository.BuildImageKey, contentType string, size int64) (string, error)) *MockBuildImageStore_PresignPutBuildImage_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SignGetBuildImage provides a mock function for the type MockBuildImageStore
+func (_mock *MockBuildImageStore) SignGetBuildImage(ctx context.Context, key repository.BuildImageKey) (string, time.Time, error) {
+	ret := _mock.Called(ctx, key)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SignGetBuildImage")
+	}
+
+	var r0 string
+	var r1 time.Time
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, repository.BuildImageKey) (string, time.Time, error)); ok {
+		return returnFunc(ctx, key)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, repository.BuildImageKey) string); ok {
+		r0 = returnFunc(ctx, key)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, repository.BuildImageKey) time.Time); ok {
+		r1 = returnFunc(ctx, key)
+	} else {
+		r1 = ret.Get(1).(time.Time)
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, repository.BuildImageKey) error); ok {
+		r2 = returnFunc(ctx, key)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// MockBuildImageStore_SignGetBuildImage_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SignGetBuildImage'
+type MockBuildImageStore_SignGetBuildImage_Call struct {
+	*mock.Call
+}
+
+// SignGetBuildImage is a helper method to define mock.On call
+//   - ctx context.Context
+//   - key repository.BuildImageKey
+func (_e *MockBuildImageStore_Expecter) SignGetBuildImage(ctx any, key any) *MockBuildImageStore_SignGetBuildImage_Call {
+	return &MockBuildImageStore_SignGetBuildImage_Call{Call: _e.mock.On("SignGetBuildImage", ctx, key)}
+}
+
+func (_c *MockBuildImageStore_SignGetBuildImage_Call) Run(run func(ctx context.Context, key repository.BuildImageKey)) *MockBuildImageStore_SignGetBuildImage_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 repository.BuildImageKey
+		if args[1] != nil {
+			arg1 = args[1].(repository.BuildImageKey)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockBuildImageStore_SignGetBuildImage_Call) Return(url string, expiresAt time.Time, err error) *MockBuildImageStore_SignGetBuildImage_Call {
+	_c.Call.Return(url, expiresAt, err)
+	return _c
+}
+
+func (_c *MockBuildImageStore_SignGetBuildImage_Call) RunAndReturn(run func(ctx context.Context, key repository.BuildImageKey) (string, time.Time, error)) *MockBuildImageStore_SignGetBuildImage_Call {
 	_c.Call.Return(run)
 	return _c
 }

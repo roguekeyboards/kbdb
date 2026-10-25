@@ -31,8 +31,8 @@ func NewBuildImageStore(client *s3.Client, presign *s3.PresignClient, bucket str
 	}
 }
 
-// PresignGetBuildImage implements repository.BuildImageStore.
-func (s *BuildImageStore) PresignGetBuildImage(_ context.Context, key repository.BuildImageKey) (url string, expiresAt time.Time, err error) {
+// SignGetBuildImage implements repository.BuildImageStore.
+func (s *BuildImageStore) SignGetBuildImage(_ context.Context, key repository.BuildImageKey) (url string, expiresAt time.Time, err error) {
 	return s.get.sign(string(key))
 }
 

@@ -37,24 +37,24 @@ func (s *BuildImageStoreSuite) SetupTest() {
 	}
 }
 
-func (s *BuildImageStoreSuite) TestPresignGetBuildImage_SignsKeyOnImagesDomain() {
+func (s *BuildImageStoreSuite) TestSignGetBuildImage_SignsKeyOnImagesDomain() {
 	s.mockSigner.EXPECT().
 		Sign("https://images.example.com/builds/alice/b1/images/img1", testGetExpiry).
 		Return("https://images.example.com/signed", nil)
 
-	url, expiresAt, err := s.store.PresignGetBuildImage(s.T().Context(), "builds/alice/b1/images/img1")
+	url, expiresAt, err := s.store.SignGetBuildImage(s.T().Context(), "builds/alice/b1/images/img1")
 
 	s.Require().NoError(err)
 	s.Equal("https://images.example.com/signed", url)
 	s.Equal(testGetExpiry, expiresAt)
 }
 
-func (s *BuildImageStoreSuite) TestPresignGetBuildImage_SignerError_Propagates() {
+func (s *BuildImageStoreSuite) TestSignGetBuildImage_SignerError_Propagates() {
 	s.mockSigner.EXPECT().
 		Sign(mock.Anything, mock.Anything).
 		Return("", errors.New("crypto/rsa: verification error"))
 
-	url, _, err := s.store.PresignGetBuildImage(s.T().Context(), "builds/alice/b1/images/img1")
+	url, _, err := s.store.SignGetBuildImage(s.T().Context(), "builds/alice/b1/images/img1")
 
 	s.Require().ErrorContains(err, "crypto/rsa: verification error")
 	s.Empty(url)

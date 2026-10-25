@@ -105,78 +105,6 @@ func (_c *MockProfileImageStore_Delete_Call) RunAndReturn(run func(ctx context.C
 	return _c
 }
 
-// PresignGet provides a mock function for the type MockProfileImageStore
-func (_mock *MockProfileImageStore) PresignGet(ctx context.Context, key repository.ProfileImageKey) (string, time.Time, error) {
-	ret := _mock.Called(ctx, key)
-
-	if len(ret) == 0 {
-		panic("no return value specified for PresignGet")
-	}
-
-	var r0 string
-	var r1 time.Time
-	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, repository.ProfileImageKey) (string, time.Time, error)); ok {
-		return returnFunc(ctx, key)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, repository.ProfileImageKey) string); ok {
-		r0 = returnFunc(ctx, key)
-	} else {
-		r0 = ret.Get(0).(string)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, repository.ProfileImageKey) time.Time); ok {
-		r1 = returnFunc(ctx, key)
-	} else {
-		r1 = ret.Get(1).(time.Time)
-	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, repository.ProfileImageKey) error); ok {
-		r2 = returnFunc(ctx, key)
-	} else {
-		r2 = ret.Error(2)
-	}
-	return r0, r1, r2
-}
-
-// MockProfileImageStore_PresignGet_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PresignGet'
-type MockProfileImageStore_PresignGet_Call struct {
-	*mock.Call
-}
-
-// PresignGet is a helper method to define mock.On call
-//   - ctx context.Context
-//   - key repository.ProfileImageKey
-func (_e *MockProfileImageStore_Expecter) PresignGet(ctx any, key any) *MockProfileImageStore_PresignGet_Call {
-	return &MockProfileImageStore_PresignGet_Call{Call: _e.mock.On("PresignGet", ctx, key)}
-}
-
-func (_c *MockProfileImageStore_PresignGet_Call) Run(run func(ctx context.Context, key repository.ProfileImageKey)) *MockProfileImageStore_PresignGet_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 repository.ProfileImageKey
-		if args[1] != nil {
-			arg1 = args[1].(repository.ProfileImageKey)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *MockProfileImageStore_PresignGet_Call) Return(url string, expiresAt time.Time, err error) *MockProfileImageStore_PresignGet_Call {
-	_c.Call.Return(url, expiresAt, err)
-	return _c
-}
-
-func (_c *MockProfileImageStore_PresignGet_Call) RunAndReturn(run func(ctx context.Context, key repository.ProfileImageKey) (string, time.Time, error)) *MockProfileImageStore_PresignGet_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // PresignPut provides a mock function for the type MockProfileImageStore
 func (_mock *MockProfileImageStore) PresignPut(ctx context.Context, key repository.ProfileImageKey, contentType string, size int64) (string, error) {
 	ret := _mock.Called(ctx, key, contentType, size)
@@ -251,6 +179,78 @@ func (_c *MockProfileImageStore_PresignPut_Call) Return(url string, err error) *
 }
 
 func (_c *MockProfileImageStore_PresignPut_Call) RunAndReturn(run func(ctx context.Context, key repository.ProfileImageKey, contentType string, size int64) (string, error)) *MockProfileImageStore_PresignPut_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SignGet provides a mock function for the type MockProfileImageStore
+func (_mock *MockProfileImageStore) SignGet(ctx context.Context, key repository.ProfileImageKey) (string, time.Time, error) {
+	ret := _mock.Called(ctx, key)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SignGet")
+	}
+
+	var r0 string
+	var r1 time.Time
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, repository.ProfileImageKey) (string, time.Time, error)); ok {
+		return returnFunc(ctx, key)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, repository.ProfileImageKey) string); ok {
+		r0 = returnFunc(ctx, key)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, repository.ProfileImageKey) time.Time); ok {
+		r1 = returnFunc(ctx, key)
+	} else {
+		r1 = ret.Get(1).(time.Time)
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, repository.ProfileImageKey) error); ok {
+		r2 = returnFunc(ctx, key)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// MockProfileImageStore_SignGet_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SignGet'
+type MockProfileImageStore_SignGet_Call struct {
+	*mock.Call
+}
+
+// SignGet is a helper method to define mock.On call
+//   - ctx context.Context
+//   - key repository.ProfileImageKey
+func (_e *MockProfileImageStore_Expecter) SignGet(ctx any, key any) *MockProfileImageStore_SignGet_Call {
+	return &MockProfileImageStore_SignGet_Call{Call: _e.mock.On("SignGet", ctx, key)}
+}
+
+func (_c *MockProfileImageStore_SignGet_Call) Run(run func(ctx context.Context, key repository.ProfileImageKey)) *MockProfileImageStore_SignGet_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 repository.ProfileImageKey
+		if args[1] != nil {
+			arg1 = args[1].(repository.ProfileImageKey)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockProfileImageStore_SignGet_Call) Return(url string, expiresAt time.Time, err error) *MockProfileImageStore_SignGet_Call {
+	_c.Call.Return(url, expiresAt, err)
+	return _c
+}
+
+func (_c *MockProfileImageStore_SignGet_Call) RunAndReturn(run func(ctx context.Context, key repository.ProfileImageKey) (string, time.Time, error)) *MockProfileImageStore_SignGet_Call {
 	_c.Call.Return(run)
 	return _c
 }
