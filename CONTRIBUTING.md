@@ -55,7 +55,7 @@ mise run migrate-build          # -> bin/kbdb-migrate
 bin/kbdb-migrate login --issuer https://auth.jay.mykeebs.dev
 
 # 2. Dump.
-bin/kbdb-migrate dump --issuer https://auth.jay.mykeebs.dev --base-url https://api.jay.mykeebs.dev --out ./dump
+bin/kbdb-migrate dump --issuer https://auth.jay.mykeebs.dev --base-url https://jay.api.mykeebs.dev --out ./dump
 
 # 3. Get a token for the TARGET (may be a different account/environment), then restore.
 bin/kbdb-migrate login --issuer <target issuer>

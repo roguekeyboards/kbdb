@@ -210,61 +210,6 @@ Resources:
                 Condition:
                   StringEquals:
                     iam:PassedToService: lambda.amazonaws.com
-              - Sid: DynamoDb
-                Effect: Allow
-                Action:
-                  - dynamodb:CreateTable
-                  - dynamodb:DescribeTable
-                  - dynamodb:UpdateTable
-                  - dynamodb:DescribeContinuousBackups
-                  - dynamodb:UpdateContinuousBackups
-                  - dynamodb:DescribeTimeToLive
-                  - dynamodb:UpdateTimeToLive
-                  - dynamodb:DescribeContributorInsights
-                  - dynamodb:DescribeKinesisStreamingDestination
-                  - dynamodb:GetResourcePolicy
-                  - dynamodb:ListTagsOfResource
-                  - dynamodb:TagResource
-                  - dynamodb:UntagResource
-                Resource:
-                  - !Sub
-                    - arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Items}
-                    - Items: !FindInMap [Env, !Ref Environment, Items]
-                  - !Sub
-                    - arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Items}/index/*
-                    - Items: !FindInMap [Env, !Ref Environment, Items]
-              - Sid: ImagesBucket
-                Effect: Allow
-                Action:
-                  - s3:CreateBucket
-                  - s3:ListBucket
-                  - s3:GetBucket*
-                  - s3:GetAccelerateConfiguration
-                  - s3:GetAnalyticsConfiguration
-                  - s3:GetEncryptionConfiguration
-                  - s3:GetIntelligentTieringConfiguration
-                  - s3:GetInventoryConfiguration
-                  - s3:GetLifecycleConfiguration
-                  - s3:GetMetricsConfiguration
-                  - s3:GetReplicationConfiguration
-                  - s3:ListTagsForResource
-                  - s3:PutBucketPublicAccessBlock
-                  - s3:PutEncryptionConfiguration
-                  - s3:PutBucketCORS
-                  - s3:PutBucketNotification
-                  - s3:PutLifecycleConfiguration
-                  - s3:PutBucketTagging
-                  - s3:DeleteBucketCors
-                  - s3:DeleteBucketEncryption
-                  - s3:DeleteBucketLifecycle
-                  - s3:TagResource
-                  - s3:UntagResource
-                  - s3:GetBucketPolicy
-                  - s3:PutBucketPolicy
-                  - s3:DeleteBucketPolicy
-                Resource: !Sub
-                  - arn:aws:s3:::kbdb-images-${AWS::AccountId}-${Stack}
-                  - Stack: !FindInMap [Env, !Ref Environment, Stack]
               # Distribution IDs are generated, so these can't be scoped to a stack.
               - Sid: CloudFrontCreate
                 Effect: Allow
@@ -306,95 +251,6 @@ Resources:
                   - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/kbdb/image-delivery/key-group-id
                   - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/kbdb/image-delivery/public-key-id
                   - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/kbdb/image-delivery/response-headers-policy-id
-              - Sid: LogGroups
-                Effect: Allow
-                Action:
-                  - logs:CreateLogGroup
-                  - logs:DeleteLogGroup
-                  - logs:PutRetentionPolicy
-                  - logs:DeleteRetentionPolicy
-                  - logs:GetDataProtectionPolicy
-                  - logs:ListTagsForResource
-                  - logs:TagResource
-                  - logs:UntagResource
-                  - logs:PutMetricFilter
-                  - logs:DeleteMetricFilter
-                  - logs:DescribeMetricFilters
-                Resource:
-                  - !Sub
-                    - arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-api-${Stack}
-                    - Stack: !FindInMap [Env, !Ref Environment, Stack]
-                  - !Sub
-                    - arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-api-${Stack}:*
-                    - Stack: !FindInMap [Env, !Ref Environment, Stack]
-                  - !Sub
-                    - arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-moderate-${Stack}
-                    - Stack: !FindInMap [Env, !Ref Environment, Stack]
-                  - !Sub
-                    - arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-moderate-${Stack}:*
-                    - Stack: !FindInMap [Env, !Ref Environment, Stack]
-                  - !Sub
-                    - arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/apigateway/kbdb-api-${Stack}
-                    - Stack: !FindInMap [Env, !Ref Environment, Stack]
-                  - !Sub
-                    - arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/apigateway/kbdb-api-${Stack}:*
-                    - Stack: !FindInMap [Env, !Ref Environment, Stack]
-              - Sid: LogsUnscoped
-                Effect: Allow
-                Action:
-                  - logs:DescribeLogGroups
-                  - logs:DescribeIndexPolicies
-                  - logs:DescribeResourcePolicies
-                  - logs:PutResourcePolicy
-                  - logs:GetLogDelivery
-                  - logs:ListLogDeliveries
-                  - logs:CreateLogDelivery
-                  - logs:UpdateLogDelivery
-                  - logs:DeleteLogDelivery
-                Resource: '*'
-              - Sid: ModerationDlq
-                Effect: Allow
-                Action:
-                  - sqs:CreateQueue
-                  - sqs:DeleteQueue
-                  - sqs:GetQueueAttributes
-                  - sqs:GetQueueUrl
-                  - sqs:SetQueueAttributes
-                  - sqs:ListQueueTags
-                  - sqs:TagQueue
-                  - sqs:UntagQueue
-                Resource: !Sub
-                  - arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${Items}
-                  - Items: !FindInMap [Env, !Ref Environment, Items]
-              - Sid: AlarmTopic
-                Effect: Allow
-                Action:
-                  - sns:CreateTopic
-                  - sns:DeleteTopic
-                  - sns:GetTopicAttributes
-                  - sns:SetTopicAttributes
-                  - sns:Subscribe
-                  - sns:Unsubscribe
-                  - sns:ListSubscriptionsByTopic
-                  - sns:GetDataProtectionPolicy
-                  - sns:ListTagsForResource
-                  - sns:TagResource
-                  - sns:UntagResource
-                Resource: !Sub
-                  - arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${Items}
-                  - Items: !FindInMap [Env, !Ref Environment, Items]
-              - Sid: Alarms
-                Effect: Allow
-                Action:
-                  - cloudwatch:PutMetricAlarm
-                  - cloudwatch:DescribeAlarms
-                  - cloudwatch:DeleteAlarms
-                  - cloudwatch:ListTagsForResource
-                  - cloudwatch:TagResource
-                  - cloudwatch:UntagResource
-                Resource: !Sub
-                  - arn:aws:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:${Items}
-                  - Items: !FindInMap [Env, !Ref Environment, Items]
               # Stacks deployed before the budget moved to bootstrap/cost-budget.yaml
               # still have a CostBudget to delete.
               - Sid: StackBudgetRemoval
@@ -411,66 +267,221 @@ Resources:
                   - iam:GetAccountSummary
                   - lambda:GetAccountSettings
                 Resource: '*'
-              # CI only: PR stacks are torn down after each run, and the
-              # functional tests read and write the stack's data directly.
-              - !If
-                - IsCI
-                - Sid: PrStackTeardown
-                  Effect: Allow
-                  Action:
-                    - cloudformation:CreateStack
-                    - cloudformation:UpdateStack
-                    - cloudformation:DeleteStack
-                    - dynamodb:DeleteTable
-                    - s3:DeleteBucket
-                    - ecr:BatchDeleteImage
-                  Resource:
-                    - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/kbdb-pr-*/*
-                    - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/kbdb-pr-*
-                    - !Sub arn:aws:s3:::kbdb-images-${AWS::AccountId}-kbdb-pr-*
-                    - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/kbdb-api
-                - !Ref AWS::NoValue
-              - !If
-                - IsCI
-                - Sid: FunctionalTestData
-                  Effect: Allow
-                  Action:
-                    - dynamodb:PutItem
-                    - dynamodb:GetItem
-                    - dynamodb:UpdateItem
-                    - dynamodb:DeleteItem
-                    - s3:GetObject
-                    - s3:PutObject
-                    - s3:DeleteObject
-                    - s3:GetObjectTagging
-                    - s3:PutObjectTagging
-                    - sqs:ReceiveMessage
-                    - sqs:DeleteMessage
-                    - logs:CreateLogStream
-                    - logs:PutLogEvents
-                    - cloudfront:CreateInvalidation
-                    - cloudfront:ListInvalidations
-                    - cloudfront:GetInvalidation
-                  Resource:
-                    - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/kbdb-pr-*
-                    - !Sub arn:aws:s3:::kbdb-images-${AWS::AccountId}-kbdb-pr-*/*
-                    - !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:kbdb-pr-*
-                    - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-moderate-kbdb-pr-*:*
-                    - !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/*
-                - !Ref AWS::NoValue
-              - !If
-                - IsCI
-                - Sid: JwksBucket
-                  Effect: Allow
-                  Action:
-                    - s3:GetObject
-                    - s3:PutObject
-                    - s3:DeleteObject
-                    - s3:ListBucket
-                  Resource:
-                    - !Sub arn:aws:s3:::kbdb-jwks-${AWS::AccountId}
-                    - !Sub arn:aws:s3:::kbdb-jwks-${AWS::AccountId}/*
-                - !Ref AWS::NoValue
+
+  # A role's inline policies are capped at 10,240 characters in all, so the
+  # stack's data, logging and CI-only permissions are a managed policy.
+  GitHubActionsDeployStackPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Roles:
+        - !Ref GitHubActionsDeployRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: DynamoDb
+            Effect: Allow
+            Action:
+              - dynamodb:CreateTable
+              - dynamodb:DescribeTable
+              - dynamodb:UpdateTable
+              - dynamodb:DescribeContinuousBackups
+              - dynamodb:UpdateContinuousBackups
+              - dynamodb:DescribeTimeToLive
+              - dynamodb:UpdateTimeToLive
+              - dynamodb:DescribeContributorInsights
+              - dynamodb:DescribeKinesisStreamingDestination
+              - dynamodb:GetResourcePolicy
+              - dynamodb:ListTagsOfResource
+              - dynamodb:TagResource
+              - dynamodb:UntagResource
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Items}
+                - Items: !FindInMap [Env, !Ref Environment, Items]
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Items}/index/*
+                - Items: !FindInMap [Env, !Ref Environment, Items]
+          - Sid: ImagesBucket
+            Effect: Allow
+            Action:
+              - s3:CreateBucket
+              - s3:ListBucket
+              - s3:GetBucket*
+              - s3:GetAccelerateConfiguration
+              - s3:GetAnalyticsConfiguration
+              - s3:GetEncryptionConfiguration
+              - s3:GetIntelligentTieringConfiguration
+              - s3:GetInventoryConfiguration
+              - s3:GetLifecycleConfiguration
+              - s3:GetMetricsConfiguration
+              - s3:GetReplicationConfiguration
+              - s3:ListTagsForResource
+              - s3:PutBucketPublicAccessBlock
+              - s3:PutEncryptionConfiguration
+              - s3:PutBucketCORS
+              - s3:PutBucketNotification
+              - s3:PutLifecycleConfiguration
+              - s3:PutBucketTagging
+              - s3:DeleteBucketCors
+              - s3:DeleteBucketEncryption
+              - s3:DeleteBucketLifecycle
+              - s3:TagResource
+              - s3:UntagResource
+              - s3:GetBucketPolicy
+              - s3:PutBucketPolicy
+              - s3:DeleteBucketPolicy
+            Resource: !Sub
+              - arn:aws:s3:::kbdb-images-${AWS::AccountId}-${Stack}
+              - Stack: !FindInMap [Env, !Ref Environment, Stack]
+          - Sid: LogGroups
+            Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:DeleteLogGroup
+              - logs:PutRetentionPolicy
+              - logs:DeleteRetentionPolicy
+              - logs:GetDataProtectionPolicy
+              - logs:ListTagsForResource
+              - logs:TagResource
+              - logs:UntagResource
+              - logs:PutMetricFilter
+              - logs:DeleteMetricFilter
+              - logs:DescribeMetricFilters
+            Resource:
+              - !Sub
+                - arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-api-${Stack}
+                - Stack: !FindInMap [Env, !Ref Environment, Stack]
+              - !Sub
+                - arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-api-${Stack}:*
+                - Stack: !FindInMap [Env, !Ref Environment, Stack]
+              - !Sub
+                - arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-moderate-${Stack}
+                - Stack: !FindInMap [Env, !Ref Environment, Stack]
+              - !Sub
+                - arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-moderate-${Stack}:*
+                - Stack: !FindInMap [Env, !Ref Environment, Stack]
+              - !Sub
+                - arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/apigateway/kbdb-api-${Stack}
+                - Stack: !FindInMap [Env, !Ref Environment, Stack]
+              - !Sub
+                - arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/apigateway/kbdb-api-${Stack}:*
+                - Stack: !FindInMap [Env, !Ref Environment, Stack]
+          - Sid: LogsUnscoped
+            Effect: Allow
+            Action:
+              - logs:DescribeLogGroups
+              - logs:DescribeIndexPolicies
+              - logs:DescribeResourcePolicies
+              - logs:PutResourcePolicy
+              - logs:GetLogDelivery
+              - logs:ListLogDeliveries
+              - logs:CreateLogDelivery
+              - logs:UpdateLogDelivery
+              - logs:DeleteLogDelivery
+            Resource: '*'
+          - Sid: ModerationDlq
+            Effect: Allow
+            Action:
+              - sqs:CreateQueue
+              - sqs:DeleteQueue
+              - sqs:GetQueueAttributes
+              - sqs:GetQueueUrl
+              - sqs:SetQueueAttributes
+              - sqs:ListQueueTags
+              - sqs:TagQueue
+              - sqs:UntagQueue
+            Resource: !Sub
+              - arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${Items}
+              - Items: !FindInMap [Env, !Ref Environment, Items]
+          - Sid: AlarmTopic
+            Effect: Allow
+            Action:
+              - sns:CreateTopic
+              - sns:DeleteTopic
+              - sns:GetTopicAttributes
+              - sns:SetTopicAttributes
+              - sns:Subscribe
+              - sns:Unsubscribe
+              - sns:ListSubscriptionsByTopic
+              - sns:GetDataProtectionPolicy
+              - sns:ListTagsForResource
+              - sns:TagResource
+              - sns:UntagResource
+            Resource: !Sub
+              - arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${Items}
+              - Items: !FindInMap [Env, !Ref Environment, Items]
+          - Sid: Alarms
+            Effect: Allow
+            Action:
+              - cloudwatch:PutMetricAlarm
+              - cloudwatch:DescribeAlarms
+              - cloudwatch:DeleteAlarms
+              - cloudwatch:ListTagsForResource
+              - cloudwatch:TagResource
+              - cloudwatch:UntagResource
+            Resource: !Sub
+              - arn:aws:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:${Items}
+              - Items: !FindInMap [Env, !Ref Environment, Items]
+          # CI only: PR stacks are torn down after each run, and the
+          # functional tests read and write the stack's data directly.
+          - !If
+            - IsCI
+            - Sid: PrStackTeardown
+              Effect: Allow
+              Action:
+                - cloudformation:CreateStack
+                - cloudformation:UpdateStack
+                - cloudformation:DeleteStack
+                - dynamodb:DeleteTable
+                - s3:DeleteBucket
+                - ecr:BatchDeleteImage
+              Resource:
+                - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/kbdb-pr-*/*
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/kbdb-pr-*
+                - !Sub arn:aws:s3:::kbdb-images-${AWS::AccountId}-kbdb-pr-*
+                - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/kbdb-api
+            - !Ref AWS::NoValue
+          - !If
+            - IsCI
+            - Sid: FunctionalTestData
+              Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:GetItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+                - s3:GetObject
+                - s3:PutObject
+                - s3:DeleteObject
+                - s3:GetObjectTagging
+                - s3:PutObjectTagging
+                - sqs:ReceiveMessage
+                - sqs:DeleteMessage
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+                - cloudfront:CreateInvalidation
+                - cloudfront:ListInvalidations
+                - cloudfront:GetInvalidation
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/kbdb-pr-*
+                - !Sub arn:aws:s3:::kbdb-images-${AWS::AccountId}-kbdb-pr-*/*
+                - !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:kbdb-pr-*
+                - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-moderate-kbdb-pr-*:*
+                - !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/*
+            - !Ref AWS::NoValue
+          - !If
+            - IsCI
+            - Sid: JwksBucket
+              Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:PutObject
+                - s3:DeleteObject
+                - s3:ListBucket
+              Resource:
+                - !Sub arn:aws:s3:::kbdb-jwks-${AWS::AccountId}
+                - !Sub arn:aws:s3:::kbdb-jwks-${AWS::AccountId}/*
+            - !Ref AWS::NoValue
 
 Outputs:
   GitHubActionsDeployRoleArn:

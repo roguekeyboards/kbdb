@@ -41,7 +41,7 @@ Parameters:
     Default: ''
     Description: >-
       Optional custom domain for this stack's HttpApi, e.g.
-      api.jay.mykeebs.dev. Left empty (the default), no custom domain is
+      jay.api.mykeebs.dev. Left empty (the default), no custom domain is
       configured and the stack is only reachable at its default
       execute-api.amazonaws.com URL - func-setup, CI, and any dev stack
       not opting in are unaffected.
