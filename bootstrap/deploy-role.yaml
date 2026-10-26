@@ -251,16 +251,6 @@ Resources:
                   - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/kbdb/image-delivery/key-group-id
                   - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/kbdb/image-delivery/public-key-id
                   - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/kbdb/image-delivery/response-headers-policy-id
-              # Stacks deployed before the budget moved to bootstrap/cost-budget.yaml
-              # still have a CostBudget to delete.
-              - Sid: StackBudgetRemoval
-                Effect: Allow
-                Action:
-                  - budgets:ViewBudget
-                  - budgets:ModifyBudget
-                  - budgets:DeleteBudget
-                  - budgets:ListTagsForResource
-                Resource: !Sub arn:aws:budgets::${AWS::AccountId}:budget/CostBudget-*
               - Sid: AccountReads
                 Effect: Allow
                 Action:
