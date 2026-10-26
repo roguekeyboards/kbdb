@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"slices"
 	"sync"
-	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -45,7 +44,7 @@ func (b Build) ToAPI(ctx context.Context, build repository.Build, isOwner bool, 
 		return api.Build{}, err
 	}
 
-	imgs, err := b.imagesToAPI(ctx, build.UserID, build.ID, repository.SortedBuildImages(build.Images), isOwner)
+	imgs, err := b.imagesToAPI(ctx, repository.SortedBuildImages(build.Images), isOwner)
 	if err != nil {
 		return api.Build{}, err
 	}
@@ -256,7 +255,7 @@ func (b Build) keyboardRefToAPI(
 	imgs := repository.SortedKeyboardImages(kb.Images)
 	served := func(img repository.KeyboardImage) bool { return servedInRef(img.Status, isOwner) }
 	if i := slices.IndexFunc(imgs, served); i >= 0 {
-		url, err := b.resolveKeyboardImageURL(ctx, ownerID, keyboardID, imgs[i])
+		url, _, err := b.KeyboardImages.SignGetKeyboardImage(ctx, imgs[i].Path)
 		if err != nil {
 			return api.BuildKeyboardRef{}, nil, fmt.Errorf("signing keyboard image for keyboard %q: %w", keyboardID, err)
 		}
@@ -337,7 +336,7 @@ func (b Build) switchEntriesResolvedToAPI(
 			}
 
 			if sw.ImagePath != nil && servedInRef(sw.ImageStatus, isOwner) {
-				url, err := b.resolveSwitchImageURL(ctx, *sw)
+				url, _, err := b.SwitchImages.SignGet(ctx, *sw.ImagePath)
 				if err != nil {
 					errs[i] = fmt.Errorf("signing switch image for switch %q: %w", e.Switch, err)
 					return
@@ -434,7 +433,7 @@ func (b Build) keycapSetRefToAPI(
 		costs[i] = kit.Purchase.Price
 
 		if kit.ImagePath != nil && servedInRef(kit.ImageStatus, isOwner) {
-			url, err := b.resolveKeycapKitImageURL(ctx, ownerID, ks.ID, kit)
+			url, _, err := b.KitImages.SignGet(ctx, *kit.ImagePath)
 			if err != nil {
 				return api.BuildKeycapSetRef{}, nil, fmt.Errorf("signing kit image for kit %q: %w", kitID, err)
 			}
@@ -447,7 +446,7 @@ func (b Build) keycapSetRefToAPI(
 
 // imagesToAPI keeps the images the caller may see and resolves a signed GET
 // URL for each one not rejected. images must already be ordered by Seq.
-func (b Build) imagesToAPI(ctx context.Context, ownerID, buildID string, images []repository.BuildImage, isOwner bool) (*[]api.BuildImage, error) {
+func (b Build) imagesToAPI(ctx context.Context, images []repository.BuildImage, isOwner bool) (*[]api.BuildImage, error) {
 	images = visibleImages(images, func(img repository.BuildImage) repository.ImageStatus { return img.Status }, isOwner)
 	if len(images) == 0 {
 		return nil, nil //nolint:nilnil // no images is a valid, expected result
@@ -467,7 +466,7 @@ func (b Build) imagesToAPI(ctx context.Context, ownerID, buildID string, images 
 			if !img.Status.Downloadable() {
 				return
 			}
-			url, err := b.resolveBuildImageURL(ctx, ownerID, buildID, img)
+			url, _, err := b.Images.SignGetBuildImage(ctx, img.Path)
 			if err != nil {
 				errs[i] = fmt.Errorf("signing build image %q: %w", img.ImageID, err)
 				return
@@ -482,56 +481,6 @@ func (b Build) imagesToAPI(ctx context.Context, ownerID, buildID string, images 
 	}
 
 	return &out, nil
-}
-
-// resolveBuildImageURL returns a signed GET URL for img.Path, reusing the
-// cached one if it was signed in the current window.
-func (b Build) resolveBuildImageURL(ctx context.Context, ownerID, buildID string, img repository.BuildImage) (string, error) {
-	return resolveImageURL(img.GetURL, img.GetURLExpiresAt, func() (string, time.Time, error) { return b.Images.SignGetBuildImage(ctx, img.Path) },
-		func(url string, expiresAt time.Time) error {
-			_, err := b.Repo.SetImageGetCache(ctx, ownerID, buildID, img.ImageID, img.Path, url, expiresAt)
-			return err
-		},
-	)
-}
-
-// resolveKeyboardImageURL returns a signed GET URL for img.Path, reusing the
-// cached one if it was signed in the current window.
-func (b Build) resolveKeyboardImageURL(ctx context.Context, ownerID, keyboardID string, img repository.KeyboardImage) (string, error) {
-	return resolveImageURL(img.GetURL, img.GetURLExpiresAt, func() (string, time.Time, error) { return b.KeyboardImages.SignGetKeyboardImage(ctx, img.Path) },
-		func(url string, expiresAt time.Time) error {
-			_, err := b.KeyboardRepo.SetImageGetCache(ctx, ownerID, keyboardID, img.ImageID, img.Path, url, expiresAt)
-			return err
-		},
-	)
-}
-
-// resolveSwitchImageURL returns a signed GET URL for sw.ImagePath, reusing
-// the cached one if it was signed in the current window. sw.ImagePath must
-// be set.
-func (b Build) resolveSwitchImageURL(ctx context.Context, sw repository.Switch) (string, error) {
-	path := *sw.ImagePath
-
-	return resolveImageURL(sw.GetURL, sw.GetURLExpiresAt, func() (string, time.Time, error) { return b.SwitchImages.SignGet(ctx, path) },
-		func(url string, expiresAt time.Time) error {
-			_, err := b.SwitchRepo.SetImageGetCache(ctx, sw.UserID, sw.ID, path, url, expiresAt)
-			return err
-		},
-	)
-}
-
-// resolveKeycapKitImageURL returns a signed GET URL for k.ImagePath, reusing
-// the cached one if it was signed in the current window. k.ImagePath must be
-// set.
-func (b Build) resolveKeycapKitImageURL(ctx context.Context, ownerID, setID string, k repository.KeycapKit) (string, error) {
-	path := *k.ImagePath
-
-	return resolveImageURL(k.GetURL, k.GetURLExpiresAt, func() (string, time.Time, error) { return b.KitImages.SignGet(ctx, path) },
-		func(url string, expiresAt time.Time) error {
-			_, err := b.KeycapSetRepo.SetKitImageGetCache(ctx, ownerID, setID, k.KitID, path, url, expiresAt)
-			return err
-		},
-	)
 }
 
 // servedInRef reports whether a referenced item's image is shown in a

@@ -6,7 +6,6 @@ package mocks
 
 import (
 	"context"
-	"time"
 
 	"github.com/rogueserenity/kbdb/internal/repository"
 	mock "github.com/stretchr/testify/mock"
@@ -454,96 +453,6 @@ func (_c *MockSwitchRepository_List_Call) Return(switches []repository.Switch, n
 }
 
 func (_c *MockSwitchRepository_List_Call) RunAndReturn(run func(ctx context.Context, ownerID string, visibilities []repository.Visibility, limit int, cursor string) ([]repository.Switch, string, error)) *MockSwitchRepository_List_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// SetImageGetCache provides a mock function for the type MockSwitchRepository
-func (_mock *MockSwitchRepository) SetImageGetCache(ctx context.Context, ownerID string, id string, forPath repository.SwitchImageKey, url string, expiresAt time.Time) (bool, error) {
-	ret := _mock.Called(ctx, ownerID, id, forPath, url, expiresAt)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SetImageGetCache")
-	}
-
-	var r0 bool
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, repository.SwitchImageKey, string, time.Time) (bool, error)); ok {
-		return returnFunc(ctx, ownerID, id, forPath, url, expiresAt)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, repository.SwitchImageKey, string, time.Time) bool); ok {
-		r0 = returnFunc(ctx, ownerID, id, forPath, url, expiresAt)
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, repository.SwitchImageKey, string, time.Time) error); ok {
-		r1 = returnFunc(ctx, ownerID, id, forPath, url, expiresAt)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// MockSwitchRepository_SetImageGetCache_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetImageGetCache'
-type MockSwitchRepository_SetImageGetCache_Call struct {
-	*mock.Call
-}
-
-// SetImageGetCache is a helper method to define mock.On call
-//   - ctx context.Context
-//   - ownerID string
-//   - id string
-//   - forPath repository.SwitchImageKey
-//   - url string
-//   - expiresAt time.Time
-func (_e *MockSwitchRepository_Expecter) SetImageGetCache(ctx any, ownerID any, id any, forPath any, url any, expiresAt any) *MockSwitchRepository_SetImageGetCache_Call {
-	return &MockSwitchRepository_SetImageGetCache_Call{Call: _e.mock.On("SetImageGetCache", ctx, ownerID, id, forPath, url, expiresAt)}
-}
-
-func (_c *MockSwitchRepository_SetImageGetCache_Call) Run(run func(ctx context.Context, ownerID string, id string, forPath repository.SwitchImageKey, url string, expiresAt time.Time)) *MockSwitchRepository_SetImageGetCache_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 repository.SwitchImageKey
-		if args[3] != nil {
-			arg3 = args[3].(repository.SwitchImageKey)
-		}
-		var arg4 string
-		if args[4] != nil {
-			arg4 = args[4].(string)
-		}
-		var arg5 time.Time
-		if args[5] != nil {
-			arg5 = args[5].(time.Time)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-			arg4,
-			arg5,
-		)
-	})
-	return _c
-}
-
-func (_c *MockSwitchRepository_SetImageGetCache_Call) Return(ok bool, err error) *MockSwitchRepository_SetImageGetCache_Call {
-	_c.Call.Return(ok, err)
-	return _c
-}
-
-func (_c *MockSwitchRepository_SetImageGetCache_Call) RunAndReturn(run func(ctx context.Context, ownerID string, id string, forPath repository.SwitchImageKey, url string, expiresAt time.Time) (bool, error)) *MockSwitchRepository_SetImageGetCache_Call {
 	_c.Call.Return(run)
 	return _c
 }

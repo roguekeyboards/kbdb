@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/rogueserenity/kbdb/internal/handlers/api"
 	"github.com/rogueserenity/kbdb/internal/repository"
@@ -36,7 +35,7 @@ func (ks KeycapSet) ToAPI(ctx context.Context, set repository.KeycapSet, isOwner
 			go func(i int, k repository.KeycapKit) {
 				defer wg.Done()
 
-				apiKit, err := ks.KitToAPI(ctx, set.UserID, set.ID, k, isOwner, ownerPrefs)
+				apiKit, err := ks.KitToAPI(ctx, k, isOwner, ownerPrefs)
 				if err != nil {
 					errs[i] = err
 					return
@@ -111,7 +110,7 @@ func (ks KeycapSet) StripPrices(out *api.KeycapSet) {
 // KitToAPI maps a repository.KeycapKit to its wire representation. Image
 // is nil unless k.ImagePath is set and the caller may see it; its URL is a
 // signed GET URL, absent once the image is rejected.
-func (ks KeycapSet) KitToAPI(ctx context.Context, ownerID, setID string, k repository.KeycapKit, isOwner bool, ownerPrefs repository.ProfilePreferences) (api.KeycapKit, error) {
+func (ks KeycapSet) KitToAPI(ctx context.Context, k repository.KeycapKit, isOwner bool, ownerPrefs repository.ProfilePreferences) (api.KeycapKit, error) {
 	purchase, err := ks.kitPurchaseToAPI(k.Purchase, isOwner, ownerPrefs)
 	if err != nil {
 		return api.KeycapKit{}, err
@@ -122,7 +121,7 @@ func (ks KeycapSet) KitToAPI(ctx context.Context, ownerID, setID string, k repos
 		image = &api.KeycapKitImage{}
 		image.Status, image.RejectionReason = imageStatusToAPI(k.ImageStatus, k.ImageRejectionReason, isOwner)
 		if k.ImageStatus.Downloadable() {
-			url, err := ks.resolveKeycapKitImageURL(ctx, ownerID, setID, k)
+			url, _, err := ks.Images.SignGet(ctx, *k.ImagePath)
 			if err != nil {
 				return api.KeycapKit{}, fmt.Errorf("signing kit image: %w", err)
 			}
@@ -136,21 +135,6 @@ func (ks KeycapSet) KitToAPI(ctx context.Context, ownerID, setID string, k repos
 		Image:    image,
 		Purchase: purchase,
 	}, nil
-}
-
-// resolveKeycapKitImageURL returns a signed GET URL for k.ImagePath, reusing
-// the cached one if it was signed in the current window. k.ImagePath must be
-// set.
-func (ks KeycapSet) resolveKeycapKitImageURL(ctx context.Context, ownerID, setID string, k repository.KeycapKit) (string, error) {
-	path := *k.ImagePath
-
-	return resolveImageURL(k.GetURL, k.GetURLExpiresAt,
-		func() (string, time.Time, error) { return ks.Images.SignGet(ctx, path) },
-		func(url string, expiresAt time.Time) error {
-			_, err := ks.Repo.SetKitImageGetCache(ctx, ownerID, setID, k.KitID, path, url, expiresAt)
-			return err
-		},
-	)
 }
 
 // KitToRepo maps a generated KeycapKitInput (already schema-validated by

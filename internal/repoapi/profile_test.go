@@ -74,10 +74,6 @@ func (s *ProfileMapperSuite) TestProfileToAPI_SignsAvatar() {
 		SignGet(mock.Anything, repository.ProfileImageKey("profiles/user-alice/avatar/up1")).
 		Return("https://example.com/avatar", signedExpiry(), nil)
 	repo := mocks.NewMockProfileRepository(s.T())
-	repo.EXPECT().
-		SetImageGetCache(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(true, nil).Maybe()
-
 	p := repository.Profile{
 		Username:   "alice",
 		AvatarPath: profileImageKeyPtr("profiles/user-alice/avatar/up1"),

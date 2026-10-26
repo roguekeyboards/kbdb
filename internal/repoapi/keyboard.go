@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/rogueserenity/kbdb/internal/handlers/api"
 	"github.com/rogueserenity/kbdb/internal/repository"
@@ -38,7 +37,7 @@ func (k Keyboard) ToAPI(ctx context.Context, kb repository.Keyboard, isOwner boo
 		return api.Keyboard{}, err
 	}
 
-	imgs, err := k.imagesToAPI(ctx, kb.UserID, kb.ID, repository.SortedKeyboardImages(kb.Images), isOwner)
+	imgs, err := k.imagesToAPI(ctx, repository.SortedKeyboardImages(kb.Images), isOwner)
 	if err != nil {
 		return api.Keyboard{}, err
 	}
@@ -67,7 +66,7 @@ func (k Keyboard) ToAPI(ctx context.Context, kb repository.Keyboard, isOwner boo
 
 // imagesToAPI keeps the images the caller may see and resolves a signed GET
 // URL for each one not rejected. images must already be ordered by Seq.
-func (k Keyboard) imagesToAPI(ctx context.Context, ownerID, keyboardID string, images []repository.KeyboardImage, isOwner bool) (*[]api.KeyboardImage, error) {
+func (k Keyboard) imagesToAPI(ctx context.Context, images []repository.KeyboardImage, isOwner bool) (*[]api.KeyboardImage, error) {
 	images = visibleImages(images, func(img repository.KeyboardImage) repository.ImageStatus { return img.Status }, isOwner)
 	if len(images) == 0 {
 		return nil, nil //nolint:nilnil // no images is a valid, expected result
@@ -87,7 +86,7 @@ func (k Keyboard) imagesToAPI(ctx context.Context, ownerID, keyboardID string, i
 			if !img.Status.Downloadable() {
 				return
 			}
-			url, err := k.resolveKeyboardImageURL(ctx, ownerID, keyboardID, img)
+			url, _, err := k.Images.SignGetKeyboardImage(ctx, img.Path)
 			if err != nil {
 				errs[i] = fmt.Errorf("signing keyboard image %q: %w", img.ImageID, err)
 				return
@@ -151,18 +150,6 @@ func (k Keyboard) stripPurchasePrice(p *api.Purchase) *api.Purchase {
 		return nil
 	}
 	return p
-}
-
-// resolveKeyboardImageURL returns a signed GET URL for img.Path, reusing the
-// cached one if it was signed in the current window.
-func (k Keyboard) resolveKeyboardImageURL(ctx context.Context, ownerID, keyboardID string, img repository.KeyboardImage) (string, error) {
-	return resolveImageURL(img.GetURL, img.GetURLExpiresAt,
-		func() (string, time.Time, error) { return k.Images.SignGetKeyboardImage(ctx, img.Path) },
-		func(url string, expiresAt time.Time) error {
-			_, err := k.Repo.SetImageGetCache(ctx, ownerID, keyboardID, img.ImageID, img.Path, url, expiresAt)
-			return err
-		},
-	)
 }
 
 func (k Keyboard) materialColorToAPI(m repository.KeyboardMaterialColor) *api.MaterialColor {

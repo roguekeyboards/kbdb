@@ -530,51 +530,13 @@ func (r *BuildRepository) DeleteImage(ctx context.Context, buildID, imageID stri
 	return &entry.Path, nil
 }
 
-// SetImageGetCache implements repository.BuildRepository.
-func (r *BuildRepository) SetImageGetCache(ctx context.Context, ownerID, buildID, imageID string, forPath repository.BuildImageKey, url string, expiresAt time.Time) (bool, error) {
-	imagePath, ok := mapKey("images", imageID)
-	if !ok {
-		return false, nil
-	}
-	update := expression.Set(field(imagePath, "get_url"), expression.Value(url)).
-		Set(field(imagePath, "get_url_expires_at"), expression.Value(expiresAt))
-	cond := expression.AttributeExists(imagePath).
-		And(field(imagePath, "path").Equal(expression.Value(forPath)))
-
-	expr, err := expression.NewBuilder().WithUpdate(update).WithCondition(cond).Build()
-	if err != nil {
-		return false, fmt.Errorf("building image get-cache update for build %q: %w", buildID, err)
-	}
-
-	_, err = r.client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
-		TableName:                 &r.tableName,
-		Key:                       buildKey(ownerID, buildID),
-		UpdateExpression:          expr.Update(),
-		ConditionExpression:       expr.Condition(),
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-	})
-	if err != nil {
-		if _, ok := errors.AsType[*types.ConditionalCheckFailedException](err); ok {
-			return false, nil
-		}
-		return false, fmt.Errorf("setting image %q get-cache for build %q owner %q: %w", imageID, buildID, ownerID, err)
-	}
-
-	return true, nil
-}
-
-// SetImageStatus implements repository.BuildRepository. A rejection
-// also clears any cached GET URL, so it isn't served from the cache.
+// SetImageStatus implements repository.BuildRepository.
 func (r *BuildRepository) SetImageStatus(ctx context.Context, ownerID, buildID, imageID string, forPath repository.BuildImageKey, from, to repository.ImageStatus, reason *string) (bool, error) {
 	imagePath, ok := mapKey("images", imageID)
 	if !ok {
 		return false, nil
 	}
 	update := statusUpdate(field(imagePath, "status"), field(imagePath, "rejection_reason"), to, reason)
-	if to == repository.ImageStatusRejected {
-		update = update.Remove(field(imagePath, "get_url")).Remove(field(imagePath, "get_url_expires_at"))
-	}
 	cond := expression.AttributeExists(imagePath).
 		And(field(imagePath, "path").Equal(expression.Value(forPath))).
 		And(statusIs(field(imagePath, "status"), from))

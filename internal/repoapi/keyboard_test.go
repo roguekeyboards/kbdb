@@ -254,10 +254,6 @@ func (s *KeyboardToAPISuite) TestImagesPresent_SignsEachAndPreservesOrder() {
 	images.EXPECT().SignGetKeyboardImage(mock.Anything, img1).Return("https://example.com/img1", signedExpiry(), nil)
 	images.EXPECT().SignGetKeyboardImage(mock.Anything, img2).Return("https://example.com/img2", signedExpiry(), nil)
 	repo := mocks.NewMockKeyboardRepository(s.T())
-	repo.EXPECT().
-		SetImageGetCache(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(true, nil).Maybe()
-
 	kr := Keyboard{Images: images, Repo: repo}
 	out, err := kr.ToAPI(s.T().Context(), kb, true, repository.ProfilePreferences{})
 	s.Require().NoError(err)

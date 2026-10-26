@@ -649,10 +649,6 @@ func (s *ListProfilesSuite) TestAvatarSigned_WhenSet() {
 			{OwnerID: "user-alice", Username: "alice", Discoverable: true, AvatarPath: &key},
 		}, "", nil)
 	s.mockImages.EXPECT().SignGet(mock.Anything, key).Return("https://signed/avatar", time.Now().Add(time.Hour), nil)
-	s.mockRepo.EXPECT().
-		SetImageGetCache(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(true, nil).Maybe()
-
 	rec := httptest.NewRecorder()
 	s.handler(rec, s.request("limit=20"))
 

@@ -228,10 +228,6 @@ func (s *ListKeyboardsSuite) TestListKeyboards_ReturnsEveryImage() {
 		RunAndReturn(func(_ context.Context, key repository.KeyboardImageKey) (string, time.Time, error) {
 			return "https://example.com/" + string(key), time.Now().Add(time.Hour), nil
 		})
-	s.mockRepo.EXPECT().
-		SetImageGetCache(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(true, nil).Maybe()
-
 	rec := httptest.NewRecorder()
 	s.handler(rec, s.newRequest(ctx, "limit=20"))
 

@@ -82,11 +82,6 @@ type Profile struct {
 	AvatarStatus          ImageStatus `dynamodbav:"avatar_status,omitempty" json:"-"`
 	AvatarRejectionReason *string     `dynamodbav:"avatar_rejection_reason,omitempty" json:"-"`
 
-	// GetURL/GetURLExpiresAt cache the last signed GET URL for AvatarPath.
-	// SetAvatarPath clears both when AvatarPath changes.
-	GetURL          *string    `dynamodbav:"get_url,omitempty" json:"-"`
-	GetURLExpiresAt *time.Time `dynamodbav:"get_url_expires_at,omitempty" json:"-"`
-
 	// DiscoverablePK / DiscordPK are the constant ("1") partition keys of the
 	// two sparse directory GSIs, written only when the profile belongs in
 	// each index (DiscordPK additionally requires DiscordUsername != nil).
@@ -156,18 +151,11 @@ type ProfileRepository interface {
 	// caller has no profile.
 	ClearAvatarPath(ctx context.Context) (*ProfileImageKey, error)
 
-	// SetImageGetCache stores url/expiresAt as ownerID's cached avatar GET
-	// URL, conditioned on AvatarPath still equalling forPath. Returns
-	// ok=false (not an error) if that condition fails or ownerID has no
-	// profile.
-	SetImageGetCache(ctx context.Context, ownerID string, forPath ProfileImageKey, url string, expiresAt time.Time) (ok bool, err error)
-
 	// SetAvatarStatus sets ownerID's avatar's moderation status to `to` and
 	// its rejection reason to reason (cleared when nil), conditioned on
 	// AvatarPath still equalling forPath and the status still being from (a
-	// missing status counts as approved). A rejection also drops any cached
-	// GET URL. Returns ok=false (not an error) if that condition fails or the
-	// item doesn't exist.
+	// missing status counts as approved). Returns ok=false (not an error) if
+	// that condition fails or the item doesn't exist.
 	SetAvatarStatus(ctx context.Context, ownerID string, forPath ProfileImageKey, from, to ImageStatus, reason *string) (ok bool, err error)
 }
 

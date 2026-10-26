@@ -256,10 +256,6 @@ func (s *ListKeycapSetsSuite) TestListKeycapSets_PrimaryKitWithImage_ReturnsPrim
 	s.prefs = repository.ProfilePreferences{}
 
 	s.mockImages.EXPECT().SignGet(mock.Anything, imagePath).Return("https://example.com/signed-get", time.Now().Add(time.Hour), nil)
-	s.mockRepo.EXPECT().
-		SetKitImageGetCache(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(true, nil).Maybe()
-
 	rec := httptest.NewRecorder()
 	s.handler(rec, s.newRequest(s.T().Context(), "limit=20"))
 
@@ -365,10 +361,6 @@ func (s *GetKeycapSetSuite) TestGetKeycapSet_KitWithImagePath_IncludesSignedURL(
 	s.mockImages.EXPECT().
 		SignGet(mock.Anything, imagePath).
 		Return("https://example.com/signed-get", time.Now().Add(time.Hour), nil)
-	s.mockRepo.EXPECT().
-		SetKitImageGetCache(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(true, nil).Maybe()
-
 	rec := httptest.NewRecorder()
 	s.handler(rec, s.newRequest(ctx))
 

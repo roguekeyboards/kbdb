@@ -356,7 +356,7 @@ func CreateKeycapKit(keycapSetRepo repository.KeycapSetRepository, kr repoapi.Ke
 		}
 
 		// isOwner: true - already gated by authz.IsOwner above.
-		out, err := kr.KitToAPI(r.Context(), ownerID, setID, *created, true, ownerPrefs)
+		out, err := kr.KitToAPI(r.Context(), *created, true, ownerPrefs)
 		if err != nil {
 			log.FromContext(r.Context()).Error("mapping keycap kit to API", log.Error, err, log.KeycapSetID, setID, log.KeycapKitID, created.KitID)
 			problem.Internal(w, "failed to add kit")
@@ -413,7 +413,7 @@ func UpdateKeycapKit(keycapSetRepo repository.KeycapSetRepository, kr repoapi.Ke
 		}
 
 		// isOwner: true - already gated by authz.IsOwner above.
-		out, err := kr.KitToAPI(r.Context(), ownerID, setID, *updated, true, ownerPrefs)
+		out, err := kr.KitToAPI(r.Context(), *updated, true, ownerPrefs)
 		if err != nil {
 			log.FromContext(r.Context()).Error("mapping keycap kit to API", log.Error, err, log.KeycapSetID, setID, log.KeycapKitID, updated.KitID)
 			problem.Internal(w, "failed to update kit")

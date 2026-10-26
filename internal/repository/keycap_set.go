@@ -37,11 +37,6 @@ type KeycapKit struct {
 	// ImageRejectionReason is set only when rejected.
 	ImageStatus          ImageStatus `dynamodbav:"image_status,omitempty" json:"-"`
 	ImageRejectionReason *string     `dynamodbav:"image_rejection_reason,omitempty" json:"-"`
-
-	// GetURL/GetURLExpiresAt cache the last signed GET URL for ImagePath.
-	// SetKitImagePath clears both when ImagePath changes.
-	GetURL          *string    `dynamodbav:"get_url,omitempty" json:"-"`
-	GetURLExpiresAt *time.Time `dynamodbav:"get_url_expires_at,omitempty" json:"-"`
 }
 
 // KeycapSet is a keycap set in a user's collection, or shared with the
@@ -223,18 +218,11 @@ type KeycapSetRepository interface {
 	// not an error. Returns ErrNotFound if setID or the kit doesn't exist.
 	ClearKitImagePath(ctx context.Context, setID, kitID string) (*KeycapKitImageKey, error)
 
-	// SetKitImageGetCache stores url/expiresAt as the matching kit's cached
-	// GET URL, conditioned on ImagePath still equalling forPath. Returns
-	// ok=false (not an error) if that condition fails or setID/the kit
-	// doesn't exist.
-	SetKitImageGetCache(ctx context.Context, ownerID, setID, kitID string, forPath KeycapKitImageKey, url string, expiresAt time.Time) (ok bool, err error)
-
 	// SetKitImageStatus sets the matching kit's image's moderation status to
 	// `to` and its rejection reason to reason (cleared when nil), conditioned
 	// on ImagePath still equalling forPath and the status still being from (a
-	// missing status counts as approved). A rejection also drops any cached
-	// GET URL. Returns ok=false (not an error) if that condition fails or the
-	// item doesn't exist.
+	// missing status counts as approved). Returns ok=false (not an error) if
+	// that condition fails or the item doesn't exist.
 	SetKitImageStatus(ctx context.Context, ownerID, setID, kitID string, forPath KeycapKitImageKey, from, to ImageStatus, reason *string) (ok bool, err error)
 }
 

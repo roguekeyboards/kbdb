@@ -3,7 +3,6 @@ package repoapi
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/rogueserenity/kbdb/internal/handlers/api"
 	"github.com/rogueserenity/kbdb/internal/repository"
@@ -30,7 +29,7 @@ func (s Switch) ToAPI(ctx context.Context, sw repository.Switch, isOwner bool, o
 		image = &api.SwitchImage{}
 		image.Status, image.RejectionReason = imageStatusToAPI(sw.ImageStatus, sw.ImageRejectionReason, isOwner)
 		if sw.ImageStatus.Downloadable() {
-			url, err := s.resolveSwitchImageURL(ctx, sw)
+			url, _, err := s.Images.SignGet(ctx, *sw.ImagePath)
 			if err != nil {
 				return api.Switch{}, fmt.Errorf("signing switch image: %w", err)
 			}
@@ -87,21 +86,6 @@ func (s Switch) StripPrices(out *api.Switch) {
 	if *out.Purchase == (api.SwitchPurchase{}) {
 		out.Purchase = nil
 	}
-}
-
-// resolveSwitchImageURL returns a signed GET URL for sw.ImagePath, reusing
-// the cached one if it was signed in the current window. sw.ImagePath must
-// be set.
-func (s Switch) resolveSwitchImageURL(ctx context.Context, sw repository.Switch) (string, error) {
-	path := *sw.ImagePath
-
-	return resolveImageURL(sw.GetURL, sw.GetURLExpiresAt,
-		func() (string, time.Time, error) { return s.Images.SignGet(ctx, path) },
-		func(url string, expiresAt time.Time) error {
-			_, err := s.Repo.SetImageGetCache(ctx, sw.UserID, sw.ID, path, url, expiresAt)
-			return err
-		},
-	)
 }
 
 func (s Switch) materialToAPI(m repository.SwitchMaterial) *api.SwitchMaterial {

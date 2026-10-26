@@ -76,23 +76,7 @@ func newBuildToAPIDeps(t interface {
 		switchRepo:     mocks.NewMockSwitchRepository(t),
 		keycapSetRepo:  mocks.NewMockKeycapSetRepository(t),
 	}
-	d.expectCache()
 	return d
-}
-
-func (d buildToAPIDeps) expectCache() {
-	d.buildRepo.EXPECT().
-		SetImageGetCache(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(true, nil).Maybe()
-	d.keyboardRepo.EXPECT().
-		SetImageGetCache(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(true, nil).Maybe()
-	d.switchRepo.EXPECT().
-		SetImageGetCache(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(true, nil).Maybe()
-	d.keycapSetRepo.EXPECT().
-		SetKitImageGetCache(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(true, nil).Maybe()
 }
 
 func (d buildToAPIDeps) call(ctx context.Context, b repository.Build) (api.Build, error) {

@@ -6,7 +6,6 @@ package mocks
 
 import (
 	"context"
-	"time"
 
 	"github.com/rogueserenity/kbdb/internal/repository"
 	mock "github.com/stretchr/testify/mock"
@@ -603,102 +602,6 @@ func (_c *MockKeycapSetRepository_List_Call) Return(sets []repository.KeycapSet,
 }
 
 func (_c *MockKeycapSetRepository_List_Call) RunAndReturn(run func(ctx context.Context, ownerID string, visibilities []repository.Visibility, limit int, cursor string) ([]repository.KeycapSet, string, error)) *MockKeycapSetRepository_List_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// SetKitImageGetCache provides a mock function for the type MockKeycapSetRepository
-func (_mock *MockKeycapSetRepository) SetKitImageGetCache(ctx context.Context, ownerID string, setID string, kitID string, forPath repository.KeycapKitImageKey, url string, expiresAt time.Time) (bool, error) {
-	ret := _mock.Called(ctx, ownerID, setID, kitID, forPath, url, expiresAt)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SetKitImageGetCache")
-	}
-
-	var r0 bool
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string, repository.KeycapKitImageKey, string, time.Time) (bool, error)); ok {
-		return returnFunc(ctx, ownerID, setID, kitID, forPath, url, expiresAt)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string, repository.KeycapKitImageKey, string, time.Time) bool); ok {
-		r0 = returnFunc(ctx, ownerID, setID, kitID, forPath, url, expiresAt)
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, string, repository.KeycapKitImageKey, string, time.Time) error); ok {
-		r1 = returnFunc(ctx, ownerID, setID, kitID, forPath, url, expiresAt)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// MockKeycapSetRepository_SetKitImageGetCache_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetKitImageGetCache'
-type MockKeycapSetRepository_SetKitImageGetCache_Call struct {
-	*mock.Call
-}
-
-// SetKitImageGetCache is a helper method to define mock.On call
-//   - ctx context.Context
-//   - ownerID string
-//   - setID string
-//   - kitID string
-//   - forPath repository.KeycapKitImageKey
-//   - url string
-//   - expiresAt time.Time
-func (_e *MockKeycapSetRepository_Expecter) SetKitImageGetCache(ctx any, ownerID any, setID any, kitID any, forPath any, url any, expiresAt any) *MockKeycapSetRepository_SetKitImageGetCache_Call {
-	return &MockKeycapSetRepository_SetKitImageGetCache_Call{Call: _e.mock.On("SetKitImageGetCache", ctx, ownerID, setID, kitID, forPath, url, expiresAt)}
-}
-
-func (_c *MockKeycapSetRepository_SetKitImageGetCache_Call) Run(run func(ctx context.Context, ownerID string, setID string, kitID string, forPath repository.KeycapKitImageKey, url string, expiresAt time.Time)) *MockKeycapSetRepository_SetKitImageGetCache_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
-		var arg4 repository.KeycapKitImageKey
-		if args[4] != nil {
-			arg4 = args[4].(repository.KeycapKitImageKey)
-		}
-		var arg5 string
-		if args[5] != nil {
-			arg5 = args[5].(string)
-		}
-		var arg6 time.Time
-		if args[6] != nil {
-			arg6 = args[6].(time.Time)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-			arg4,
-			arg5,
-			arg6,
-		)
-	})
-	return _c
-}
-
-func (_c *MockKeycapSetRepository_SetKitImageGetCache_Call) Return(ok bool, err error) *MockKeycapSetRepository_SetKitImageGetCache_Call {
-	_c.Call.Return(ok, err)
-	return _c
-}
-
-func (_c *MockKeycapSetRepository_SetKitImageGetCache_Call) RunAndReturn(run func(ctx context.Context, ownerID string, setID string, kitID string, forPath repository.KeycapKitImageKey, url string, expiresAt time.Time) (bool, error)) *MockKeycapSetRepository_SetKitImageGetCache_Call {
 	_c.Call.Return(run)
 	return _c
 }

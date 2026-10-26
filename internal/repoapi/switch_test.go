@@ -220,10 +220,6 @@ func (s *SwitchToAPISuite) TestImagePresent_ReturnsSignedURL() {
 	images := mocks.NewMockSwitchImageStore(s.T())
 	images.EXPECT().SignGet(mock.Anything, *sw.ImagePath).Return("https://example.com/img", signedExpiry(), nil)
 	repo := mocks.NewMockSwitchRepository(s.T())
-	repo.EXPECT().
-		SetImageGetCache(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(true, nil).Maybe()
-
 	sr := Switch{Images: images, Repo: repo}
 	out, err := sr.ToAPI(s.T().Context(), sw, true, repository.ProfilePreferences{})
 	s.Require().NoError(err)

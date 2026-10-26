@@ -429,9 +429,7 @@ func (r *KeycapSetRepository) classifyDeleteKitConflict(ctx context.Context, own
 	return nil
 }
 
-// SetKitImagePath implements repository.KeycapSetRepository. Also clears
-// any cached GET URL - it was signed against the old ImagePath, so it must
-// not outlive it.
+// SetKitImagePath implements repository.KeycapSetRepository.
 func (r *KeycapSetRepository) SetKitImagePath(ctx context.Context, setID, kitID string, key repository.KeycapKitImageKey) error {
 	ownerID, ok := kbdbctx.UserID(ctx)
 	if !ok {
@@ -444,9 +442,7 @@ func (r *KeycapSetRepository) SetKitImagePath(ctx context.Context, setID, kitID 
 	}
 	update := expression.Set(field(kitPath, "image_path"), expression.Value(key)).
 		Set(field(kitPath, "image_status"), expression.Value(repository.ImageStatusPending)).
-		Remove(field(kitPath, "image_rejection_reason")).
-		Remove(field(kitPath, "get_url")).
-		Remove(field(kitPath, "get_url_expires_at"))
+		Remove(field(kitPath, "image_rejection_reason"))
 	expr, err := expression.NewBuilder().
 		WithUpdate(update).
 		WithCondition(expression.AttributeExists(kitPath)).
@@ -474,8 +470,7 @@ func (r *KeycapSetRepository) SetKitImagePath(ctx context.Context, setID, kitID 
 }
 
 // ClearKitImagePath implements repository.KeycapSetRepository. ALL_OLD
-// reports the key that was cleared, or nil when nothing was set. Also
-// clears any cached GET URL, which is meaningless once ImagePath is gone.
+// reports the key that was cleared, or nil when nothing was set.
 func (r *KeycapSetRepository) ClearKitImagePath(ctx context.Context, setID, kitID string) (*repository.KeycapKitImageKey, error) {
 	ownerID, ok := kbdbctx.UserID(ctx)
 	if !ok {
@@ -488,9 +483,7 @@ func (r *KeycapSetRepository) ClearKitImagePath(ctx context.Context, setID, kitI
 	}
 	update := expression.Remove(field(kitPath, "image_path")).
 		Remove(field(kitPath, "image_status")).
-		Remove(field(kitPath, "image_rejection_reason")).
-		Remove(field(kitPath, "get_url")).
-		Remove(field(kitPath, "get_url_expires_at"))
+		Remove(field(kitPath, "image_rejection_reason"))
 	expr, err := expression.NewBuilder().
 		WithUpdate(update).
 		WithCondition(expression.AttributeExists(kitPath)).
@@ -529,51 +522,13 @@ func (r *KeycapSetRepository) ClearKitImagePath(ctx context.Context, setID, kitI
 	return kit.ImagePath, nil
 }
 
-// SetKitImageGetCache implements repository.KeycapSetRepository.
-func (r *KeycapSetRepository) SetKitImageGetCache(ctx context.Context, ownerID, setID, kitID string, forPath repository.KeycapKitImageKey, url string, expiresAt time.Time) (bool, error) {
-	kitPath, ok := mapKey("kits", kitID)
-	if !ok {
-		return false, nil
-	}
-	update := expression.Set(field(kitPath, "get_url"), expression.Value(url)).
-		Set(field(kitPath, "get_url_expires_at"), expression.Value(expiresAt))
-	cond := expression.AttributeExists(kitPath).
-		And(field(kitPath, "image_path").Equal(expression.Value(forPath)))
-
-	expr, err := expression.NewBuilder().WithUpdate(update).WithCondition(cond).Build()
-	if err != nil {
-		return false, fmt.Errorf("building kit image get-cache update for keycap set %q: %w", setID, err)
-	}
-
-	_, err = r.client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
-		TableName:                 &r.tableName,
-		Key:                       keycapSetKey(ownerID, setID),
-		UpdateExpression:          expr.Update(),
-		ConditionExpression:       expr.Condition(),
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-	})
-	if err != nil {
-		if _, ok := errors.AsType[*types.ConditionalCheckFailedException](err); ok {
-			return false, nil
-		}
-		return false, fmt.Errorf("setting kit %q image get-cache in keycap set %q owner %q: %w", kitID, setID, ownerID, err)
-	}
-
-	return true, nil
-}
-
-// SetKitImageStatus implements repository.KeycapSetRepository. A rejection
-// also clears any cached GET URL, so it isn't served from the cache.
+// SetKitImageStatus implements repository.KeycapSetRepository.
 func (r *KeycapSetRepository) SetKitImageStatus(ctx context.Context, ownerID, setID, kitID string, forPath repository.KeycapKitImageKey, from, to repository.ImageStatus, reason *string) (bool, error) {
 	kitPath, ok := mapKey("kits", kitID)
 	if !ok {
 		return false, nil
 	}
 	update := statusUpdate(field(kitPath, "image_status"), field(kitPath, "image_rejection_reason"), to, reason)
-	if to == repository.ImageStatusRejected {
-		update = update.Remove(field(kitPath, "get_url")).Remove(field(kitPath, "get_url_expires_at"))
-	}
 	cond := expression.AttributeExists(kitPath).
 		And(field(kitPath, "image_path").Equal(expression.Value(forPath))).
 		And(statusIs(field(kitPath, "image_status"), from))
