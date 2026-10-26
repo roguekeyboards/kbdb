@@ -13,9 +13,17 @@ Parameters:
     Type: AWS::SSM::Parameter::Value<String>
     Default: /kbdb/image-delivery/public-key
     Description: >-
-      The public half of the account's image signing key pair, which
-      scripts/image-delivery-setup.sh generates. The private half is the
-      SecureString /kbdb/image-delivery/private-key.
+      The public half of the account's retiring RSA image signing key pair,
+      which scripts/image-delivery-setup.sh generates. The private half is
+      the SecureString /kbdb/image-delivery/private-key.
+  EcdsaPublicKeyPem:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /kbdb/image-delivery/ecdsa-public-key
+    Description: >-
+      The public half of the account's ECDSA P-256 image signing key pair,
+      which scripts/image-delivery-setup.sh generates and the API signs
+      with. The private half is the SecureString
+      /kbdb/image-delivery/ecdsa-private-key.
 
 Resources:
   SigningPublicKey:
@@ -26,13 +34,23 @@ Resources:
         Name: kbdb-image-signing
         EncodedKey: !Ref PublicKeyPem
 
+  EcdsaSigningPublicKey:
+    Type: AWS::CloudFront::PublicKey
+    Properties:
+      PublicKeyConfig:
+        CallerReference: kbdb-image-signing-ecdsa
+        Name: kbdb-image-signing-ecdsa
+        EncodedKey: !Ref EcdsaPublicKeyPem
+
   SigningKeyGroup:
     Type: AWS::CloudFront::KeyGroup
     Properties:
       KeyGroupConfig:
         Name: kbdb-image-signing
+        # The RSA key stays trusted until the URLs signed with it expire.
         Items:
           - !Ref SigningPublicKey
+          - !Ref EcdsaSigningPublicKey
 
   # Every image key's bytes are immutable (#495), so browsers may keep them
   # for good.
@@ -54,6 +72,13 @@ Resources:
       Name: /kbdb/image-delivery/public-key-id
       Type: String
       Value: !Ref SigningPublicKey
+
+  EcdsaPublicKeyIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /kbdb/image-delivery/ecdsa-public-key-id
+      Type: String
+      Value: !Ref EcdsaSigningPublicKey
 
   KeyGroupIdParameter:
     Type: AWS::SSM::Parameter

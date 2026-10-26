@@ -3,6 +3,7 @@ package cloudfront
 import (
 	"crypto"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -25,7 +26,7 @@ type GetSigner struct {
 // NewGetSigner returns a GetSigner for URLs under baseURL, signed with key,
 // whose public half is registered with CloudFront as keyID.
 func NewGetSigner(baseURL, keyID string, key crypto.Signer) *GetSigner {
-	signer := sign.NewURLSigner(keyID, key)
+	signer := sign.NewURLSigner(keyID, deterministicSigner{key})
 	signer.HashAlg = sign.HashSHA256
 
 	return &GetSigner{
@@ -33,6 +34,14 @@ func NewGetSigner(baseURL, keyID string, key crypto.Signer) *GetSigner {
 		signer:  signer,
 		now:     time.Now,
 	}
+}
+
+// deterministicSigner signs without randomness, so an ECDSA key gives the
+// same URL for the same key and expiry (RFC 6979) and browsers can cache it.
+type deterministicSigner struct{ crypto.Signer }
+
+func (d deterministicSigner) Sign(_ io.Reader, digest []byte, opts crypto.SignerOpts) ([]byte, error) {
+	return d.Signer.Sign(nil, digest, opts)
 }
 
 // Sign returns a signed URL for key and when it stops working.
