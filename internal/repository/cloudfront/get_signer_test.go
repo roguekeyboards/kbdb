@@ -1,8 +1,9 @@
 package cloudfront
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"net/url"
 	"strconv"
 	"testing"
@@ -65,7 +66,7 @@ func (s *GetSignerSuite) TestExpiry_AlignsToUTCWindows() {
 }
 
 func (s *GetSignerSuite) TestSign_TrimsTrailingSlashFromBaseURL() {
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	s.Require().NoError(err)
 	g := NewGetSigner("https://images.example.com/", "KEYID", key)
 
@@ -77,8 +78,8 @@ func (s *GetSignerSuite) TestSign_TrimsTrailingSlashFromBaseURL() {
 	s.Equal("/switches/alice/sw1/image/up1", u.Path)
 }
 
-func (s *GetSignerSuite) TestSign_RealSigner_SHA256AndDeterministic() {
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
+func (s *GetSignerSuite) TestSign_RealECDSASigner_SHA256AndDeterministic() {
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	s.Require().NoError(err)
 	g := NewGetSigner("https://images.example.com", "KEYID", key)
 	g.now = func() time.Time { return testGetNow }

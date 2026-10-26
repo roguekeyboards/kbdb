@@ -768,9 +768,11 @@ Resources:
     Properties:
       FunctionName: !Sub kbdb-api-${AWS::StackName}
       PackageType: Image
-      # Lambda's CPU scales with memory. At 128 MB each CloudFront URL
-      # signature took about 30 ms; at 256 MB about 16 ms, the same as 512.
-      MemorySize: 256
+      # Lambda's CPU scales with memory, and a list fans out dozens of
+      # concurrent DynamoDB calls. At 256 MB a 34-build list took 60-220 ms
+      # warm and 1.4-1.6 s re-caching its image URLs; at 1024 MB 13-49 ms
+      # and 330-400 ms. 1769 MB, a full vCPU, was little faster.
+      MemorySize: 1024
       ReservedConcurrentExecutions: !If
         - HasApiReservedConcurrency
         - !Ref ApiReservedConcurrency

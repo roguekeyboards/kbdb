@@ -13,17 +13,19 @@ Parameters:
     Type: AWS::SSM::Parameter::Value<String>
     Default: /kbdb/image-delivery/public-key
     Description: >-
-      The public half of the account's image signing key pair, which
+      The public half of the account's ECDSA P-256 image signing key pair, which
       scripts/image-delivery-setup.sh generates. The private half is the
       SecureString /kbdb/image-delivery/private-key.
 
 Resources:
-  SigningPublicKey:
+  # CloudFront can't change a public key's EncodedKey, so a new key type
+  # needs a new resource and name.
+  SigningPublicKeyP256:
     Type: AWS::CloudFront::PublicKey
     Properties:
       PublicKeyConfig:
-        CallerReference: kbdb-image-signing
-        Name: kbdb-image-signing
+        CallerReference: kbdb-image-signing-p256
+        Name: kbdb-image-signing-p256
         EncodedKey: !Ref PublicKeyPem
 
   SigningKeyGroup:
@@ -32,7 +34,7 @@ Resources:
       KeyGroupConfig:
         Name: kbdb-image-signing
         Items:
-          - !Ref SigningPublicKey
+          - !Ref SigningPublicKeyP256
 
   # Every image key's bytes are immutable (#495), so browsers may keep them
   # for good.
@@ -53,7 +55,7 @@ Resources:
     Properties:
       Name: /kbdb/image-delivery/public-key-id
       Type: String
-      Value: !Ref SigningPublicKey
+      Value: !Ref SigningPublicKeyP256
 
   KeyGroupIdParameter:
     Type: AWS::SSM::Parameter

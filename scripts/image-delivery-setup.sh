@@ -36,10 +36,12 @@ fi
 if [[ "$has_private" == true ]]; then
   echo "Account $ACCOUNT already has an image signing key pair."
 else
-  # RSA, not ECDSA: ECDSA signatures are randomized, which would give the
-  # same image a different URL on every request. The key goes to SSM through
-  # stdin, never argv or disk.
-  private_key=$(openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 2>/dev/null)
+  # ECDSA P-256, signed deterministically (RFC 6979) by
+  # internal/repository/cloudfront so an image's URL is stable within its
+  # signing window. CloudFront rejects explicit curve parameters, hence
+  # named_curve. The key goes to SSM through stdin, never argv or disk.
+  private_key=$(openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 \
+    -pkeyopt ec_param_enc:named_curve 2>/dev/null)
   public_key=$(openssl pkey -pubout <<<"$private_key")
   printf '%s\n' "$private_key" | aws ssm put-parameter --region "$REGION" \
     --name "$PRIVATE_KEY_PARAM" --type SecureString --value file:///dev/stdin >/dev/null
