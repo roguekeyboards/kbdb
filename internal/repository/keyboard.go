@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math"
 	"sort"
-	"time"
 
 	kbdbctx "github.com/rogueserenity/kbdb/internal/ctx"
 )
@@ -392,7 +391,7 @@ func NewKeyboardImageKey(ctx context.Context, keyboardID, imageID string) (Keybo
 type KeyboardImageStore interface {
 	// SignGetKeyboardImage returns a signed GET URL for key on the images
 	// distribution, and when it stops working.
-	SignGetKeyboardImage(ctx context.Context, key KeyboardImageKey) (url string, expiresAt time.Time, err error)
+	SignGetKeyboardImage(ctx context.Context, key KeyboardImageKey) (url string, err error)
 
 	// PresignPutKeyboardImage returns a short-lived presigned PUT URL for
 	// key, locked to contentType and size via the Content-Type and

@@ -13,7 +13,6 @@ import (
 // Keyboard maps repository.Keyboard to and from its wire representations.
 type Keyboard struct {
 	Images repository.KeyboardImageStore
-	Repo   repository.KeyboardRepository
 }
 
 // ToAPI maps a repository.Keyboard to its wire representation. The owner
@@ -86,7 +85,7 @@ func (k Keyboard) imagesToAPI(ctx context.Context, images []repository.KeyboardI
 			if !img.Status.Downloadable() {
 				return
 			}
-			url, _, err := k.Images.SignGetKeyboardImage(ctx, img.Path)
+			url, err := k.Images.SignGetKeyboardImage(ctx, img.Path)
 			if err != nil {
 				errs[i] = fmt.Errorf("signing keyboard image %q: %w", img.ImageID, err)
 				return

@@ -13,7 +13,6 @@ import (
 // KeycapSet maps repository.KeycapSet to and from its wire representations.
 type KeycapSet struct {
 	Images repository.KeycapKitImageStore
-	Repo   repository.KeycapSetRepository
 }
 
 // ToAPI maps a repository.KeycapSet to its wire representation. The owner
@@ -121,7 +120,7 @@ func (ks KeycapSet) KitToAPI(ctx context.Context, k repository.KeycapKit, isOwne
 		image = &api.KeycapKitImage{}
 		image.Status, image.RejectionReason = imageStatusToAPI(k.ImageStatus, k.ImageRejectionReason, isOwner)
 		if k.ImageStatus.Downloadable() {
-			url, _, err := ks.Images.SignGet(ctx, *k.ImagePath)
+			url, err := ks.Images.SignGet(ctx, *k.ImagePath)
 			if err != nil {
 				return api.KeycapKit{}, fmt.Errorf("signing kit image: %w", err)
 			}

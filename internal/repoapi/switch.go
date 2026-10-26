@@ -11,7 +11,6 @@ import (
 // Switch maps repository.Switch to and from its wire representations.
 type Switch struct {
 	Images repository.SwitchImageStore
-	Repo   repository.SwitchRepository
 }
 
 // ToAPI maps a repository.Switch to its wire representation. The owner
@@ -29,7 +28,7 @@ func (s Switch) ToAPI(ctx context.Context, sw repository.Switch, isOwner bool, o
 		image = &api.SwitchImage{}
 		image.Status, image.RejectionReason = imageStatusToAPI(sw.ImageStatus, sw.ImageRejectionReason, isOwner)
 		if sw.ImageStatus.Downloadable() {
-			url, _, err := s.Images.SignGet(ctx, *sw.ImagePath)
+			url, err := s.Images.SignGet(ctx, *sw.ImagePath)
 			if err != nil {
 				return api.Switch{}, fmt.Errorf("signing switch image: %w", err)
 			}

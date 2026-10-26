@@ -5,8 +5,6 @@
 package mocks
 
 import (
-	"time"
-
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -47,7 +45,7 @@ func (_m *MockGetSigner) EXPECT() *MockGetSigner_Expecter {
 }
 
 // Sign provides a mock function for the type MockGetSigner
-func (_mock *MockGetSigner) Sign(key string) (string, time.Time, error) {
+func (_mock *MockGetSigner) Sign(key string) (string, error) {
 	ret := _mock.Called(key)
 
 	if len(ret) == 0 {
@@ -55,9 +53,8 @@ func (_mock *MockGetSigner) Sign(key string) (string, time.Time, error) {
 	}
 
 	var r0 string
-	var r1 time.Time
-	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(string) (string, time.Time, error)); ok {
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(string) (string, error)); ok {
 		return returnFunc(key)
 	}
 	if returnFunc, ok := ret.Get(0).(func(string) string); ok {
@@ -65,17 +62,12 @@ func (_mock *MockGetSigner) Sign(key string) (string, time.Time, error) {
 	} else {
 		r0 = ret.Get(0).(string)
 	}
-	if returnFunc, ok := ret.Get(1).(func(string) time.Time); ok {
+	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
 		r1 = returnFunc(key)
 	} else {
-		r1 = ret.Get(1).(time.Time)
+		r1 = ret.Error(1)
 	}
-	if returnFunc, ok := ret.Get(2).(func(string) error); ok {
-		r2 = returnFunc(key)
-	} else {
-		r2 = ret.Error(2)
-	}
-	return r0, r1, r2
+	return r0, r1
 }
 
 // MockGetSigner_Sign_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Sign'
@@ -102,12 +94,12 @@ func (_c *MockGetSigner_Sign_Call) Run(run func(key string)) *MockGetSigner_Sign
 	return _c
 }
 
-func (_c *MockGetSigner_Sign_Call) Return(s string, time1 time.Time, err error) *MockGetSigner_Sign_Call {
-	_c.Call.Return(s, time1, err)
+func (_c *MockGetSigner_Sign_Call) Return(s string, err error) *MockGetSigner_Sign_Call {
+	_c.Call.Return(s, err)
 	return _c
 }
 
-func (_c *MockGetSigner_Sign_Call) RunAndReturn(run func(key string) (string, time.Time, error)) *MockGetSigner_Sign_Call {
+func (_c *MockGetSigner_Sign_Call) RunAndReturn(run func(key string) (string, error)) *MockGetSigner_Sign_Call {
 	_c.Call.Return(run)
 	return _c
 }

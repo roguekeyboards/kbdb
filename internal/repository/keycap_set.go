@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"time"
 
 	kbdbctx "github.com/rogueserenity/kbdb/internal/ctx"
 )
@@ -249,7 +248,7 @@ func NewKeycapKitImageKey(ctx context.Context, setID, kitID, uploadID string) (K
 type KeycapKitImageStore interface {
 	// SignGet returns a signed GET URL for key on the images
 	// distribution, and when it stops working.
-	SignGet(ctx context.Context, key KeycapKitImageKey) (url string, expiresAt time.Time, err error)
+	SignGet(ctx context.Context, key KeycapKitImageKey) (url string, err error)
 
 	// PresignPut returns a short-lived presigned PUT URL for key, locked
 	// to contentType and size via the Content-Type and Content-Length the

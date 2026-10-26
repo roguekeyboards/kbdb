@@ -16,7 +16,6 @@ import (
 // Build maps repository.Build to and from its wire representations,
 // resolving the Keyboard/Switch/KeycapSet references it carries.
 type Build struct {
-	Repo           repository.BuildRepository
 	Images         repository.BuildImageStore
 	KitImages      repository.KeycapKitImageStore
 	KeyboardImages repository.KeyboardImageStore
@@ -255,7 +254,7 @@ func (b Build) keyboardRefToAPI(
 	imgs := repository.SortedKeyboardImages(kb.Images)
 	served := func(img repository.KeyboardImage) bool { return servedInRef(img.Status, isOwner) }
 	if i := slices.IndexFunc(imgs, served); i >= 0 {
-		url, _, err := b.KeyboardImages.SignGetKeyboardImage(ctx, imgs[i].Path)
+		url, err := b.KeyboardImages.SignGetKeyboardImage(ctx, imgs[i].Path)
 		if err != nil {
 			return api.BuildKeyboardRef{}, nil, fmt.Errorf("signing keyboard image for keyboard %q: %w", keyboardID, err)
 		}
@@ -336,7 +335,7 @@ func (b Build) switchEntriesResolvedToAPI(
 			}
 
 			if sw.ImagePath != nil && servedInRef(sw.ImageStatus, isOwner) {
-				url, _, err := b.SwitchImages.SignGet(ctx, *sw.ImagePath)
+				url, err := b.SwitchImages.SignGet(ctx, *sw.ImagePath)
 				if err != nil {
 					errs[i] = fmt.Errorf("signing switch image for switch %q: %w", e.Switch, err)
 					return
@@ -433,7 +432,7 @@ func (b Build) keycapSetRefToAPI(
 		costs[i] = kit.Purchase.Price
 
 		if kit.ImagePath != nil && servedInRef(kit.ImageStatus, isOwner) {
-			url, _, err := b.KitImages.SignGet(ctx, *kit.ImagePath)
+			url, err := b.KitImages.SignGet(ctx, *kit.ImagePath)
 			if err != nil {
 				return api.BuildKeycapSetRef{}, nil, fmt.Errorf("signing kit image for kit %q: %w", kitID, err)
 			}
@@ -466,7 +465,7 @@ func (b Build) imagesToAPI(ctx context.Context, images []repository.BuildImage, 
 			if !img.Status.Downloadable() {
 				return
 			}
-			url, _, err := b.Images.SignGetBuildImage(ctx, img.Path)
+			url, err := b.Images.SignGetBuildImage(ctx, img.Path)
 			if err != nil {
 				errs[i] = fmt.Errorf("signing build image %q: %w", img.ImageID, err)
 				return

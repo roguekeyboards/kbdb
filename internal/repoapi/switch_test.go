@@ -218,9 +218,8 @@ func (s *SwitchToAPISuite) TestImagePresent_ReturnsSignedURL() {
 	switchImageKey := repository.SwitchImageKey("switches/alice/sw1/image/up1")
 	sw.ImagePath = &switchImageKey
 	images := mocks.NewMockSwitchImageStore(s.T())
-	images.EXPECT().SignGet(mock.Anything, *sw.ImagePath).Return("https://example.com/img", signedExpiry(), nil)
-	repo := mocks.NewMockSwitchRepository(s.T())
-	sr := Switch{Images: images, Repo: repo}
+	images.EXPECT().SignGet(mock.Anything, *sw.ImagePath).Return("https://example.com/img", nil)
+	sr := Switch{Images: images}
 	out, err := sr.ToAPI(s.T().Context(), sw, true, repository.ProfilePreferences{})
 	s.Require().NoError(err)
 
@@ -243,7 +242,7 @@ func (s *SwitchToAPISuite) TestImageSignError_Propagates() {
 	switchImageKey := repository.SwitchImageKey("switches/alice/sw1/image/up1")
 	sw.ImagePath = &switchImageKey
 	images := mocks.NewMockSwitchImageStore(s.T())
-	images.EXPECT().SignGet(mock.Anything, *sw.ImagePath).Return("", time.Time{}, errors.New("s3: access denied"))
+	images.EXPECT().SignGet(mock.Anything, *sw.ImagePath).Return("", errors.New("s3: access denied"))
 
 	sr := Switch{Images: images}
 	_, err := sr.ToAPI(s.T().Context(), sw, true, repository.ProfilePreferences{})

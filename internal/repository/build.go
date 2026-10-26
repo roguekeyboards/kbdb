@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"time"
 
 	kbdbctx "github.com/rogueserenity/kbdb/internal/ctx"
 )
@@ -218,7 +217,7 @@ func NewBuildImageKey(ctx context.Context, buildID, imageID string) (BuildImageK
 type BuildImageStore interface {
 	// SignGetBuildImage returns a signed GET URL for key on the images
 	// distribution, and when it stops working.
-	SignGetBuildImage(ctx context.Context, key BuildImageKey) (url string, expiresAt time.Time, err error)
+	SignGetBuildImage(ctx context.Context, key BuildImageKey) (url string, err error)
 
 	// PresignPutBuildImage returns a short-lived presigned PUT URL for key,
 	// locked to contentType and size via the Content-Type and Content-Length

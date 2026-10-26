@@ -3,7 +3,6 @@ package repoapi
 import (
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
@@ -72,14 +71,13 @@ func (s *ProfileMapperSuite) TestProfileToAPI_SignsAvatar() {
 	images := mocks.NewMockProfileImageStore(s.T())
 	images.EXPECT().
 		SignGet(mock.Anything, repository.ProfileImageKey("profiles/user-alice/avatar/up1")).
-		Return("https://example.com/avatar", signedExpiry(), nil)
-	repo := mocks.NewMockProfileRepository(s.T())
+		Return("https://example.com/avatar", nil)
 	p := repository.Profile{
 		Username:   "alice",
 		AvatarPath: profileImageKeyPtr("profiles/user-alice/avatar/up1"),
 	}
 
-	pr := Profile{Images: images, Repo: repo}
+	pr := Profile{Images: images}
 	out, err := pr.ToAPI(s.T().Context(), p, true)
 
 	s.Require().NoError(err)
@@ -89,7 +87,7 @@ func (s *ProfileMapperSuite) TestProfileToAPI_SignsAvatar() {
 
 func (s *ProfileMapperSuite) TestProfileToAPI_SignError_Propagates() {
 	images := mocks.NewMockProfileImageStore(s.T())
-	images.EXPECT().SignGet(mock.Anything, mock.Anything).Return("", time.Time{}, errors.New("s3 down"))
+	images.EXPECT().SignGet(mock.Anything, mock.Anything).Return("", errors.New("s3 down"))
 
 	pr := Profile{Images: images}
 	_, err := pr.ToAPI(s.T().Context(), repository.Profile{

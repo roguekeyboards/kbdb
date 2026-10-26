@@ -3,7 +3,6 @@ package s3
 import (
 	"errors"
 	"testing"
-	"time"
 
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -42,20 +41,18 @@ func (s *KeyboardImageStoreSuite) SetupTest() {
 }
 
 func (s *KeyboardImageStoreSuite) TestSignGetKeyboardImage_SignsKeyOnImagesDomain() {
-	expiry := time.Date(2026, 10, 26, 0, 0, 0, 0, time.UTC)
-	s.mockSigner.EXPECT().Sign("keyboards/alice/kb1/images/img1").Return("https://images.example.com/signed", expiry, nil)
+	s.mockSigner.EXPECT().Sign("keyboards/alice/kb1/images/img1").Return("https://images.example.com/signed", nil)
 
-	url, expiresAt, err := s.store.SignGetKeyboardImage(s.T().Context(), "keyboards/alice/kb1/images/img1")
+	url, err := s.store.SignGetKeyboardImage(s.T().Context(), "keyboards/alice/kb1/images/img1")
 
 	s.Require().NoError(err)
 	s.Equal("https://images.example.com/signed", url)
-	s.Equal(expiry, expiresAt)
 }
 
 func (s *KeyboardImageStoreSuite) TestSignGetKeyboardImage_SignerError_Propagates() {
-	s.mockSigner.EXPECT().Sign(mock.Anything).Return("", time.Time{}, errors.New("crypto/rsa: verification error"))
+	s.mockSigner.EXPECT().Sign(mock.Anything).Return("", errors.New("crypto/rsa: verification error"))
 
-	url, _, err := s.store.SignGetKeyboardImage(s.T().Context(), "keyboards/alice/kb1/images/img1")
+	url, err := s.store.SignGetKeyboardImage(s.T().Context(), "keyboards/alice/kb1/images/img1")
 
 	s.Require().ErrorContains(err, "crypto/rsa: verification error")
 	s.Empty(url)

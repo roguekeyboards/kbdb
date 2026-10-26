@@ -2,7 +2,6 @@ package s3
 
 import (
 	"context"
-	"time"
 
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -19,7 +18,7 @@ type s3PresignAPI interface {
 }
 
 type getSigner interface {
-	Sign(key string) (string, time.Time, error)
+	Sign(key string) (string, error)
 }
 
 type invalidator interface {

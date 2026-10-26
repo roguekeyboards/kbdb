@@ -40,10 +40,9 @@ func (s *ImageModerationSuite) keyboardImages() map[string]repository.KeyboardIm
 func (s *ImageModerationSuite) keyboardMapper(signed ...repository.KeyboardImageKey) Keyboard {
 	images := mocks.NewMockKeyboardImageStore(s.T())
 	for _, key := range signed {
-		images.EXPECT().SignGetKeyboardImage(mock.Anything, key).Return("https://example.com/"+string(key), signedExpiry(), nil)
+		images.EXPECT().SignGetKeyboardImage(mock.Anything, key).Return("https://example.com/"+string(key), nil)
 	}
-	repo := mocks.NewMockKeyboardRepository(s.T())
-	return Keyboard{Images: images, Repo: repo}
+	return Keyboard{Images: images}
 }
 
 func (s *ImageModerationSuite) TestKeyboard_Owner_SeesEveryImageWithStatus_NoURLWhenRejected() {
@@ -90,10 +89,9 @@ func (s *ImageModerationSuite) TestKeyboard_NonOwner_NothingApproved_NoImages() 
 func (s *ImageModerationSuite) buildMapper(signed ...repository.BuildImageKey) Build {
 	images := mocks.NewMockBuildImageStore(s.T())
 	for _, key := range signed {
-		images.EXPECT().SignGetBuildImage(mock.Anything, key).Return("https://example.com/"+string(key), signedExpiry(), nil)
+		images.EXPECT().SignGetBuildImage(mock.Anything, key).Return("https://example.com/"+string(key), nil)
 	}
-	repo := mocks.NewMockBuildRepository(s.T())
-	return Build{Images: images, Repo: repo}
+	return Build{Images: images}
 }
 
 func (s *ImageModerationSuite) buildImages() []repository.BuildImage {
@@ -133,7 +131,7 @@ func (s *ImageModerationSuite) buildWithKeyboard(signed ...repository.KeyboardIm
 	repo.EXPECT().Get(mock.Anything, "alice", "kb1").Return(&kb, nil)
 	images := mocks.NewMockKeyboardImageStore(s.T())
 	for _, key := range signed {
-		images.EXPECT().SignGetKeyboardImage(mock.Anything, key).Return("https://example.com/"+string(key), signedExpiry(), nil)
+		images.EXPECT().SignGetKeyboardImage(mock.Anything, key).Return("https://example.com/"+string(key), nil)
 	}
 
 	return Build{KeyboardRepo: repo, KeyboardImages: images}
@@ -161,10 +159,9 @@ func (s *ImageModerationSuite) TestServedInRef() {
 func (s *ImageModerationSuite) switchMapper(signed ...repository.SwitchImageKey) Switch {
 	images := mocks.NewMockSwitchImageStore(s.T())
 	for _, key := range signed {
-		images.EXPECT().SignGet(mock.Anything, key).Return("https://example.com/"+string(key), signedExpiry(), nil)
+		images.EXPECT().SignGet(mock.Anything, key).Return("https://example.com/"+string(key), nil)
 	}
-	repo := mocks.NewMockSwitchRepository(s.T())
-	return Switch{Images: images, Repo: repo}
+	return Switch{Images: images}
 }
 
 func (s *ImageModerationSuite) switchWith(key string, status repository.ImageStatus, reason *string) repository.Switch {

@@ -8,7 +8,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
@@ -38,7 +37,7 @@ func TestGetProfileSuite(t *testing.T) {
 func (s *GetProfileSuite) SetupTest() {
 	s.mockRepo = mocks.NewMockProfileRepository(s.T())
 	s.mockImages = mocks.NewMockProfileImageStore(s.T())
-	s.handler = GetProfile(s.mockRepo, repoapi.Profile{Images: s.mockImages, Repo: s.mockRepo})
+	s.handler = GetProfile(s.mockRepo, repoapi.Profile{Images: s.mockImages})
 }
 
 func (s *GetProfileSuite) newRequest(ctx context.Context, identifier string) *http.Request {
@@ -152,7 +151,7 @@ func TestCreateProfileSuite(t *testing.T) {
 func (s *CreateProfileSuite) SetupTest() {
 	s.mockRepo = mocks.NewMockProfileRepository(s.T())
 	s.mockImages = mocks.NewMockProfileImageStore(s.T())
-	s.handler = CreateProfile(s.mockRepo, repoapi.Profile{Images: s.mockImages, Repo: s.mockRepo})
+	s.handler = CreateProfile(s.mockRepo, repoapi.Profile{Images: s.mockImages})
 }
 
 const profileUserID = "user-alice"
@@ -322,7 +321,7 @@ func TestUpdateProfileSuite(t *testing.T) {
 func (s *UpdateProfileSuite) SetupTest() {
 	s.mockRepo = mocks.NewMockProfileRepository(s.T())
 	s.mockImages = mocks.NewMockProfileImageStore(s.T())
-	s.handler = UpdateProfile(s.mockRepo, repoapi.Profile{Images: s.mockImages, Repo: s.mockRepo})
+	s.handler = UpdateProfile(s.mockRepo, repoapi.Profile{Images: s.mockImages})
 }
 
 func (s *UpdateProfileSuite) put(caller string, body any) *httptest.ResponseRecorder {
@@ -531,7 +530,7 @@ func TestListProfilesSuite(t *testing.T) {
 func (s *ListProfilesSuite) SetupTest() {
 	s.mockRepo = mocks.NewMockProfileRepository(s.T())
 	s.mockImages = mocks.NewMockProfileImageStore(s.T())
-	s.handler = ListProfiles(s.mockRepo, repoapi.Profile{Images: s.mockImages, Repo: s.mockRepo})
+	s.handler = ListProfiles(s.mockRepo, repoapi.Profile{Images: s.mockImages})
 }
 
 func (s *ListProfilesSuite) request(query string) *http.Request {
@@ -648,7 +647,7 @@ func (s *ListProfilesSuite) TestAvatarSigned_WhenSet() {
 		Return([]repository.Profile{
 			{OwnerID: "user-alice", Username: "alice", Discoverable: true, AvatarPath: &key},
 		}, "", nil)
-	s.mockImages.EXPECT().SignGet(mock.Anything, key).Return("https://signed/avatar", time.Now().Add(time.Hour), nil)
+	s.mockImages.EXPECT().SignGet(mock.Anything, key).Return("https://signed/avatar", nil)
 	rec := httptest.NewRecorder()
 	s.handler(rec, s.request("limit=20"))
 

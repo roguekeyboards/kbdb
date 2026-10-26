@@ -55,11 +55,10 @@ func New(
 ) http.Handler {
 	validate := restOpenAPIValidator()
 
-	sr := repoapi.Switch{Images: switchImageStore, Repo: switchRepo}
-	kr := repoapi.Keyboard{Images: keyboardImageStore, Repo: keyboardRepo}
-	kcr := repoapi.KeycapSet{Images: imageStore, Repo: keycapSetRepo}
+	sr := repoapi.Switch{Images: switchImageStore}
+	kr := repoapi.Keyboard{Images: keyboardImageStore}
+	kcr := repoapi.KeycapSet{Images: imageStore}
 	br := repoapi.Build{
-		Repo:           buildRepo,
 		Images:         buildImageStore,
 		KitImages:      imageStore,
 		KeyboardImages: keyboardImageStore,
@@ -68,7 +67,7 @@ func New(
 		SwitchRepo:     switchRepo,
 		KeycapSetRepo:  keycapSetRepo,
 	}
-	pr := repoapi.Profile{Images: profileImageStore, Repo: profileRepo}
+	pr := repoapi.Profile{Images: profileImageStore}
 
 	account := accountdelete.Account{
 		Images:     ownerImageStore,

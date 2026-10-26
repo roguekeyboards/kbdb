@@ -11,7 +11,6 @@ import (
 // Profile maps repository.Profile to and from its wire representations.
 type Profile struct {
 	Images repository.ProfileImageStore
-	Repo   repository.ProfileRepository
 }
 
 // ToAPI maps a repository.Profile to its wire shape, signing the avatar's
@@ -35,7 +34,7 @@ func (p Profile) ToAPI(ctx context.Context, prof repository.Profile, isOwner boo
 		out.Avatar = &api.ProfileImage{}
 		out.Avatar.Status, out.Avatar.RejectionReason = imageStatusToAPI(prof.AvatarStatus, prof.AvatarRejectionReason, isOwner)
 		if prof.AvatarStatus.Downloadable() {
-			url, _, err := p.Images.SignGet(ctx, *prof.AvatarPath)
+			url, err := p.Images.SignGet(ctx, *prof.AvatarPath)
 			if err != nil {
 				return api.Profile{}, fmt.Errorf("signing profile avatar: %w", err)
 			}

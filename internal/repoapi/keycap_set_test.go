@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
@@ -144,9 +143,8 @@ func (s *KeycapSetToAPISuite) TestNonOwnerShowPriceToOthersFalse_OmitsKitPriceKe
 	ks.Kits = map[string]repository.KeycapKit{repoKit.KitID: repoKit}
 
 	images := mocks.NewMockKeycapKitImageStore(s.T())
-	images.EXPECT().SignGet(mock.Anything, *repoKit.ImagePath).Return("https://example.com/signed-get", signedExpiry(), nil)
-	repo := mocks.NewMockKeycapSetRepository(s.T())
-	kr := KeycapSet{Images: images, Repo: repo}
+	images.EXPECT().SignGet(mock.Anything, *repoKit.ImagePath).Return("https://example.com/signed-get", nil)
+	kr := KeycapSet{Images: images}
 	out, err := kr.ToAPI(context.Background(), ks, false, repository.ProfilePreferences{ShowPriceToOthers: false})
 	s.Require().NoError(err)
 
@@ -165,9 +163,8 @@ func (s *KeycapSetToAPISuite) TestNonOwnerShowPriceToOthersTrue_IncludesKitPrice
 	ks.Kits = map[string]repository.KeycapKit{repoKit.KitID: repoKit}
 
 	images := mocks.NewMockKeycapKitImageStore(s.T())
-	images.EXPECT().SignGet(mock.Anything, *repoKit.ImagePath).Return("https://example.com/signed-get", signedExpiry(), nil)
-	repo := mocks.NewMockKeycapSetRepository(s.T())
-	kr := KeycapSet{Images: images, Repo: repo}
+	images.EXPECT().SignGet(mock.Anything, *repoKit.ImagePath).Return("https://example.com/signed-get", nil)
+	kr := KeycapSet{Images: images}
 	out, err := kr.ToAPI(context.Background(), ks, false, repository.ProfilePreferences{ShowPriceToOthers: true})
 	s.Require().NoError(err)
 
@@ -183,9 +180,8 @@ func (s *KeycapSetToAPISuite) TestOwner_AlwaysIncludesKitPriceRegardlessOfShowPr
 	ks.Kits = map[string]repository.KeycapKit{repoKit.KitID: repoKit}
 
 	images := mocks.NewMockKeycapKitImageStore(s.T())
-	images.EXPECT().SignGet(mock.Anything, *repoKit.ImagePath).Return("https://example.com/signed-get", signedExpiry(), nil)
-	repo := mocks.NewMockKeycapSetRepository(s.T())
-	kr := KeycapSet{Images: images, Repo: repo}
+	images.EXPECT().SignGet(mock.Anything, *repoKit.ImagePath).Return("https://example.com/signed-get", nil)
+	kr := KeycapSet{Images: images}
 	out, err := kr.ToAPI(context.Background(), ks, true, repository.ProfilePreferences{ShowPriceToMe: false})
 	s.Require().NoError(err)
 
@@ -355,9 +351,8 @@ func TestKeycapKitToAPISuite(t *testing.T) {
 func (s *KeycapKitToAPISuite) TestFullRoundTrip_PreservesEveryField() {
 	k := fullRepoKeycapKit()
 	images := mocks.NewMockKeycapKitImageStore(s.T())
-	images.EXPECT().SignGet(mock.Anything, *k.ImagePath).Return("https://example.com/signed-get", signedExpiry(), nil)
-	repo := mocks.NewMockKeycapSetRepository(s.T())
-	kr := KeycapSet{Images: images, Repo: repo}
+	images.EXPECT().SignGet(mock.Anything, *k.ImagePath).Return("https://example.com/signed-get", nil)
+	kr := KeycapSet{Images: images}
 	out, err := kr.KitToAPI(context.Background(), k, true, repository.ProfilePreferences{Currency: "EUR"})
 	s.Require().NoError(err)
 
@@ -401,9 +396,8 @@ func (s *KeycapKitToAPISuite) TestMalformedStoredDate_ReturnsError() {
 func (s *KeycapKitToAPISuite) TestNonOwnerShowPriceToOthersFalse_OmitsPriceKeepsRestOfPurchase() {
 	k := fullRepoKeycapKit()
 	images := mocks.NewMockKeycapKitImageStore(s.T())
-	images.EXPECT().SignGet(mock.Anything, *k.ImagePath).Return("https://example.com/signed-get", signedExpiry(), nil)
-	repo := mocks.NewMockKeycapSetRepository(s.T())
-	kr := KeycapSet{Images: images, Repo: repo}
+	images.EXPECT().SignGet(mock.Anything, *k.ImagePath).Return("https://example.com/signed-get", nil)
+	kr := KeycapSet{Images: images}
 	out, err := kr.KitToAPI(context.Background(), k, false, repository.ProfilePreferences{Currency: "EUR"})
 	s.Require().NoError(err)
 
@@ -417,9 +411,8 @@ func (s *KeycapKitToAPISuite) TestNonOwnerShowPriceToOthersFalse_OmitsPriceKeeps
 func (s *KeycapKitToAPISuite) TestOwner_IncludesPrice() {
 	k := fullRepoKeycapKit()
 	images := mocks.NewMockKeycapKitImageStore(s.T())
-	images.EXPECT().SignGet(mock.Anything, *k.ImagePath).Return("https://example.com/signed-get", signedExpiry(), nil)
-	repo := mocks.NewMockKeycapSetRepository(s.T())
-	kr := KeycapSet{Images: images, Repo: repo}
+	images.EXPECT().SignGet(mock.Anything, *k.ImagePath).Return("https://example.com/signed-get", nil)
+	kr := KeycapSet{Images: images}
 	out, err := kr.KitToAPI(context.Background(), k, true, repository.ProfilePreferences{Currency: "EUR"})
 	s.Require().NoError(err)
 
@@ -433,7 +426,7 @@ func (s *KeycapKitToAPISuite) TestSignGetFails_ReturnsError() {
 	k := repository.KeycapKit{KitID: "kit1", Name: "Base", ImagePath: imageKeyPtr("keycap-sets/alice/ks1/kits/kit1/image/up1")}
 
 	images := mocks.NewMockKeycapKitImageStore(s.T())
-	images.EXPECT().SignGet(mock.Anything, *k.ImagePath).Return("", time.Time{}, errors.New("s3: access denied"))
+	images.EXPECT().SignGet(mock.Anything, *k.ImagePath).Return("", errors.New("s3: access denied"))
 
 	kr := KeycapSet{Images: images}
 	_, err := kr.KitToAPI(context.Background(), k, true, repository.ProfilePreferences{Currency: "EUR"})
