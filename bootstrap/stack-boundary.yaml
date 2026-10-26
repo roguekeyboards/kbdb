@@ -62,8 +62,6 @@ Resources:
             Resource:
               - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/kbdb/image-delivery/private-key
               - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/kbdb/image-delivery/public-key-id
-              - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/kbdb/image-delivery/ecdsa-private-key
-              - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/kbdb/image-delivery/ecdsa-public-key-id
           - Sid: ImagesInvalidation
             Effect: Allow
             Action: cloudfront:CreateInvalidation

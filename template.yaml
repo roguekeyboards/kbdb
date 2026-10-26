@@ -792,8 +792,8 @@ Resources:
               - HasImagesDomain
               - !Sub https://${ImagesDomainName}
               - !Sub https://${ImagesDistribution.DomainName}
-          IMAGES_SIGNING_KEY_PARAM: /kbdb/image-delivery/ecdsa-private-key
-          IMAGES_SIGNING_KEY_ID_PARAM: /kbdb/image-delivery/ecdsa-public-key-id
+          IMAGES_SIGNING_KEY_PARAM: /kbdb/image-delivery/private-key
+          IMAGES_SIGNING_KEY_ID_PARAM: /kbdb/image-delivery/public-key-id
           IMAGES_DISTRIBUTION_ID: !If [HasImageInvalidation, !Ref ImagesDistribution, '']
           SWITCH_TABLE_NAME: !Ref SwitchTable
           KEYBOARD_TABLE_NAME: !Ref KeyboardTable
@@ -833,8 +833,8 @@ Resources:
             - Effect: Allow
               Action: ssm:GetParameters
               Resource:
-                - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/kbdb/image-delivery/ecdsa-private-key
-                - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/kbdb/image-delivery/ecdsa-public-key-id
+                - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/kbdb/image-delivery/private-key
+                - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/kbdb/image-delivery/public-key-id
             - !If
               - HasImageInvalidation
               - Effect: Allow

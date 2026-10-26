@@ -17,7 +17,7 @@ stacks:
     capabilities: CAPABILITY_NAMED_IAM
     accounts: [dev, ci, prod, floci]
 
-  # image-delivery-setup generates the account's signing key pairs before it
+  # image-delivery-setup generates the account's signing key pair before it
   # deploys the template.
   - name: kbdb-image-delivery
     template: bootstrap/image-delivery.yaml

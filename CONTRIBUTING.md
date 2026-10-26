@@ -156,7 +156,7 @@ New AWS account, never deployed to before? With an admin profile for it:
 AWS_PROFILE=<profile> mise run bootstrap <dev|ci|prod>
 ```
 
-It checks the credentials belong to that account, then deploys its bootstrap stacks in order. `bootstrap/stacks.yaml` lists them per account: the artifact bucket, the [stack permissions boundary](#stack-permissions-boundary), image delivery (the image signing key pairs, each generated once, and the CloudFront key group and response headers policy every stack's distribution shares), the cost budget, and for `ci` and `prod` the GitHub Actions deploy role. Rerunning it is safe. **If you're forking this repo** to deploy to your own account, add your account to `stacks.yaml` as `dev` and run `mise run bootstrap dev`; the `ci` and `prod` stacks are this project's own.
+It checks the credentials belong to that account, then deploys its bootstrap stacks in order. `bootstrap/stacks.yaml` lists them per account: the artifact bucket, the [stack permissions boundary](#stack-permissions-boundary), image delivery (the image signing key pair, generated once, and the CloudFront key group and response headers policy every stack's distribution shares), the cost budget, and for `ci` and `prod` the GitHub Actions deploy role. Rerunning it is safe. **If you're forking this repo** to deploy to your own account, add your account to `stacks.yaml` as `dev` and run `mise run bootstrap dev`; the `ci` and `prod` stacks are this project's own.
 
 Then the steps a script can't do:
 
