@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: >-
   Bootstrap (every account) - the CloudFront signing key and response headers
   policy shared by every stack's images distribution. Deployed by
-  mise run image-delivery-setup.
+  mise run bootstrap, through scripts/image-delivery-setup.sh.
 
 # Per account rather than per stack: an account holds at most 10 key groups,
 # 10 public keys and 20 response headers policies, and kbdb-ci runs many PR
@@ -14,7 +14,7 @@ Parameters:
     Default: /kbdb/image-delivery/public-key
     Description: >-
       The public half of the account's image signing key pair, which
-      mise run image-delivery-setup generates. The private half is the
+      scripts/image-delivery-setup.sh generates. The private half is the
       SecureString /kbdb/image-delivery/private-key.
 
 Resources:

@@ -27,9 +27,9 @@ if [ "$(git rev-parse --is-shallow-repository)" = true ]; then
   exit 2
 fi
 
-# CloudFormation won't deploy a change to only comments, formatting or the
-# template Description, so the live template can't pick one up.
-normalize() { yq 'del(.Description) | ... comments=""'; }
+# CloudFormation won't deploy a change to only comments, formatting or
+# descriptions, so the live template can't pick one up.
+normalize() { yq 'del(.Description) | del(.Parameters[].Description) | ... comments=""'; }
 
 status=0
 for pair in "${stacks[@]}"; do

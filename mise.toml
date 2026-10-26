@@ -44,10 +44,6 @@ file = "scripts/bootstrap.sh"
 description = "Fail if an account's bootstrap stacks are behind the repo: mise run bootstrap-check <dev|ci|prod> (needs that account's credentials)"
 file = "scripts/bootstrap-check.sh"
 
-[tasks.image-delivery-setup]
-description = "One-time per account: generate the image signing key pair and deploy bootstrap/image-delivery.yaml (needs an admin AWS profile)"
-file = "scripts/image-delivery-setup.sh"
-
 [tasks.cf-login]
 description = "Sign in to Cloudflare for the dns and setup tasks (opens the browser): mise run cf-login"
 run = "cf auth login --use-keyring"
