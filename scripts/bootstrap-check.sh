@@ -11,10 +11,16 @@ if [ -z "$env" ] || [ "$(yq ".accounts | has(\"$env\")" "$STACKS")" != true ]; t
   echo "usage: mise run bootstrap-check <dev|ci|prod>" >&2
   exit 2
 fi
+want=$(yq ".accounts.\"$env\"" "$STACKS")
+have=$(aws sts get-caller-identity --query Account --output text)
+if [ "$have" != "$want" ]; then
+  echo "These credentials are for account $have, not $env's $want." >&2
+  exit 1
+fi
 stacks=()
 while IFS= read -r pair; do
   stacks+=("$pair")
-done < <(yq ".stacks[] | select(.accounts | contains([\"$env\"])) | .name + \"=\" + .template" "$STACKS")
+done < <(yq ".stacks[] | select(.accounts | any_c(. == \"$env\")) | .name + \"=\" + .template" "$STACKS")
 
 if [ "$(git rev-parse --is-shallow-repository)" = true ]; then
   echo "bootstrap-check needs full git history; this clone is shallow (git fetch --unshallow)." >&2

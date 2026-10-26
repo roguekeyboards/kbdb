@@ -21,7 +21,7 @@ region="${AWS_REGION:-${AWS_DEFAULT_REGION:-us-east-2}}"
 count=$(yq '.stacks | length' "$STACKS")
 for ((i = 0; i < count; i++)); do
   stack=".stacks[$i]"
-  if [ "$(yq "$stack.accounts | contains([\"$env\"])" "$STACKS")" != true ]; then
+  if [ "$(yq "$stack.accounts | any_c(. == \"$env\")" "$STACKS")" != true ]; then
     continue
   fi
   name=$(yq "$stack.name" "$STACKS")

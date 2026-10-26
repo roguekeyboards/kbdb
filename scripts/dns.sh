@@ -13,8 +13,14 @@ param() {
   grep -o "$1=[^ \\]*" <<<"$overrides" | head -1 | cut -d= -f2- || true
 }
 output() {
-  aws cloudformation describe-stacks --region "$REGION" --stack-name "$STACK_NAME" \
-    --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue" --output text
+  local value
+  value=$(aws cloudformation describe-stacks --region "$REGION" --stack-name "$STACK_NAME" \
+    --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue" --output text)
+  if [ -z "$value" ] || [ "$value" = None ]; then
+    echo "$STACK_NAME has no $1 output; deploy it first." >&2
+    exit 1
+  fi
+  echo "$value"
 }
 
 point() {
@@ -23,7 +29,7 @@ point() {
   local existing
   existing=$(cf dns records list -z "$zone" --name "$name" --type CNAME)
   if [ "$(yq -p json 'length' <<<"$existing")" -gt 0 ]; then
-    if [ "$(yq -p json '.[0].content' <<<"$existing")" = "$target" ]; then
+    if [ "$(yq -p json '.[0].content + " " + (.[0].proxied | tostring)' <<<"$existing")" = "$target false" ]; then
       echo "$name already points at $target"
       return
     fi

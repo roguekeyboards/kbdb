@@ -2,14 +2,14 @@
 
 ## Setup
 
-Tool versions (Go, AWS CLI, SAM CLI, the Cloudflare CLI `cf`, mockery, golangci-lint) are pinned via [mise](https://mise.jdx.dev/):
+Tool versions (Go, AWS CLI, SAM CLI, mockery, golangci-lint) are pinned via [mise](https://mise.jdx.dev/):
 
 ```sh
 mise install
 mise activate  # add to your shell profile so `go`, `sam`, `aws`, etc. resolve directly
 ```
 
-Deploying uses two logins: an AWS one (see [AWS accounts](#aws-accounts)), and a Cloudflare one for DNS, `cf auth login --use-keyring` once. The Cloudflare login can be narrowed to zone read and DNS edit on the consent page.
+Deploying uses two logins: an AWS one (see [AWS accounts](#aws-accounts)), and a Cloudflare one for DNS, `mise run cf-login` once. The Cloudflare login can be narrowed to zone read and DNS edit on the consent page.
 
 `sam build` requires Docker running locally. On macOS with Docker Desktop, make sure `/Applications/Docker.app/Contents/Resources/bin` is on your `PATH` — otherwise `sam build`/`docker push` fail with a credential-store error.
 
@@ -131,7 +131,7 @@ A comma-separated list of browser origins (each scheme + host + port) allowed to
 Optional. They give your stack stable domains instead of its default `execute-api.amazonaws.com` and `*.cloudfront.net` ones, which a web app's CSP can name. There's nothing to request per developer: two wildcard certificates in the `kbdb-dev` account cover everyone. `*.api.mykeebs.dev` is in `us-east-2`, for API Gateway. `*.images.mykeebs.dev` is in `us-east-1`, because CloudFront only takes certificates from there. Their ARNs are in `[dev-jay.deploy.parameters]`.
 
 1. **Add `CustomDomainName=<your-name>.api.mykeebs.dev`, `ImagesDomainName=<your-name>.images.mykeebs.dev` and the two certificate ARNs** to your section's `parameter_overrides`.
-2. **Run `mise run setup`** (or `mise run dns` if the stack already exists). After deploying, it creates the DNS-only `<your-name>.api` and `<your-name>.images` CNAMEs in the `mykeebs.dev` Cloudflare zone, pointed at the stack's `ApiCustomDomainTarget` and `ImagesDomainTarget` outputs. It needs a Cloudflare login: `cf auth login --use-keyring` once (see [Setup](#setup)).
+2. **Run `mise run setup`** (or `mise run dns` if the stack already exists). After deploying, it creates the DNS-only `<your-name>.api` and `<your-name>.images` CNAMEs in the `mykeebs.dev` Cloudflare zone, pointed at the stack's `ApiCustomDomainTarget` and `ImagesDomainTarget` outputs. It needs a Cloudflare login: `mise run cf-login` once (see [Setup](#setup)).
 
 DNS for `mykeebs.dev` is on Cloudflare, not Route53. The wildcard certificates were validated once with CNAMEs there, and renew on their own as long as those records stay. The zone's CAA records include `issuewild "amazon.com"`, without which ACM can't issue them.
 
