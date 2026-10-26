@@ -40,14 +40,9 @@ func (s *ImageModerationSuite) keyboardImages() map[string]repository.KeyboardIm
 func (s *ImageModerationSuite) keyboardMapper(signed ...repository.KeyboardImageKey) Keyboard {
 	images := mocks.NewMockKeyboardImageStore(s.T())
 	for _, key := range signed {
-		images.EXPECT().SignGetKeyboardImage(mock.Anything, key).Return("https://example.com/"+string(key), signedExpiry(), nil)
+		images.EXPECT().SignGetKeyboardImage(mock.Anything, key).Return("https://example.com/"+string(key), nil)
 	}
-	repo := mocks.NewMockKeyboardRepository(s.T())
-	repo.EXPECT().
-		SetImageGetCache(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(true, nil).Maybe()
-
-	return Keyboard{Images: images, Repo: repo}
+	return Keyboard{Images: images}
 }
 
 func (s *ImageModerationSuite) TestKeyboard_Owner_SeesEveryImageWithStatus_NoURLWhenRejected() {
@@ -94,14 +89,9 @@ func (s *ImageModerationSuite) TestKeyboard_NonOwner_NothingApproved_NoImages() 
 func (s *ImageModerationSuite) buildMapper(signed ...repository.BuildImageKey) Build {
 	images := mocks.NewMockBuildImageStore(s.T())
 	for _, key := range signed {
-		images.EXPECT().SignGetBuildImage(mock.Anything, key).Return("https://example.com/"+string(key), signedExpiry(), nil)
+		images.EXPECT().SignGetBuildImage(mock.Anything, key).Return("https://example.com/"+string(key), nil)
 	}
-	repo := mocks.NewMockBuildRepository(s.T())
-	repo.EXPECT().
-		SetImageGetCache(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(true, nil).Maybe()
-
-	return Build{Images: images, Repo: repo}
+	return Build{Images: images}
 }
 
 func (s *ImageModerationSuite) buildImages() []repository.BuildImage {
@@ -113,7 +103,7 @@ func (s *ImageModerationSuite) buildImages() []repository.BuildImage {
 }
 
 func (s *ImageModerationSuite) TestBuild_Owner_SeesEveryImageWithStatus() {
-	out, err := s.buildMapper(pendingKey, approvedKey).imagesToAPI(s.T().Context(), "alice", "b1", s.buildImages(), true)
+	out, err := s.buildMapper(pendingKey, approvedKey).imagesToAPI(s.T().Context(), s.buildImages(), true)
 	s.Require().NoError(err)
 
 	s.Equal([]api.BuildImage{
@@ -124,7 +114,7 @@ func (s *ImageModerationSuite) TestBuild_Owner_SeesEveryImageWithStatus() {
 }
 
 func (s *ImageModerationSuite) TestBuild_NonOwner_SeesApprovedOnly() {
-	out, err := s.buildMapper(approvedKey).imagesToAPI(s.T().Context(), "alice", "b1", s.buildImages(), false)
+	out, err := s.buildMapper(approvedKey).imagesToAPI(s.T().Context(), s.buildImages(), false)
 	s.Require().NoError(err)
 
 	s.Equal([]api.BuildImage{{ImageId: "approved", Url: strPtr("https://example.com/" + approvedKey)}}, *out)
@@ -139,12 +129,9 @@ func (s *ImageModerationSuite) buildWithKeyboard(signed ...repository.KeyboardIm
 	}
 	repo := mocks.NewMockKeyboardRepository(s.T())
 	repo.EXPECT().Get(mock.Anything, "alice", "kb1").Return(&kb, nil)
-	repo.EXPECT().
-		SetImageGetCache(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(true, nil).Maybe()
 	images := mocks.NewMockKeyboardImageStore(s.T())
 	for _, key := range signed {
-		images.EXPECT().SignGetKeyboardImage(mock.Anything, key).Return("https://example.com/"+string(key), signedExpiry(), nil)
+		images.EXPECT().SignGetKeyboardImage(mock.Anything, key).Return("https://example.com/"+string(key), nil)
 	}
 
 	return Build{KeyboardRepo: repo, KeyboardImages: images}
@@ -172,14 +159,9 @@ func (s *ImageModerationSuite) TestServedInRef() {
 func (s *ImageModerationSuite) switchMapper(signed ...repository.SwitchImageKey) Switch {
 	images := mocks.NewMockSwitchImageStore(s.T())
 	for _, key := range signed {
-		images.EXPECT().SignGet(mock.Anything, key).Return("https://example.com/"+string(key), signedExpiry(), nil)
+		images.EXPECT().SignGet(mock.Anything, key).Return("https://example.com/"+string(key), nil)
 	}
-	repo := mocks.NewMockSwitchRepository(s.T())
-	repo.EXPECT().
-		SetImageGetCache(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(true, nil).Maybe()
-
-	return Switch{Images: images, Repo: repo}
+	return Switch{Images: images}
 }
 
 func (s *ImageModerationSuite) switchWith(key string, status repository.ImageStatus, reason *string) repository.Switch {
@@ -218,14 +200,14 @@ func (s *ImageModerationSuite) kitWith(key string, status repository.ImageStatus
 
 func (s *ImageModerationSuite) TestKit_Owner_Rejected_ReasonNoURL() {
 	ks := KeycapSet{Images: mocks.NewMockKeycapKitImageStore(s.T())}
-	out, err := ks.KitToAPI(s.T().Context(), "alice", "set1", s.kitWith(rejectedKey, repository.ImageStatusRejected, strPtr("Hate Symbols")), true, repository.ProfilePreferences{})
+	out, err := ks.KitToAPI(s.T().Context(), s.kitWith(rejectedKey, repository.ImageStatusRejected, strPtr("Hate Symbols")), true, repository.ProfilePreferences{})
 	s.Require().NoError(err)
 	s.Equal(&api.KeycapKitImage{Status: statusPtr(api.Rejected), RejectionReason: strPtr("Hate Symbols")}, out.Image)
 }
 
 func (s *ImageModerationSuite) TestKit_NonOwner_Rejected_NoImage() {
 	ks := KeycapSet{Images: mocks.NewMockKeycapKitImageStore(s.T())}
-	out, err := ks.KitToAPI(s.T().Context(), "alice", "set1", s.kitWith(rejectedKey, repository.ImageStatusRejected, strPtr("Hate Symbols")), false, repository.ProfilePreferences{})
+	out, err := ks.KitToAPI(s.T().Context(), s.kitWith(rejectedKey, repository.ImageStatusRejected, strPtr("Hate Symbols")), false, repository.ProfilePreferences{})
 	s.Require().NoError(err)
 	s.Nil(out.Image)
 }

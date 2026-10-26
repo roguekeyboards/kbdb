@@ -23,34 +23,6 @@ func parseAPIDate(s string) (*openapi_types.Date, error) {
 	return &openapi_types.Date{Time: t}, nil
 }
 
-// getURLRefreshFloor is how long a cached image URL must have left to be
-// reused: more than this means it was signed in the current window.
-const getURLRefreshFloor = repository.ImageURLLifetime - repository.ImageURLWindow
-
-// resolveImageURL returns cachedURL if it has more than getURLRefreshFloor
-// left before cachedExpiresAt, and otherwise signs a new one with mint and
-// stores it with writeBack. A writeBack failure isn't an error: the new URL
-// is returned regardless.
-func resolveImageURL(
-	cachedURL *string,
-	cachedExpiresAt *time.Time,
-	mint func() (url string, expiresAt time.Time, err error),
-	writeBack func(url string, expiresAt time.Time) error,
-) (string, error) {
-	if cachedURL != nil && cachedExpiresAt != nil && time.Until(*cachedExpiresAt) > getURLRefreshFloor {
-		return *cachedURL, nil
-	}
-
-	url, expiresAt, err := mint()
-	if err != nil {
-		return "", err
-	}
-
-	_ = writeBack(url, expiresAt)
-
-	return url, nil
-}
-
 // sumKnownCosts sums the non-nil components, treating a nil one as
 // excluded rather than zero. Returns nil if none are set.
 func sumKnownCosts(components ...*float64) *float64 {

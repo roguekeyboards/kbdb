@@ -9,7 +9,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
@@ -41,7 +40,7 @@ func (s *ListKeyboardsSuite) SetupTest() {
 	s.mockRepo = mocks.NewMockKeyboardRepository(s.T())
 	s.mockImages = mocks.NewMockKeyboardImageStore(s.T())
 	s.prefs = repository.ProfilePreferences{}
-	s.handler = ListKeyboards(s.mockRepo, repoapi.Keyboard{Images: s.mockImages, Repo: s.mockRepo})
+	s.handler = ListKeyboards(s.mockRepo, repoapi.Keyboard{Images: s.mockImages})
 }
 
 func (s *ListKeyboardsSuite) newRequest(ctx context.Context, query string) *http.Request {
@@ -225,13 +224,9 @@ func (s *ListKeyboardsSuite) TestListKeyboards_ReturnsEveryImage() {
 			{ImageID: "img2", Path: "keyboards/alice/kb1/images/img2"},
 		})}}, "", nil)
 	s.mockImages.EXPECT().SignGetKeyboardImage(mock.Anything, mock.Anything).
-		RunAndReturn(func(_ context.Context, key repository.KeyboardImageKey) (string, time.Time, error) {
-			return "https://example.com/" + string(key), time.Now().Add(time.Hour), nil
+		RunAndReturn(func(_ context.Context, key repository.KeyboardImageKey) (string, error) {
+			return "https://example.com/" + string(key), nil
 		})
-	s.mockRepo.EXPECT().
-		SetImageGetCache(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(true, nil).Maybe()
-
 	rec := httptest.NewRecorder()
 	s.handler(rec, s.newRequest(ctx, "limit=20"))
 
@@ -311,7 +306,7 @@ func (s *GetKeyboardSuite) SetupTest() {
 	s.mockRepo = mocks.NewMockKeyboardRepository(s.T())
 	s.mockImages = mocks.NewMockKeyboardImageStore(s.T())
 	s.prefs = repository.ProfilePreferences{}
-	s.handler = GetKeyboard(s.mockRepo, repoapi.Keyboard{Images: s.mockImages, Repo: s.mockRepo})
+	s.handler = GetKeyboard(s.mockRepo, repoapi.Keyboard{Images: s.mockImages})
 }
 
 func (s *GetKeyboardSuite) newRequest(ctx context.Context) *http.Request {
@@ -525,7 +520,7 @@ func (s *CreateKeyboardSuite) SetupTest() {
 	s.prefs = repository.ProfilePreferences{Currency: "EUR"}
 	s.mockKeyboardRepo = mocks.NewMockKeyboardRepository(s.T())
 	s.mockImages = mocks.NewMockKeyboardImageStore(s.T())
-	s.handler = CreateKeyboard(s.mockKeyboardRepo, repoapi.Keyboard{Images: s.mockImages, Repo: s.mockKeyboardRepo})
+	s.handler = CreateKeyboard(s.mockKeyboardRepo, repoapi.Keyboard{Images: s.mockImages})
 }
 
 func (s *CreateKeyboardSuite) newRequest(ctx context.Context, body string) *http.Request {
@@ -782,7 +777,7 @@ func (s *UpdateKeyboardSuite) SetupTest() {
 	s.prefs = repository.ProfilePreferences{Currency: "EUR"}
 	s.mockKeyboardRepo = mocks.NewMockKeyboardRepository(s.T())
 	s.mockImages = mocks.NewMockKeyboardImageStore(s.T())
-	s.handler = UpdateKeyboard(s.mockKeyboardRepo, repoapi.Keyboard{Images: s.mockImages, Repo: s.mockKeyboardRepo})
+	s.handler = UpdateKeyboard(s.mockKeyboardRepo, repoapi.Keyboard{Images: s.mockImages})
 }
 
 func (s *UpdateKeyboardSuite) newRequest(ctx context.Context, body string) *http.Request {

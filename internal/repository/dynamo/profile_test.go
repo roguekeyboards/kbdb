@@ -6,7 +6,6 @@ import (
 	"maps"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
@@ -758,24 +757,6 @@ func (s *ProfileRepositorySuite) TestSetAvatarPath_NoProfile_ReturnsErrNotFound(
 	s.Require().ErrorIs(err, repository.ErrNotFound)
 }
 
-func (s *ProfileRepositorySuite) TestSetAvatarPath_AlsoClearsCachedGetURL() {
-	// A cached GET URL was signed against the old avatar_path, so it must
-	// not outlive it - see SetAvatarPath's doc comment.
-	var captured *dynamodb.UpdateItemInput
-	s.mockClient.EXPECT().
-		UpdateItem(mock.Anything, mock.MatchedBy(func(in *dynamodb.UpdateItemInput) bool {
-			captured = in
-			return true
-		})).
-		Return(&dynamodb.UpdateItemOutput{}, nil)
-
-	err := s.repo.SetAvatarPath(s.updateCtx(), "profiles/user-alice/avatar/up1")
-	s.Require().NoError(err)
-
-	s.True(removesAttr(captured, "get_url"), "get_url should be REMOVEd")
-	s.True(removesAttr(captured, "get_url_expires_at"), "get_url_expires_at should be REMOVEd")
-}
-
 func (s *ProfileRepositorySuite) TestClearAvatarPath_NoUserID_ReturnsErrNoUserID() {
 	_, err := s.repo.ClearAvatarPath(s.T().Context())
 
@@ -823,68 +804,6 @@ func (s *ProfileRepositorySuite) TestClearAvatarPath_NoProfile_ReturnsErrNotFoun
 
 	s.Require().ErrorIs(err, repository.ErrNotFound)
 	s.Nil(cleared)
-}
-
-func (s *ProfileRepositorySuite) TestClearAvatarPath_AlsoClearsCachedGetURL() {
-	// A cached GET URL is meaningless once avatar_path is gone - see
-	// ClearAvatarPath's doc comment.
-	var captured *dynamodb.UpdateItemInput
-	s.mockClient.EXPECT().
-		UpdateItem(mock.Anything, mock.MatchedBy(func(in *dynamodb.UpdateItemInput) bool {
-			captured = in
-			return true
-		})).
-		Return(&dynamodb.UpdateItemOutput{}, nil)
-
-	_, err := s.repo.ClearAvatarPath(s.updateCtx())
-	s.Require().NoError(err)
-
-	s.True(removesAttr(captured, "get_url"), "get_url should be REMOVEd")
-	s.True(removesAttr(captured, "get_url_expires_at"), "get_url_expires_at should be REMOVEd")
-}
-
-func (s *ProfileRepositorySuite) TestSetImageGetCache_PathMatches_WritesURLAndReturnsTrue() {
-	var captured *dynamodb.UpdateItemInput
-	s.mockClient.EXPECT().
-		UpdateItem(mock.Anything, mock.MatchedBy(func(in *dynamodb.UpdateItemInput) bool {
-			captured = in
-			return true
-		})).
-		Return(&dynamodb.UpdateItemOutput{}, nil)
-
-	expiresAt := time.Now().Add(24 * time.Hour)
-	ok, err := s.repo.SetImageGetCache(s.T().Context(), "user-alice", "profiles/user-alice/avatar/up1", "https://example.com/presigned", expiresAt)
-
-	s.Require().NoError(err)
-	s.True(ok)
-	s.Equal("user-alice", captured.Key["user_id"].(*types.AttributeValueMemberS).Value)
-	s.Contains(*captured.ConditionExpression, "attribute_exists")
-}
-
-func (s *ProfileRepositorySuite) TestSetImageGetCache_PathChanged_ReturnsFalseWithoutError() {
-	// avatar_path no longer equals forPath - a concurrent SetAvatarPath/
-	// ClearAvatarPath raced this write, so the condition fails and it's not
-	// an error - the caller's freshly-minted URL is still returned to the
-	// requester, just not persisted.
-	s.mockClient.EXPECT().
-		UpdateItem(mock.Anything, mock.Anything).
-		Return(nil, &types.ConditionalCheckFailedException{})
-
-	ok, err := s.repo.SetImageGetCache(s.T().Context(), "user-alice", "profiles/user-alice/avatar/up1", "https://example.com/presigned", time.Now().Add(24*time.Hour))
-
-	s.Require().NoError(err)
-	s.False(ok)
-}
-
-func (s *ProfileRepositorySuite) TestSetImageGetCache_UpdateItemError_Propagates() {
-	s.mockClient.EXPECT().
-		UpdateItem(mock.Anything, mock.Anything).
-		Return(nil, errors.New("dynamodb: throttled"))
-
-	ok, err := s.repo.SetImageGetCache(s.T().Context(), "user-alice", "profiles/user-alice/avatar/up1", "https://example.com/presigned", time.Now().Add(24*time.Hour))
-
-	s.Require().Error(err)
-	s.False(ok)
 }
 
 func (s *ProfileRepositorySuite) TestDelete_NoUserID_ReturnsErrNoUserID() {
@@ -1420,25 +1339,6 @@ func (s *ProfileRepositorySuite) TestSetAvatarStatus_ConditionedOnPathAndStatus(
 	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "rejected"))
 	s.True(setsAttr(captured, "avatar_rejection_reason"))
 	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "unprocessable"))
-	s.True(removesAttr(captured, "get_url"), "a rejection drops the cached URL")
-	s.True(removesAttr(captured, "get_url_expires_at"))
-}
-
-func (s *ProfileRepositorySuite) TestSetAvatarStatus_Approval_KeepsCachedURL() {
-	var captured *dynamodb.UpdateItemInput
-	s.mockClient.EXPECT().
-		UpdateItem(mock.Anything, mock.MatchedBy(func(in *dynamodb.UpdateItemInput) bool {
-			captured = in
-			return true
-		})).
-		Return(&dynamodb.UpdateItemOutput{}, nil)
-
-	ok, err := s.repo.SetAvatarStatus(s.T().Context(), "alice", "profiles/alice/avatar/up1", repository.ImageStatusPending, repository.ImageStatusApproved, nil)
-
-	s.Require().NoError(err)
-	s.True(ok)
-	s.False(removesAttr(captured, "get_url"), "an approval keeps the cached URL")
-	s.False(removesAttr(captured, "get_url_expires_at"))
 }
 
 func (s *ProfileRepositorySuite) TestSetAvatarStatus_ConditionFails_ReturnsFalseWithoutError() {

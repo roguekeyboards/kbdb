@@ -383,51 +383,13 @@ func (r *KeyboardRepository) classifyDeleteImageConflict(ctx context.Context, ow
 	return nil, nil //nolint:nilnil // no such image already absent is a valid, expected result
 }
 
-// SetImageGetCache implements repository.KeyboardRepository.
-func (r *KeyboardRepository) SetImageGetCache(ctx context.Context, ownerID, keyboardID, imageID string, forPath repository.KeyboardImageKey, url string, expiresAt time.Time) (bool, error) {
-	imagePath, ok := mapKey("images", imageID)
-	if !ok {
-		return false, nil
-	}
-	update := expression.Set(field(imagePath, "get_url"), expression.Value(url)).
-		Set(field(imagePath, "get_url_expires_at"), expression.Value(expiresAt))
-	cond := expression.AttributeExists(imagePath).
-		And(field(imagePath, "path").Equal(expression.Value(forPath)))
-
-	expr, err := expression.NewBuilder().WithUpdate(update).WithCondition(cond).Build()
-	if err != nil {
-		return false, fmt.Errorf("building image get-cache update for keyboard %q: %w", keyboardID, err)
-	}
-
-	_, err = r.client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
-		TableName:                 &r.tableName,
-		Key:                       keyboardKey(ownerID, keyboardID),
-		UpdateExpression:          expr.Update(),
-		ConditionExpression:       expr.Condition(),
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-	})
-	if err != nil {
-		if _, ok := errors.AsType[*types.ConditionalCheckFailedException](err); ok {
-			return false, nil
-		}
-		return false, fmt.Errorf("setting image %q get-cache for keyboard %q owner %q: %w", imageID, keyboardID, ownerID, err)
-	}
-
-	return true, nil
-}
-
-// SetImageStatus implements repository.KeyboardRepository. A rejection
-// also clears any cached GET URL, so it isn't served from the cache.
+// SetImageStatus implements repository.KeyboardRepository.
 func (r *KeyboardRepository) SetImageStatus(ctx context.Context, ownerID, keyboardID, imageID string, forPath repository.KeyboardImageKey, from, to repository.ImageStatus, reason *string) (bool, error) {
 	imagePath, ok := mapKey("images", imageID)
 	if !ok {
 		return false, nil
 	}
 	update := statusUpdate(field(imagePath, "status"), field(imagePath, "rejection_reason"), to, reason)
-	if to == repository.ImageStatusRejected {
-		update = update.Remove(field(imagePath, "get_url")).Remove(field(imagePath, "get_url_expires_at"))
-	}
 	cond := expression.AttributeExists(imagePath).
 		And(field(imagePath, "path").Equal(expression.Value(forPath))).
 		And(statusIs(field(imagePath, "status"), from))

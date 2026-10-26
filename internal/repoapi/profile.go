@@ -3,7 +3,6 @@ package repoapi
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/rogueserenity/kbdb/internal/handlers/api"
 	"github.com/rogueserenity/kbdb/internal/repository"
@@ -12,7 +11,6 @@ import (
 // Profile maps repository.Profile to and from its wire representations.
 type Profile struct {
 	Images repository.ProfileImageStore
-	Repo   repository.ProfileRepository
 }
 
 // ToAPI maps a repository.Profile to its wire shape, signing the avatar's
@@ -36,7 +34,7 @@ func (p Profile) ToAPI(ctx context.Context, prof repository.Profile, isOwner boo
 		out.Avatar = &api.ProfileImage{}
 		out.Avatar.Status, out.Avatar.RejectionReason = imageStatusToAPI(prof.AvatarStatus, prof.AvatarRejectionReason, isOwner)
 		if prof.AvatarStatus.Downloadable() {
-			url, err := p.resolveProfileImageURL(ctx, prof)
+			url, err := p.Images.SignGet(ctx, *prof.AvatarPath)
 			if err != nil {
 				return api.Profile{}, fmt.Errorf("signing profile avatar: %w", err)
 			}
@@ -45,21 +43,6 @@ func (p Profile) ToAPI(ctx context.Context, prof repository.Profile, isOwner boo
 	}
 
 	return out, nil
-}
-
-// resolveProfileImageURL returns a signed GET URL for prof.AvatarPath,
-// reusing the cached one if it was signed in the current window.
-// prof.AvatarPath must be set.
-func (p Profile) resolveProfileImageURL(ctx context.Context, prof repository.Profile) (string, error) {
-	path := *prof.AvatarPath
-
-	return resolveImageURL(prof.GetURL, prof.GetURLExpiresAt,
-		func() (string, time.Time, error) { return p.Images.SignGet(ctx, path) },
-		func(url string, expiresAt time.Time) error {
-			_, err := p.Repo.SetImageGetCache(ctx, prof.OwnerID, path, url, expiresAt)
-			return err
-		},
-	)
 }
 
 // ToRepo maps a ProfileInput to a repository.Profile. OwnerID, AvatarPath,

@@ -6,7 +6,6 @@ package mocks
 
 import (
 	"context"
-	"time"
 
 	"github.com/rogueserenity/kbdb/internal/repository"
 	mock "github.com/stretchr/testify/mock"
@@ -184,7 +183,7 @@ func (_c *MockProfileImageStore_PresignPut_Call) RunAndReturn(run func(ctx conte
 }
 
 // SignGet provides a mock function for the type MockProfileImageStore
-func (_mock *MockProfileImageStore) SignGet(ctx context.Context, key repository.ProfileImageKey) (string, time.Time, error) {
+func (_mock *MockProfileImageStore) SignGet(ctx context.Context, key repository.ProfileImageKey) (string, error) {
 	ret := _mock.Called(ctx, key)
 
 	if len(ret) == 0 {
@@ -192,9 +191,8 @@ func (_mock *MockProfileImageStore) SignGet(ctx context.Context, key repository.
 	}
 
 	var r0 string
-	var r1 time.Time
-	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, repository.ProfileImageKey) (string, time.Time, error)); ok {
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, repository.ProfileImageKey) (string, error)); ok {
 		return returnFunc(ctx, key)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, repository.ProfileImageKey) string); ok {
@@ -202,17 +200,12 @@ func (_mock *MockProfileImageStore) SignGet(ctx context.Context, key repository.
 	} else {
 		r0 = ret.Get(0).(string)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, repository.ProfileImageKey) time.Time); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, repository.ProfileImageKey) error); ok {
 		r1 = returnFunc(ctx, key)
 	} else {
-		r1 = ret.Get(1).(time.Time)
+		r1 = ret.Error(1)
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, repository.ProfileImageKey) error); ok {
-		r2 = returnFunc(ctx, key)
-	} else {
-		r2 = ret.Error(2)
-	}
-	return r0, r1, r2
+	return r0, r1
 }
 
 // MockProfileImageStore_SignGet_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SignGet'
@@ -245,12 +238,12 @@ func (_c *MockProfileImageStore_SignGet_Call) Run(run func(ctx context.Context, 
 	return _c
 }
 
-func (_c *MockProfileImageStore_SignGet_Call) Return(url string, expiresAt time.Time, err error) *MockProfileImageStore_SignGet_Call {
-	_c.Call.Return(url, expiresAt, err)
+func (_c *MockProfileImageStore_SignGet_Call) Return(url string, err error) *MockProfileImageStore_SignGet_Call {
+	_c.Call.Return(url, err)
 	return _c
 }
 
-func (_c *MockProfileImageStore_SignGet_Call) RunAndReturn(run func(ctx context.Context, key repository.ProfileImageKey) (string, time.Time, error)) *MockProfileImageStore_SignGet_Call {
+func (_c *MockProfileImageStore_SignGet_Call) RunAndReturn(run func(ctx context.Context, key repository.ProfileImageKey) (string, error)) *MockProfileImageStore_SignGet_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -6,7 +6,6 @@ package mocks
 
 import (
 	"context"
-	"time"
 
 	"github.com/rogueserenity/kbdb/internal/repository"
 	mock "github.com/stretchr/testify/mock"
@@ -664,90 +663,6 @@ func (_c *MockProfileRepository_SetAvatarStatus_Call) Return(ok bool, err error)
 }
 
 func (_c *MockProfileRepository_SetAvatarStatus_Call) RunAndReturn(run func(ctx context.Context, ownerID string, forPath repository.ProfileImageKey, from repository.ImageStatus, to repository.ImageStatus, reason *string) (bool, error)) *MockProfileRepository_SetAvatarStatus_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// SetImageGetCache provides a mock function for the type MockProfileRepository
-func (_mock *MockProfileRepository) SetImageGetCache(ctx context.Context, ownerID string, forPath repository.ProfileImageKey, url string, expiresAt time.Time) (bool, error) {
-	ret := _mock.Called(ctx, ownerID, forPath, url, expiresAt)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SetImageGetCache")
-	}
-
-	var r0 bool
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, repository.ProfileImageKey, string, time.Time) (bool, error)); ok {
-		return returnFunc(ctx, ownerID, forPath, url, expiresAt)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, repository.ProfileImageKey, string, time.Time) bool); ok {
-		r0 = returnFunc(ctx, ownerID, forPath, url, expiresAt)
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, repository.ProfileImageKey, string, time.Time) error); ok {
-		r1 = returnFunc(ctx, ownerID, forPath, url, expiresAt)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// MockProfileRepository_SetImageGetCache_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetImageGetCache'
-type MockProfileRepository_SetImageGetCache_Call struct {
-	*mock.Call
-}
-
-// SetImageGetCache is a helper method to define mock.On call
-//   - ctx context.Context
-//   - ownerID string
-//   - forPath repository.ProfileImageKey
-//   - url string
-//   - expiresAt time.Time
-func (_e *MockProfileRepository_Expecter) SetImageGetCache(ctx any, ownerID any, forPath any, url any, expiresAt any) *MockProfileRepository_SetImageGetCache_Call {
-	return &MockProfileRepository_SetImageGetCache_Call{Call: _e.mock.On("SetImageGetCache", ctx, ownerID, forPath, url, expiresAt)}
-}
-
-func (_c *MockProfileRepository_SetImageGetCache_Call) Run(run func(ctx context.Context, ownerID string, forPath repository.ProfileImageKey, url string, expiresAt time.Time)) *MockProfileRepository_SetImageGetCache_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 repository.ProfileImageKey
-		if args[2] != nil {
-			arg2 = args[2].(repository.ProfileImageKey)
-		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
-		var arg4 time.Time
-		if args[4] != nil {
-			arg4 = args[4].(time.Time)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-			arg4,
-		)
-	})
-	return _c
-}
-
-func (_c *MockProfileRepository_SetImageGetCache_Call) Return(ok bool, err error) *MockProfileRepository_SetImageGetCache_Call {
-	_c.Call.Return(ok, err)
-	return _c
-}
-
-func (_c *MockProfileRepository_SetImageGetCache_Call) RunAndReturn(run func(ctx context.Context, ownerID string, forPath repository.ProfileImageKey, url string, expiresAt time.Time) (bool, error)) *MockProfileRepository_SetImageGetCache_Call {
 	_c.Call.Return(run)
 	return _c
 }

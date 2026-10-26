@@ -6,7 +6,6 @@ package mocks
 
 import (
 	"context"
-	"time"
 
 	"github.com/rogueserenity/kbdb/internal/repository"
 	mock "github.com/stretchr/testify/mock"
@@ -797,102 +796,6 @@ func (_c *MockKeyboardRepository_List_Call) Return(keyboards []repository.Keyboa
 }
 
 func (_c *MockKeyboardRepository_List_Call) RunAndReturn(run func(ctx context.Context, ownerID string, visibilities []repository.Visibility, limit int, cursor string) ([]repository.Keyboard, string, error)) *MockKeyboardRepository_List_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// SetImageGetCache provides a mock function for the type MockKeyboardRepository
-func (_mock *MockKeyboardRepository) SetImageGetCache(ctx context.Context, ownerID string, keyboardID string, imageID string, forPath repository.KeyboardImageKey, url string, expiresAt time.Time) (bool, error) {
-	ret := _mock.Called(ctx, ownerID, keyboardID, imageID, forPath, url, expiresAt)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SetImageGetCache")
-	}
-
-	var r0 bool
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string, repository.KeyboardImageKey, string, time.Time) (bool, error)); ok {
-		return returnFunc(ctx, ownerID, keyboardID, imageID, forPath, url, expiresAt)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string, repository.KeyboardImageKey, string, time.Time) bool); ok {
-		r0 = returnFunc(ctx, ownerID, keyboardID, imageID, forPath, url, expiresAt)
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, string, repository.KeyboardImageKey, string, time.Time) error); ok {
-		r1 = returnFunc(ctx, ownerID, keyboardID, imageID, forPath, url, expiresAt)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// MockKeyboardRepository_SetImageGetCache_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetImageGetCache'
-type MockKeyboardRepository_SetImageGetCache_Call struct {
-	*mock.Call
-}
-
-// SetImageGetCache is a helper method to define mock.On call
-//   - ctx context.Context
-//   - ownerID string
-//   - keyboardID string
-//   - imageID string
-//   - forPath repository.KeyboardImageKey
-//   - url string
-//   - expiresAt time.Time
-func (_e *MockKeyboardRepository_Expecter) SetImageGetCache(ctx any, ownerID any, keyboardID any, imageID any, forPath any, url any, expiresAt any) *MockKeyboardRepository_SetImageGetCache_Call {
-	return &MockKeyboardRepository_SetImageGetCache_Call{Call: _e.mock.On("SetImageGetCache", ctx, ownerID, keyboardID, imageID, forPath, url, expiresAt)}
-}
-
-func (_c *MockKeyboardRepository_SetImageGetCache_Call) Run(run func(ctx context.Context, ownerID string, keyboardID string, imageID string, forPath repository.KeyboardImageKey, url string, expiresAt time.Time)) *MockKeyboardRepository_SetImageGetCache_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
-		var arg4 repository.KeyboardImageKey
-		if args[4] != nil {
-			arg4 = args[4].(repository.KeyboardImageKey)
-		}
-		var arg5 string
-		if args[5] != nil {
-			arg5 = args[5].(string)
-		}
-		var arg6 time.Time
-		if args[6] != nil {
-			arg6 = args[6].(time.Time)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-			arg4,
-			arg5,
-			arg6,
-		)
-	})
-	return _c
-}
-
-func (_c *MockKeyboardRepository_SetImageGetCache_Call) Return(ok bool, err error) *MockKeyboardRepository_SetImageGetCache_Call {
-	_c.Call.Return(ok, err)
-	return _c
-}
-
-func (_c *MockKeyboardRepository_SetImageGetCache_Call) RunAndReturn(run func(ctx context.Context, ownerID string, keyboardID string, imageID string, forPath repository.KeyboardImageKey, url string, expiresAt time.Time) (bool, error)) *MockKeyboardRepository_SetImageGetCache_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math"
 	"sort"
-	"time"
 
 	kbdbctx "github.com/rogueserenity/kbdb/internal/ctx"
 )
@@ -135,10 +134,6 @@ type KeyboardImageEntry struct {
 	// ImageStatus.Effective. RejectionReason is set only when rejected.
 	Status          ImageStatus `dynamodbav:"status,omitempty" json:"-"`
 	RejectionReason *string     `dynamodbav:"rejection_reason,omitempty" json:"-"`
-
-	// GetURL/GetURLExpiresAt cache the last signed GET URL for Path.
-	GetURL          *string    `dynamodbav:"get_url,omitempty" json:"-"`
-	GetURLExpiresAt *time.Time `dynamodbav:"get_url_expires_at,omitempty" json:"-"`
 }
 
 // KeyboardImage is an image id paired with its stored entry, the ordered
@@ -152,10 +147,6 @@ type KeyboardImage struct {
 	// Status is the entry's effective status, never empty.
 	Status          ImageStatus
 	RejectionReason *string
-
-	// GetURL/GetURLExpiresAt mirror KeyboardImageEntry's cache fields.
-	GetURL          *string
-	GetURLExpiresAt *time.Time
 }
 
 // SortedKeyboardImages flattens an Images map into a slice ordered by Seq
@@ -169,8 +160,6 @@ func SortedKeyboardImages(images map[string]KeyboardImageEntry) []KeyboardImage 
 			Seq:             entry.Seq,
 			Status:          entry.Status.Effective(),
 			RejectionReason: entry.RejectionReason,
-			GetURL:          entry.GetURL,
-			GetURLExpiresAt: entry.GetURLExpiresAt,
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Seq < out[j].Seq })
@@ -179,7 +168,7 @@ func SortedKeyboardImages(images map[string]KeyboardImageEntry) []KeyboardImage 
 
 // KeyboardImagesMap builds an Images map from an ordered slice, assigning
 // Seq by position. The inverse of SortedKeyboardImages, for callers holding
-// images as a list (e.g. reload tooling, tests). Cache fields are dropped.
+// images as a list (e.g. reload tooling, tests).
 func KeyboardImagesMap(images []KeyboardImage) map[string]KeyboardImageEntry {
 	if len(images) == 0 {
 		return nil
@@ -371,16 +360,10 @@ type KeyboardRepository interface {
 	// doesn't exist for the owner.
 	DeleteImage(ctx context.Context, keyboardID, imageID string) (*KeyboardImageKey, error)
 
-	// SetImageGetCache stores url/expiresAt as the matching image's cached
-	// GET URL, conditioned on its Path still equalling forPath. Returns
-	// ok=false (not an error) if that condition fails or keyboardID/imageID
-	// doesn't exist.
-	SetImageGetCache(ctx context.Context, ownerID, keyboardID, imageID string, forPath KeyboardImageKey, url string, expiresAt time.Time) (ok bool, err error)
-
 	// SetImageStatus sets the matching image's moderation status to `to` and
 	// its rejection reason to reason (cleared when nil), conditioned on Path
 	// still equalling forPath and the status still being from (a missing
-	// status counts as approved). A rejection also drops any cached GET URL.
+	// status counts as approved).
 	// Returns ok=false (not an error) if that condition fails or the item
 	// doesn't exist.
 	SetImageStatus(ctx context.Context, ownerID, keyboardID, imageID string, forPath KeyboardImageKey, from, to ImageStatus, reason *string) (ok bool, err error)
@@ -408,7 +391,7 @@ func NewKeyboardImageKey(ctx context.Context, keyboardID, imageID string) (Keybo
 type KeyboardImageStore interface {
 	// SignGetKeyboardImage returns a signed GET URL for key on the images
 	// distribution, and when it stops working.
-	SignGetKeyboardImage(ctx context.Context, key KeyboardImageKey) (url string, expiresAt time.Time, err error)
+	SignGetKeyboardImage(ctx context.Context, key KeyboardImageKey) (url string, err error)
 
 	// PresignPutKeyboardImage returns a short-lived presigned PUT URL for
 	// key, locked to contentType and size via the Content-Type and

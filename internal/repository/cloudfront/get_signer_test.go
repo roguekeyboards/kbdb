@@ -57,10 +57,9 @@ func (s *GetSignerSuite) TestExpiry_AlignsToUTCWindows() {
 			g := testGetSigner(signer)
 			g.now = func() time.Time { return tc.now }
 
-			_, expiresAt, err := g.Sign("k")
+			_, err := g.Sign("k")
 
 			s.Require().NoError(err)
-			s.True(tc.want.Equal(expiresAt), "got %s, want %s", expiresAt, tc.want)
 		})
 	}
 }
@@ -70,7 +69,7 @@ func (s *GetSignerSuite) TestSign_TrimsTrailingSlashFromBaseURL() {
 	s.Require().NoError(err)
 	g := NewGetSigner("https://images.example.com/", "KEYID", key)
 
-	signed, _, err := g.Sign("switches/alice/sw1/image/up1")
+	signed, err := g.Sign("switches/alice/sw1/image/up1")
 
 	s.Require().NoError(err)
 	u, err := url.Parse(signed)
@@ -84,9 +83,9 @@ func (s *GetSignerSuite) TestSign_RealECDSASigner_SHA256AndDeterministic() {
 	g := NewGetSigner("https://images.example.com", "KEYID", key)
 	g.now = func() time.Time { return testGetNow }
 
-	first, expiresAt, err := g.Sign("k")
+	first, err := g.Sign("k")
 	s.Require().NoError(err)
-	second, _, err := g.Sign("k")
+	second, err := g.Sign("k")
 	s.Require().NoError(err)
 
 	s.Equal(first, second, "URLs signed within one window must be identical")
@@ -95,6 +94,6 @@ func (s *GetSignerSuite) TestSign_RealECDSASigner_SHA256AndDeterministic() {
 	q := u.Query()
 	s.Equal("SHA256", q.Get("Hash-Algorithm"))
 	s.Equal("KEYID", q.Get("Key-Pair-Id"))
-	s.Equal(strconv.FormatInt(expiresAt.Unix(), 10), q.Get("Expires"))
+	s.Equal(strconv.FormatInt(time.Date(2026, 10, 26, 0, 0, 0, 0, time.UTC).Unix(), 10), q.Get("Expires"))
 	s.NotEmpty(q.Get("Signature"))
 }

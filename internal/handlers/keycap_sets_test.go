@@ -8,7 +8,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
@@ -40,7 +39,7 @@ func (s *ListKeycapSetsSuite) SetupTest() {
 	s.mockRepo = mocks.NewMockKeycapSetRepository(s.T())
 	s.mockImages = mocks.NewMockKeycapKitImageStore(s.T())
 	s.prefs = repository.ProfilePreferences{}
-	s.handler = ListKeycapSets(s.mockRepo, repoapi.KeycapSet{Images: s.mockImages, Repo: s.mockRepo})
+	s.handler = ListKeycapSets(s.mockRepo, repoapi.KeycapSet{Images: s.mockImages})
 }
 
 func (s *ListKeycapSetsSuite) newRequest(ctx context.Context, query string) *http.Request {
@@ -255,11 +254,7 @@ func (s *ListKeycapSetsSuite) TestListKeycapSets_PrimaryKitWithImage_ReturnsPrim
 		}}, "", nil)
 	s.prefs = repository.ProfilePreferences{}
 
-	s.mockImages.EXPECT().SignGet(mock.Anything, imagePath).Return("https://example.com/signed-get", time.Now().Add(time.Hour), nil)
-	s.mockRepo.EXPECT().
-		SetKitImageGetCache(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(true, nil).Maybe()
-
+	s.mockImages.EXPECT().SignGet(mock.Anything, imagePath).Return("https://example.com/signed-get", nil)
 	rec := httptest.NewRecorder()
 	s.handler(rec, s.newRequest(s.T().Context(), "limit=20"))
 
@@ -318,7 +313,7 @@ func (s *GetKeycapSetSuite) SetupTest() {
 	s.mockRepo = mocks.NewMockKeycapSetRepository(s.T())
 	s.mockImages = mocks.NewMockKeycapKitImageStore(s.T())
 	s.prefs = repository.ProfilePreferences{}
-	s.handler = GetKeycapSet(s.mockRepo, repoapi.KeycapSet{Images: s.mockImages, Repo: s.mockRepo})
+	s.handler = GetKeycapSet(s.mockRepo, repoapi.KeycapSet{Images: s.mockImages})
 }
 
 func (s *GetKeycapSetSuite) newRequest(ctx context.Context) *http.Request {
@@ -364,11 +359,7 @@ func (s *GetKeycapSetSuite) TestGetKeycapSet_KitWithImagePath_IncludesSignedURL(
 		}, nil)
 	s.mockImages.EXPECT().
 		SignGet(mock.Anything, imagePath).
-		Return("https://example.com/signed-get", time.Now().Add(time.Hour), nil)
-	s.mockRepo.EXPECT().
-		SetKitImageGetCache(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(true, nil).Maybe()
-
+		Return("https://example.com/signed-get", nil)
 	rec := httptest.NewRecorder()
 	s.handler(rec, s.newRequest(ctx))
 
@@ -571,7 +562,7 @@ func (s *CreateKeycapSetSuite) SetupTest() {
 	s.prefs = repository.ProfilePreferences{Currency: "EUR"}
 	s.mockKeycapSetRepo = mocks.NewMockKeycapSetRepository(s.T())
 	s.mockImages = mocks.NewMockKeycapKitImageStore(s.T())
-	s.handler = CreateKeycapSet(s.mockKeycapSetRepo, repoapi.KeycapSet{Images: s.mockImages, Repo: s.mockKeycapSetRepo})
+	s.handler = CreateKeycapSet(s.mockKeycapSetRepo, repoapi.KeycapSet{Images: s.mockImages})
 }
 
 func (s *CreateKeycapSetSuite) newRequest(ctx context.Context, body string) *http.Request {
@@ -741,7 +732,7 @@ func (s *UpdateKeycapSetSuite) SetupTest() {
 	s.prefs = repository.ProfilePreferences{Currency: "EUR"}
 	s.mockKeycapSetRepo = mocks.NewMockKeycapSetRepository(s.T())
 	s.mockImages = mocks.NewMockKeycapKitImageStore(s.T())
-	s.handler = UpdateKeycapSet(s.mockKeycapSetRepo, repoapi.KeycapSet{Images: s.mockImages, Repo: s.mockKeycapSetRepo})
+	s.handler = UpdateKeycapSet(s.mockKeycapSetRepo, repoapi.KeycapSet{Images: s.mockImages})
 }
 
 func (s *UpdateKeycapSetSuite) newRequest(ctx context.Context, body string) *http.Request {
@@ -1118,7 +1109,7 @@ func (s *CreateKeycapKitSuite) SetupTest() {
 	s.prefs = repository.ProfilePreferences{Currency: "EUR"}
 	s.mockRepo = mocks.NewMockKeycapSetRepository(s.T())
 	s.mockImages = mocks.NewMockKeycapKitImageStore(s.T())
-	s.handler = CreateKeycapKit(s.mockRepo, repoapi.KeycapSet{Images: s.mockImages, Repo: s.mockRepo})
+	s.handler = CreateKeycapKit(s.mockRepo, repoapi.KeycapSet{Images: s.mockImages})
 }
 
 func (s *CreateKeycapKitSuite) newRequest(ctx context.Context, body string) *http.Request {
@@ -1283,7 +1274,7 @@ func (s *UpdateKeycapKitSuite) SetupTest() {
 	s.prefs = repository.ProfilePreferences{Currency: "EUR"}
 	s.mockRepo = mocks.NewMockKeycapSetRepository(s.T())
 	s.mockImages = mocks.NewMockKeycapKitImageStore(s.T())
-	s.handler = UpdateKeycapKit(s.mockRepo, repoapi.KeycapSet{Images: s.mockImages, Repo: s.mockRepo})
+	s.handler = UpdateKeycapKit(s.mockRepo, repoapi.KeycapSet{Images: s.mockImages})
 }
 
 func (s *UpdateKeycapKitSuite) newRequest(ctx context.Context, body string) *http.Request {

@@ -58,7 +58,7 @@ func TestKeyboardPlateHandlersSuite(t *testing.T) {
 
 func (s *KeyboardPlateHandlersSuite) SetupTest() {
 	s.mockRepo = mocks.NewMockKeyboardRepository(s.T())
-	s.kr = repoapi.Keyboard{Repo: s.mockRepo}
+	s.kr = repoapi.Keyboard{}
 }
 
 func (s *KeyboardPlateHandlersSuite) ownerCtx() context.Context {
@@ -249,7 +249,7 @@ func TestKeyboardPCBHandlersSuite(t *testing.T) {
 
 func (s *KeyboardPCBHandlersSuite) SetupTest() {
 	s.mockRepo = mocks.NewMockKeyboardRepository(s.T())
-	s.kr = repoapi.Keyboard{Repo: s.mockRepo}
+	s.kr = repoapi.Keyboard{}
 }
 
 func (s *KeyboardPCBHandlersSuite) ownerCtx() context.Context {

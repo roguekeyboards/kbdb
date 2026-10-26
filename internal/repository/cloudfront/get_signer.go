@@ -44,14 +44,14 @@ func (d deterministicSigner) Sign(_ io.Reader, digest []byte, opts crypto.Signer
 	return d.Signer.Sign(nil, digest, opts)
 }
 
-// Sign returns a signed URL for key and when it stops working.
-func (g *GetSigner) Sign(key string) (string, time.Time, error) {
+// Sign returns a signed URL for key.
+func (g *GetSigner) Sign(key string) (string, error) {
 	expiresAt := g.now().Truncate(repository.ImageURLWindow).Add(repository.ImageURLLifetime)
 
 	url, err := g.signer.Sign(g.baseURL+"/"+key, expiresAt)
 	if err != nil {
-		return "", time.Time{}, fmt.Errorf("signing GET for %s: %w", key, err)
+		return "", fmt.Errorf("signing GET for %s: %w", key, err)
 	}
 
-	return url, expiresAt, nil
+	return url, nil
 }

@@ -3,7 +3,6 @@ package s3
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -36,7 +35,7 @@ func NewBuildImageStore(client *s3.Client, presign *s3.PresignClient, bucket str
 }
 
 // SignGetBuildImage implements repository.BuildImageStore.
-func (s *BuildImageStore) SignGetBuildImage(_ context.Context, key repository.BuildImageKey) (url string, expiresAt time.Time, err error) {
+func (s *BuildImageStore) SignGetBuildImage(_ context.Context, key repository.BuildImageKey) (url string, err error) {
 	return s.get.Sign(string(key))
 }
 

@@ -56,7 +56,6 @@ func (s *CreateBuildSuite) SetupTest() {
 	s.mockSwitchRepo = mocks.NewMockSwitchRepository(s.T())
 	s.mockKeycapSetRepo = mocks.NewMockKeycapSetRepository(s.T())
 	br := repoapi.Build{
-		Repo:           s.mockBuildRepo,
 		Images:         s.mockImages,
 		KitImages:      s.mockKitImages,
 		KeyboardImages: s.mockKeyboardImages,
@@ -423,7 +422,6 @@ func (s *UpdateBuildSuite) SetupTest() {
 	s.mockSwitchRepo = mocks.NewMockSwitchRepository(s.T())
 	s.mockKeycapSetRepo = mocks.NewMockKeycapSetRepository(s.T())
 	br := repoapi.Build{
-		Repo:           s.mockBuildRepo,
 		Images:         s.mockImages,
 		KitImages:      s.mockKitImages,
 		KeyboardImages: s.mockKeyboardImages,
@@ -633,7 +631,6 @@ func (s *ListBuildsSuite) SetupTest() {
 	s.mockImages = mocks.NewMockBuildImageStore(s.T())
 	s.prefs = repository.ProfilePreferences{}
 	br := repoapi.Build{
-		Repo:          s.mockBuildRepo,
 		Images:        s.mockImages,
 		KeyboardRepo:  s.mockKeyboardRepo,
 		SwitchRepo:    s.mockSwitchRepo,
@@ -1003,7 +1000,6 @@ func (s *GetBuildSuite) SetupTest() {
 	s.mockKeycapSetRepo = mocks.NewMockKeycapSetRepository(s.T())
 	s.prefs = repository.ProfilePreferences{}
 	br := repoapi.Build{
-		Repo:           s.mockBuildRepo,
 		Images:         s.mockImages,
 		KitImages:      s.mockKitImages,
 		KeyboardImages: s.mockKeyboardImages,

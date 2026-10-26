@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"time"
 
 	kbdbctx "github.com/rogueserenity/kbdb/internal/ctx"
 )
@@ -53,10 +52,6 @@ type BuildImageEntry struct {
 	// ImageStatus.Effective. RejectionReason is set only when rejected.
 	Status          ImageStatus `dynamodbav:"status,omitempty" json:"-"`
 	RejectionReason *string     `dynamodbav:"rejection_reason,omitempty" json:"-"`
-
-	// GetURL/GetURLExpiresAt cache the last signed GET URL for Path.
-	GetURL          *string    `dynamodbav:"get_url,omitempty" json:"-"`
-	GetURLExpiresAt *time.Time `dynamodbav:"get_url_expires_at,omitempty" json:"-"`
 }
 
 // BuildImage is an image id paired with its stored entry, the ordered
@@ -70,10 +65,6 @@ type BuildImage struct {
 	// Status is the entry's effective status, never empty.
 	Status          ImageStatus
 	RejectionReason *string
-
-	// GetURL/GetURLExpiresAt mirror BuildImageEntry's cache fields.
-	GetURL          *string
-	GetURLExpiresAt *time.Time
 }
 
 // SortedBuildImages flattens an Images map into a slice ordered by Seq
@@ -87,8 +78,6 @@ func SortedBuildImages(images map[string]BuildImageEntry) []BuildImage {
 			Seq:             entry.Seq,
 			Status:          entry.Status.Effective(),
 			RejectionReason: entry.RejectionReason,
-			GetURL:          entry.GetURL,
-			GetURLExpiresAt: entry.GetURLExpiresAt,
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Seq < out[j].Seq })
@@ -97,7 +86,7 @@ func SortedBuildImages(images map[string]BuildImageEntry) []BuildImage {
 
 // BuildImagesMap builds an Images map from an ordered slice, assigning Seq
 // by position. The inverse of SortedBuildImages, for callers holding images
-// as a list (reload tooling, tests). Cache fields are dropped.
+// as a list (reload tooling, tests).
 func BuildImagesMap(images []BuildImage) map[string]BuildImageEntry {
 	if len(images) == 0 {
 		return nil
@@ -175,16 +164,10 @@ type BuildRepository interface {
 	// (nil, nil). Returns ErrNotFound if buildID doesn't exist.
 	DeleteImage(ctx context.Context, buildID, imageID string) (*BuildImageKey, error)
 
-	// SetImageGetCache stores url/expiresAt as the matching image's cached
-	// GET URL, conditioned on its Path still equalling forPath. Returns
-	// ok=false (not an error) if that condition fails or buildID/imageID
-	// doesn't exist.
-	SetImageGetCache(ctx context.Context, ownerID, buildID, imageID string, forPath BuildImageKey, url string, expiresAt time.Time) (ok bool, err error)
-
 	// SetImageStatus sets the matching image's moderation status to `to` and
 	// its rejection reason to reason (cleared when nil), conditioned on Path
 	// still equalling forPath and the status still being from (a missing
-	// status counts as approved). A rejection also drops any cached GET URL.
+	// status counts as approved).
 	// Returns ok=false (not an error) if that condition fails or the item
 	// doesn't exist.
 	SetImageStatus(ctx context.Context, ownerID, buildID, imageID string, forPath BuildImageKey, from, to ImageStatus, reason *string) (ok bool, err error)
@@ -234,7 +217,7 @@ func NewBuildImageKey(ctx context.Context, buildID, imageID string) (BuildImageK
 type BuildImageStore interface {
 	// SignGetBuildImage returns a signed GET URL for key on the images
 	// distribution, and when it stops working.
-	SignGetBuildImage(ctx context.Context, key BuildImageKey) (url string, expiresAt time.Time, err error)
+	SignGetBuildImage(ctx context.Context, key BuildImageKey) (url string, err error)
 
 	// PresignPutBuildImage returns a short-lived presigned PUT URL for key,
 	// locked to contentType and size via the Content-Type and Content-Length

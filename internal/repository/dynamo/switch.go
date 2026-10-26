@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
@@ -243,9 +242,7 @@ func setOrRemovePtr[T any](update expression.UpdateBuilder, name string, v *T) e
 	return update.Set(expression.Name(name), expression.Value(*v))
 }
 
-// SetImagePath implements repository.SwitchRepository. Also clears any
-// cached GET URL - it was signed against the old ImagePath, so it must not
-// outlive it.
+// SetImagePath implements repository.SwitchRepository.
 func (r *SwitchRepository) SetImagePath(ctx context.Context, id string, key repository.SwitchImageKey) error {
 	ownerID, ok := kbdbctx.UserID(ctx)
 	if !ok {
@@ -254,9 +251,7 @@ func (r *SwitchRepository) SetImagePath(ctx context.Context, id string, key repo
 
 	update := expression.Set(expression.Name("image_path"), expression.Value(key)).
 		Set(expression.Name("image_status"), expression.Value(repository.ImageStatusPending)).
-		Remove(expression.Name("image_rejection_reason")).
-		Remove(expression.Name("get_url")).
-		Remove(expression.Name("get_url_expires_at"))
+		Remove(expression.Name("image_rejection_reason"))
 	expr, err := expression.NewBuilder().
 		WithUpdate(update).
 		WithCondition(expression.AttributeExists(expression.Name("id"))).
@@ -284,8 +279,7 @@ func (r *SwitchRepository) SetImagePath(ctx context.Context, id string, key repo
 }
 
 // ClearImagePath implements repository.SwitchRepository. ALL_OLD reports the
-// key that was cleared, or nil when nothing was set. Also clears any
-// cached GET URL, which is meaningless once ImagePath is gone.
+// key that was cleared, or nil when nothing was set.
 func (r *SwitchRepository) ClearImagePath(ctx context.Context, id string) (*repository.SwitchImageKey, error) {
 	ownerID, ok := kbdbctx.UserID(ctx)
 	if !ok {
@@ -294,9 +288,7 @@ func (r *SwitchRepository) ClearImagePath(ctx context.Context, id string) (*repo
 
 	update := expression.Remove(expression.Name("image_path")).
 		Remove(expression.Name("image_status")).
-		Remove(expression.Name("image_rejection_reason")).
-		Remove(expression.Name("get_url")).
-		Remove(expression.Name("get_url_expires_at"))
+		Remove(expression.Name("image_rejection_reason"))
 	expr, err := expression.NewBuilder().
 		WithUpdate(update).
 		WithCondition(expression.AttributeExists(expression.Name("id"))).
@@ -334,43 +326,9 @@ func (r *SwitchRepository) ClearImagePath(ctx context.Context, id string) (*repo
 	return old.ImagePath, nil
 }
 
-// SetImageGetCache implements repository.SwitchRepository.
-func (r *SwitchRepository) SetImageGetCache(ctx context.Context, ownerID, id string, forPath repository.SwitchImageKey, url string, expiresAt time.Time) (bool, error) {
-	update := expression.Set(expression.Name("get_url"), expression.Value(url)).
-		Set(expression.Name("get_url_expires_at"), expression.Value(expiresAt))
-	cond := expression.AttributeExists(expression.Name("id")).
-		And(expression.Name("image_path").Equal(expression.Value(forPath)))
-
-	expr, err := expression.NewBuilder().WithUpdate(update).WithCondition(cond).Build()
-	if err != nil {
-		return false, fmt.Errorf("building image get-cache update for switch %q: %w", id, err)
-	}
-
-	_, err = r.client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
-		TableName:                 &r.tableName,
-		Key:                       switchKey(ownerID, id),
-		UpdateExpression:          expr.Update(),
-		ConditionExpression:       expr.Condition(),
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-	})
-	if err != nil {
-		if _, ok := errors.AsType[*types.ConditionalCheckFailedException](err); ok {
-			return false, nil
-		}
-		return false, fmt.Errorf("setting image get-cache for switch %q owner %q: %w", id, ownerID, err)
-	}
-
-	return true, nil
-}
-
-// SetImageStatus implements repository.SwitchRepository. A rejection
-// also clears any cached GET URL, so it isn't served from the cache.
+// SetImageStatus implements repository.SwitchRepository.
 func (r *SwitchRepository) SetImageStatus(ctx context.Context, ownerID, id string, forPath repository.SwitchImageKey, from, to repository.ImageStatus, reason *string) (bool, error) {
 	update := statusUpdate(expression.Name("image_status"), expression.Name("image_rejection_reason"), to, reason)
-	if to == repository.ImageStatusRejected {
-		update = update.Remove(expression.Name("get_url")).Remove(expression.Name("get_url_expires_at"))
-	}
 	cond := expression.AttributeExists(expression.Name("id")).
 		And(expression.Name("image_path").Equal(expression.Value(forPath))).
 		And(statusIs(expression.Name("image_status"), from))

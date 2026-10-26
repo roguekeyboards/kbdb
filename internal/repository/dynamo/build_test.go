@@ -786,51 +786,6 @@ func (s *BuildRepositorySuite) TestDeleteImage_NoUserIDInContext_ReturnsError() 
 	s.Nil(removed)
 }
 
-func (s *BuildRepositorySuite) TestSetImageGetCache_PathMatches_WritesURLAndReturnsTrue() {
-	var captured *dynamodb.UpdateItemInput
-	s.mockClient.EXPECT().
-		UpdateItem(mock.Anything, mock.MatchedBy(func(in *dynamodb.UpdateItemInput) bool {
-			captured = in
-			return true
-		})).
-		Return(&dynamodb.UpdateItemOutput{}, nil)
-
-	expiresAt := time.Now().Add(24 * time.Hour)
-	ok, err := s.repo.SetImageGetCache(s.T().Context(), "alice", "b1", "img1", "builds/alice/b1/img1", "https://example.com/presigned", expiresAt)
-
-	s.Require().NoError(err)
-	s.True(ok)
-	s.Equal("alice", captured.Key["user_id"].(*types.AttributeValueMemberS).Value)
-	s.Equal("b1", captured.Key["id"].(*types.AttributeValueMemberS).Value)
-	s.Contains(*captured.ConditionExpression, "attribute_exists")
-}
-
-func (s *BuildRepositorySuite) TestSetImageGetCache_PathChanged_ReturnsFalseWithoutError() {
-	// images.<id>.path no longer equals forPath (or the entry itself is
-	// gone) - a concurrent AddImage/DeleteImage raced this write, so the
-	// condition fails and it's not an error - the caller's freshly-minted
-	// URL is still returned to the requester, just not persisted.
-	s.mockClient.EXPECT().
-		UpdateItem(mock.Anything, mock.Anything).
-		Return(nil, &types.ConditionalCheckFailedException{})
-
-	ok, err := s.repo.SetImageGetCache(s.T().Context(), "alice", "b1", "img1", "builds/alice/b1/img1", "https://example.com/presigned", time.Now().Add(24*time.Hour))
-
-	s.Require().NoError(err)
-	s.False(ok)
-}
-
-func (s *BuildRepositorySuite) TestSetImageGetCache_UpdateItemError_Propagates() {
-	s.mockClient.EXPECT().
-		UpdateItem(mock.Anything, mock.Anything).
-		Return(nil, errors.New("dynamodb: throttled"))
-
-	ok, err := s.repo.SetImageGetCache(s.T().Context(), "alice", "b1", "img1", "builds/alice/b1/img1", "https://example.com/presigned", time.Now().Add(24*time.Hour))
-
-	s.Require().Error(err)
-	s.False(ok)
-}
-
 func (s *BuildRepositorySuite) TestSetImageStatus_ConditionedOnPathAndStatus() {
 	var captured *dynamodb.UpdateItemInput
 	s.mockClient.EXPECT().
@@ -855,8 +810,6 @@ func (s *BuildRepositorySuite) TestSetImageStatus_ConditionedOnPathAndStatus() {
 	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "rejected"))
 	s.True(setsAttr(captured, "rejection_reason"))
 	s.True(exprValuesContainS(captured.ExpressionAttributeValues, "unprocessable"))
-	s.True(removesAttr(captured, "get_url"), "a rejection drops the cached URL")
-	s.True(removesAttr(captured, "get_url_expires_at"))
 }
 
 func (s *BuildRepositorySuite) TestSetImageStatus_NoReason_RemovesRejectionReason() {
@@ -873,7 +826,6 @@ func (s *BuildRepositorySuite) TestSetImageStatus_NoReason_RemovesRejectionReaso
 	s.Require().NoError(err)
 	s.True(ok)
 	s.True(removesAttr(captured, "rejection_reason"))
-	s.False(removesAttr(captured, "get_url"), "an approval keeps the cached URL")
 }
 
 func (s *BuildRepositorySuite) TestSetImageStatus_ConditionFails_ReturnsFalseWithoutError() {
