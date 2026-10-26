@@ -1,13 +1,9 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  One-time-per-account bootstrap: a cost-budget tripwire for accounts that
-  don't otherwise get one from the app's own template.yaml (kbdb-dev's
-  CostBudget comes from its app stack; rogueserenity-management and kbdb-ci
-  have no app stack, so they need this instead). Mirrors template.yaml's
-  CostBudget resource - this whole project is designed to run at effectively
-  $0 on AWS free-tier usage, so a real bill appearing in any account,
-  including ones with no persistent app stack, is itself a signal something
-  is wrong.
+  Bootstrap (every account) - the account's cost-budget tripwire. A budget
+  watches the whole account's spend, so there's one per account rather than
+  one per stack. This project is designed to run at effectively $0 on AWS
+  free-tier usage, so a real bill in any account is itself the alarm.
 
 Parameters:
   BudgetLimitUsd:

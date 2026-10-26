@@ -27,8 +27,8 @@ parameter_overrides = """\
   OidcAudience=project-test-e811f2fd-9992-4bc8-ba6a-ed578b7f5411 \
   IdpConsentPublicToken=public-token-test-ecb1c2b7-2170-4a87-947c-b6dcc6ae3047 \
   CorsAllowOrigins=http://localhost:5173,https://jay.mykeebs.dev \
-  CustomDomainName=api.jay.mykeebs.dev \
-  CustomDomainCertificateArn=arn:aws:acm:us-east-2:992234857260:certificate/1831f13e-7a40-4c83-91e7-c93c254e2807 \
+  CustomDomainName=jay.api.mykeebs.dev \
+  CustomDomainCertificateArn=arn:aws:acm:us-east-2:992234857260:certificate/9779ae75-a23b-4a33-8619-e26b7125f237 \
   ImagesDomainName=jay.images.mykeebs.dev \
   ImagesDomainCertificateArn=arn:aws:acm:us-east-1:992234857260:certificate/88553c3c-cb56-4fa1-a8cf-15fd5ee48a32 \
   AlarmEmail=kbdb-alerts-dev@mykeebs.com\
@@ -58,8 +58,7 @@ parameter_overrides = """\
   ThrottleRateLimit=5 \
   ThrottleBurstLimit=50 \
   ApiReservedConcurrency=15 \
-  AlarmEmail=kbdb-alerts-prd@mykeebs.com \
-  BudgetEmail=kbdb-budget-prd@mykeebs.com\
+  AlarmEmail=kbdb-alerts-prd@mykeebs.com\
   """
 
 # CI deploys per-PR stacks into the separate kbdb-ci account (475976462467),

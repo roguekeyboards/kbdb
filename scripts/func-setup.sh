@@ -109,16 +109,9 @@ aws s3 cp "$OIDC_DIR/jwks.json" \
   "s3://$OIDC_BUCKET/jwks.json" \
   --content-type application/json >/dev/null
 
-# template.yaml's roles reference this boundary, and creating one fails if
-# the policy doesn't exist yet.
-aws cloudformation deploy --template-file bootstrap/stack-boundary.yaml \
-  --stack-name kbdb-stack-boundary \
-  --capabilities CAPABILITY_NAMED_IAM \
-  --no-fail-on-empty-changeset >/dev/null
-
-# template.yaml reads the key group and response headers policy IDs this
-# writes to SSM.
-scripts/image-delivery-setup.sh >/dev/null
+# template.yaml's roles need the stack boundary, and its distribution reads
+# the image delivery stack's IDs from SSM.
+scripts/bootstrap.sh floci >/dev/null
 
 # floci serves a distribution's aliases on its own port, which the
 # distribution's domain can't carry, so ImagesBaseUrl adds it. floci's ACM

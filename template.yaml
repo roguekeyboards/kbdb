@@ -3,8 +3,8 @@ Transform: AWS::Serverless-2016-10-31
 Description: >
   kbdb - keyboard database. Infrastructure for the kbdb API: a Lambda
   function fronted by an HTTP API with a native OIDC JWT authorizer, DynamoDB
-  tables, an S3 bucket for images with an event-driven moderation function,
-  and a budget cost tripwire.
+  tables, and an S3 bucket for images with an event-driven moderation
+  function.
 
 Globals:
   Function:
@@ -41,7 +41,7 @@ Parameters:
     Default: ''
     Description: >-
       Optional custom domain for this stack's HttpApi, e.g.
-      api.jay.mykeebs.dev. Left empty (the default), no custom domain is
+      jay.api.mykeebs.dev. Left empty (the default), no custom domain is
       configured and the stack is only reachable at its default
       execute-api.amazonaws.com URL - func-setup, CI, and any dev stack
       not opting in are unaffected.
@@ -135,10 +135,6 @@ Parameters:
       user from the identity provider by hand (internal/deletenotice).
       Empty, the default, still creates the topic and alarms, with no one
       subscribed: the functional tests subscribe their own queue.
-  BudgetEmail:
-    Type: String
-    Default: aws-budget@rogueserenity.dev
-    Description: Address CostBudget emails at 80% and 100% of the budget.
   ProtectData:
     Type: String
     Default: 'false'
@@ -995,31 +991,6 @@ Resources:
       ApiId: !Ref HttpApi
       DomainName: !Ref ApiCustomDomain
       Stage: !Ref HttpApiApiGatewayDefaultStage
-
-  CostBudget:
-    Type: AWS::Budgets::Budget
-    Properties:
-      Budget:
-        BudgetType: COST
-        TimeUnit: MONTHLY
-        BudgetLimit:
-          Amount: 10
-          Unit: USD
-      NotificationsWithSubscribers:
-        - Notification:
-            NotificationType: ACTUAL
-            ComparisonOperator: GREATER_THAN
-            Threshold: 80
-          Subscribers:
-            - SubscriptionType: EMAIL
-              Address: !Ref BudgetEmail
-        - Notification:
-            NotificationType: ACTUAL
-            ComparisonOperator: GREATER_THAN
-            Threshold: 100
-          Subscribers:
-            - SubscriptionType: EMAIL
-              Address: !Ref BudgetEmail
 
 Outputs:
   ApiUrl:

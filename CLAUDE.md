@@ -67,7 +67,7 @@ Follow this same split when adding an entity: a handler per route in `handlers/`
 
 **Config is env-var-only, read via Kong (`functions/api/config.go`)**, not raw `os.Getenv` calls — Kong gives struct-tag-driven required-field validation and defaults even though there are no CLI flags to parse (this is a Lambda entrypoint, not a CLI tool). Add new config by adding a field to `Config`, not by reaching for `os.Getenv` elsewhere.
 
-**`template.yaml` also declares an `AWS::Budgets::Budget`** (`CostBudget`) as a cost tripwire — don't remove it when touching the template, and raise the threshold deliberately if the project's real usage/cost profile changes rather than deleting it.
+**Every account has an `AWS::Budgets::Budget` cost tripwire** in `bootstrap/cost-budget.yaml`, deployed by `mise run bootstrap` — one per account, not per stack, since a budget watches the whole account. Don't remove it, and raise the threshold deliberately if the project's real usage/cost profile changes rather than deleting it.
 
 **Unit tests under `internal/` use `testify/suite`** (`type XSuite struct { suite.Suite }`, `TestXSuite` runner, `s.Equal`/`s.Require()` methods), not bare `func TestX(t *testing.T)` + `t.Run` tables. Applies even to small files. A `_test.go` file holding only shared helpers and no test cases of its own (e.g. `internal/mcp/tool_test.go`) needs no suite. `test/functional/` is Ginkgo instead — not covered by this rule.
 

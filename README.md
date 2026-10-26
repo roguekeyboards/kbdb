@@ -20,7 +20,7 @@ It exposes two first-class APIs — REST and an MCP server, so you can manage yo
 
 **API versioning is explicit where it needs to be.** REST routes are prefixed `/v1/...`. MCP tool schemas and descriptions evolve additive-only instead, since tool descriptions steer which tool an LLM client picks, not just the schema shape a version number would cover.
 
-**The whole stack runs at effectively $0** on AWS free-tier usage — a cost-budget tripwire is wired into every environment, so a real bill showing up is itself the alarm.
+**The whole stack runs at effectively $0** on AWS free-tier usage — a cost-budget tripwire is wired into every AWS account, so a real bill showing up is itself the alarm.
 
 ## Identity provider requirements
 
