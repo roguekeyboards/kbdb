@@ -56,9 +56,9 @@ func (r *KeyboardRepository) List(
 		return []repository.Keyboard{}, "", nil
 	}
 
-	startKey, _, _, err := decodeCursor(cursor)
+	startKey, _, err := decodeOwnerCursor(cursor, ownerID)
 	if err != nil {
-		return nil, "", fmt.Errorf("%w: %w", repository.ErrInvalidCursor, err)
+		return nil, "", err
 	}
 
 	visValues := make([]expression.OperandBuilder, len(visibilities))
@@ -75,25 +75,24 @@ func (r *KeyboardRepository) List(
 		return nil, "", fmt.Errorf("building keyboard list expression: %w", err)
 	}
 
-	out, err := r.client.Query(ctx, &dynamodb.QueryInput{
+	items, lastKey, err := queryFullPage(ctx, r.client, &dynamodb.QueryInput{
 		TableName:                 &r.tableName,
 		KeyConditionExpression:    expr.KeyCondition(),
 		FilterExpression:          expr.Filter(),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
 		ExclusiveStartKey:         startKey,
-		Limit:                     queryLimit(limit),
-	})
+	}, limit)
 	if err != nil {
 		return nil, "", fmt.Errorf("querying keyboards for owner %q: %w", ownerID, err)
 	}
 
 	keyboards := []repository.Keyboard{}
-	if err := attributevalue.UnmarshalListOfMaps(out.Items, &keyboards); err != nil {
+	if err := attributevalue.UnmarshalListOfMaps(items, &keyboards); err != nil {
 		return nil, "", fmt.Errorf("unmarshalling keyboards for owner %q: %w", ownerID, err)
 	}
 
-	nextCursor, err := encodeCursor(out.LastEvaluatedKey, "", "")
+	nextCursor, err := encodeCursor(lastKey, "", "")
 	if err != nil {
 		return nil, "", fmt.Errorf("encoding next cursor: %w", err)
 	}

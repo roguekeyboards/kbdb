@@ -34,7 +34,7 @@ func (s *KeycapSetRepositorySuite) SetupTest() {
 func (s *KeycapSetRepositorySuite) TestList_Succeeds() {
 	s.mockClient.EXPECT().
 		Query(mock.Anything, mock.MatchedBy(func(in *dynamodb.QueryInput) bool {
-			return len(in.ExclusiveStartKey) == 0 && *in.Limit == 20
+			return len(in.ExclusiveStartKey) == 0 && *in.Limit == queryReadSize
 		})).
 		Return(&dynamodb.QueryOutput{
 			Items: []map[string]types.AttributeValue{
@@ -85,7 +85,10 @@ func (s *KeycapSetRepositorySuite) TestList_ReturnsEncodedCursor_WhenMorePagesEx
 	s.mockClient.EXPECT().
 		Query(mock.Anything, mock.Anything).
 		Return(&dynamodb.QueryOutput{
-			Items: []map[string]types.AttributeValue{},
+			Items: []map[string]types.AttributeValue{{
+				"user_id": &types.AttributeValueMemberS{Value: "alice"},
+				"id":      &types.AttributeValueMemberS{Value: "ks1"},
+			}},
 			LastEvaluatedKey: map[string]types.AttributeValue{
 				"user_id": &types.AttributeValueMemberS{Value: "alice"},
 				"id":      &types.AttributeValueMemberS{Value: "ks1"},
@@ -93,7 +96,7 @@ func (s *KeycapSetRepositorySuite) TestList_ReturnsEncodedCursor_WhenMorePagesEx
 		}, nil)
 
 	_, next, err := s.repo.List(s.T().Context(), "alice",
-		[]repository.Visibility{repository.VisibilityPublic}, 20, "")
+		[]repository.Visibility{repository.VisibilityPublic}, 1, "")
 
 	s.Require().NoError(err)
 	s.NotEmpty(next)
@@ -107,7 +110,10 @@ func (s *KeycapSetRepositorySuite) TestList_DecodesCursor_IntoExclusiveStartKey(
 			return len(in.ExclusiveStartKey) == 0
 		})).
 		Return(&dynamodb.QueryOutput{
-			Items: []map[string]types.AttributeValue{},
+			Items: []map[string]types.AttributeValue{{
+				"user_id": &types.AttributeValueMemberS{Value: "alice"},
+				"id":      &types.AttributeValueMemberS{Value: "ks1"},
+			}},
 			LastEvaluatedKey: map[string]types.AttributeValue{
 				"user_id": &types.AttributeValueMemberS{Value: "alice"},
 				"id":      &types.AttributeValueMemberS{Value: "ks1"},
@@ -115,7 +121,7 @@ func (s *KeycapSetRepositorySuite) TestList_DecodesCursor_IntoExclusiveStartKey(
 		}, nil).Once()
 
 	_, cursor, err := s.repo.List(s.T().Context(), "alice",
-		[]repository.Visibility{repository.VisibilityPublic}, 20, "")
+		[]repository.Visibility{repository.VisibilityPublic}, 1, "")
 	s.Require().NoError(err)
 
 	s.mockClient.EXPECT().

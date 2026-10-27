@@ -57,9 +57,15 @@ func (r *BuildRepository) List(
 		return []repository.Build{}, "", nil
 	}
 
-	startKey, _, _, err := decodeCursor(cursor)
+	startKey, cursorKeyboardID, err := decodeOwnerCursor(cursor, ownerID)
 	if err != nil {
-		return nil, "", fmt.Errorf("%w: %w", repository.ErrInvalidCursor, err)
+		return nil, "", err
+	}
+	if len(startKey) > 0 && cursorKeyboardID != keyboardID {
+		return nil, "", fmt.Errorf("%w: keyboard filter changed since this cursor was issued", repository.ErrInvalidCursor)
+	}
+	if id, ok := startKey["id"].(*types.AttributeValueMemberS); ok && id.Value >= refMarkerPrefix {
+		return nil, "", fmt.Errorf("%w: cursor is outside the builds key range", repository.ErrInvalidCursor)
 	}
 
 	visValues := make([]expression.OperandBuilder, len(visibilities))
@@ -67,21 +73,14 @@ func (r *BuildRepository) List(
 		visValues[i] = expression.Value(v)
 	}
 
-	// BuildTable's user_id partition also holds refMarker items (see
-	// build_ref.go), which sort after every real Build id (their sort key is
-	// "z"-prefixed) so a fresh scan exhausts real builds before reaching any
-	// marker. This filter is still needed as a backstop: a single
-	// Limit-bounded page can straddle the build/marker boundary once a
-	// user's builds are exhausted, and a marker item has no visibility
-	// attribute to match anyway.
-	filter := expression.Name("visibility").In(visValues[0], visValues[1:]...).
-		And(expression.AttributeNotExists(expression.Name("item_type")))
+	filter := expression.Name("visibility").In(visValues[0], visValues[1:]...)
 	if keyboardID != "" {
 		filter = filter.And(expression.Name("keyboard").Equal(expression.Value(keyboardID)))
 	}
 
 	builder := expression.NewBuilder().
-		WithKeyCondition(expression.Key("user_id").Equal(expression.Value(ownerID))).
+		WithKeyCondition(expression.Key("user_id").Equal(expression.Value(ownerID)).
+			And(expression.Key("id").LessThan(expression.Value(refMarkerPrefix)))).
 		WithFilter(filter)
 
 	expr, err := builder.Build()
@@ -89,25 +88,24 @@ func (r *BuildRepository) List(
 		return nil, "", fmt.Errorf("building build list expression: %w", err)
 	}
 
-	out, err := r.client.Query(ctx, &dynamodb.QueryInput{
+	items, lastKey, err := queryFullPage(ctx, r.client, &dynamodb.QueryInput{
 		TableName:                 &r.tableName,
 		KeyConditionExpression:    expr.KeyCondition(),
 		FilterExpression:          expr.Filter(),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
 		ExclusiveStartKey:         startKey,
-		Limit:                     queryLimit(limit),
-	})
+	}, limit)
 	if err != nil {
 		return nil, "", fmt.Errorf("querying builds for owner %q: %w", ownerID, err)
 	}
 
 	builds := []repository.Build{}
-	if err := attributevalue.UnmarshalListOfMaps(out.Items, &builds); err != nil {
+	if err := attributevalue.UnmarshalListOfMaps(items, &builds); err != nil {
 		return nil, "", fmt.Errorf("unmarshalling builds for owner %q: %w", ownerID, err)
 	}
 
-	nextCursor, err := encodeCursor(out.LastEvaluatedKey, "", "")
+	nextCursor, err := encodeCursor(lastKey, "", keyboardID)
 	if err != nil {
 		return nil, "", fmt.Errorf("encoding next cursor: %w", err)
 	}

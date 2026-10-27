@@ -62,6 +62,19 @@ var _ = Describe("Listing builds", func() {
 		return page.Items
 	}
 
+	decodePage := func(r *http.Response) ([]string, string) {
+		var page struct {
+			Items      []listItem `json:"items"`
+			NextCursor string     `json:"next_cursor"`
+		}
+		Expect(json.NewDecoder(r.Body).Decode(&page)).To(Succeed())
+		ids := make([]string, len(page.Items))
+		for i, item := range page.Items {
+			ids[i] = item.ID
+		}
+		return ids, page.NextCursor
+	}
+
 	itemIDs := func(items []listItem) []string {
 		ids := make([]string, len(items))
 		for i, item := range items {
@@ -419,6 +432,114 @@ var _ = Describe("Listing builds", func() {
 			It("returns an empty page", func() {
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 				Expect(decodeItems(resp)).To(BeEmpty())
+			})
+		})
+	})
+
+	Context("given the owner's builds for a keyboard are spread among builds for another keyboard", func() {
+		var otherKeyboardID string
+		matching := []string{"build-2", "build-5", "build-7"}
+		others := []string{"build-1", "build-3", "build-4", "build-6"}
+
+		BeforeEach(func(ctx SpecContext) {
+			otherKeyboardID = "build-fixture-keyboard-" + uuid.NewString()
+			Expect(db.SeedKeyboard(ctx, ownerID, otherKeyboardID, "private")).To(Succeed())
+			for _, id := range matching {
+				Expect(db.SeedBuild(ctx, ownerID, id, keyboardID, "public")).To(Succeed())
+			}
+			for _, id := range others {
+				Expect(db.SeedBuild(ctx, ownerID, id, otherKeyboardID, "public")).To(Succeed())
+			}
+		})
+
+		AfterEach(func(ctx SpecContext) {
+			for _, id := range matching {
+				Expect(db.DeleteBuild(ctx, ownerID, id, keyboardID)).To(Succeed())
+			}
+			for _, id := range others {
+				Expect(db.DeleteBuild(ctx, ownerID, id, otherKeyboardID)).To(Succeed())
+			}
+			Expect(db.DeleteKeyboard(ctx, ownerID, otherKeyboardID)).To(Succeed())
+		})
+
+		When("paging through builds filtered to that keyboard two at a time", func() {
+			var firstIDs, secondIDs []string
+			var firstCursor, secondCursor string
+
+			BeforeEach(func(ctx SpecContext) {
+				first, err := client.ListPage(ctx, ownerID, ownerToken, keyboardID, 2, "")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(first.StatusCode).To(Equal(http.StatusOK))
+				firstIDs, firstCursor = decodePage(first)
+
+				second, err := client.ListPage(ctx, ownerID, ownerToken, keyboardID, 2, firstCursor)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(second.StatusCode).To(Equal(http.StatusOK))
+				secondIDs, secondCursor = decodePage(second)
+			})
+
+			It("fills every page but the last and returns every matching build", func() {
+				Expect(firstIDs).To(Equal([]string{"build-2", "build-5"}))
+				Expect(firstCursor).NotTo(BeEmpty())
+				Expect(secondIDs).To(Equal([]string{"build-7"}))
+				Expect(secondCursor).To(BeEmpty())
+			})
+		})
+
+		Context("given a cursor issued while filtering to that keyboard", func() {
+			var cursor string
+
+			BeforeEach(func(ctx SpecContext) {
+				first, err := client.ListPage(ctx, ownerID, ownerToken, keyboardID, 1, "")
+				Expect(err).NotTo(HaveOccurred())
+				_, cursor = decodePage(first)
+				Expect(cursor).NotTo(BeEmpty())
+			})
+
+			When("listing builds filtered to the other keyboard with that cursor", func() {
+				BeforeEach(func(ctx SpecContext) {
+					var err error
+					resp, err = client.ListPage(ctx, ownerID, ownerToken, otherKeyboardID, 1, cursor)
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("rejects the cursor", func() {
+					Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+				})
+			})
+		})
+	})
+
+	Context("given the owner's public builds sort after private ones", func() {
+		private := []string{"build-1", "build-2", "build-3"}
+		public := []string{"build-4", "build-5"}
+
+		BeforeEach(func(ctx SpecContext) {
+			for _, id := range private {
+				Expect(db.SeedBuild(ctx, ownerID, id, keyboardID, "private")).To(Succeed())
+			}
+			for _, id := range public {
+				Expect(db.SeedBuild(ctx, ownerID, id, keyboardID, "public")).To(Succeed())
+			}
+		})
+
+		AfterEach(func(ctx SpecContext) {
+			for _, id := range append(private, public...) {
+				Expect(db.DeleteBuild(ctx, ownerID, id, keyboardID)).To(Succeed())
+			}
+		})
+
+		When("an anonymous caller lists two builds", func() {
+			BeforeEach(func(ctx SpecContext) {
+				var err error
+				resp, err = client.ListPage(ctx, ownerID, "", "", 2, "")
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("returns both public builds in the first page", func() {
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				ids, _ := decodePage(resp)
+				Expect(ids).To(Equal([]string{"build-4", "build-5"}))
 			})
 		})
 	})
