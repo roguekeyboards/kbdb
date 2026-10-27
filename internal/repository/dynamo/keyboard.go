@@ -56,9 +56,9 @@ func (r *KeyboardRepository) List(
 		return []repository.Keyboard{}, "", nil
 	}
 
-	startKey, _, _, err := decodeCursor(cursor)
+	startKey, _, err := decodeOwnerCursor(cursor, ownerID)
 	if err != nil {
-		return nil, "", fmt.Errorf("%w: %w", repository.ErrInvalidCursor, err)
+		return nil, "", err
 	}
 
 	visValues := make([]expression.OperandBuilder, len(visibilities))

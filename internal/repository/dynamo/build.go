@@ -57,14 +57,14 @@ func (r *BuildRepository) List(
 		return []repository.Build{}, "", nil
 	}
 
-	startKey, _, cursorKeyboardID, err := decodeCursor(cursor)
+	startKey, cursorKeyboardID, err := decodeOwnerCursor(cursor, ownerID)
 	if err != nil {
-		return nil, "", fmt.Errorf("%w: %w", repository.ErrInvalidCursor, err)
+		return nil, "", err
 	}
 	if len(startKey) > 0 && cursorKeyboardID != keyboardID {
 		return nil, "", fmt.Errorf("%w: keyboard filter changed since this cursor was issued", repository.ErrInvalidCursor)
 	}
-	if id, ok := startKey["id"].(*types.AttributeValueMemberS); len(startKey) > 0 && (!ok || id.Value >= refMarkerPrefix) {
+	if id, ok := startKey["id"].(*types.AttributeValueMemberS); ok && id.Value >= refMarkerPrefix {
 		return nil, "", fmt.Errorf("%w: cursor is outside the builds key range", repository.ErrInvalidCursor)
 	}
 

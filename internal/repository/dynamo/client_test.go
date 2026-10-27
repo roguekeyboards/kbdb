@@ -57,21 +57,21 @@ func (s *QueryFullPageSuite) SetupTest() {
 	s.mockClient = mocks.NewMockDynamoAPI(s.T())
 }
 
-func item(id string) map[string]types.AttributeValue {
+func queryItem(id string) map[string]types.AttributeValue {
 	return map[string]types.AttributeValue{
 		"user_id": &types.AttributeValueMemberS{Value: "alice"},
 		"id":      &types.AttributeValueMemberS{Value: id},
 	}
 }
 
-func startsAfter(id string) func(*dynamodb.QueryInput) bool {
+func startsAfterID(id string) func(*dynamodb.QueryInput) bool {
 	return func(in *dynamodb.QueryInput) bool {
 		key, ok := in.ExclusiveStartKey["id"].(*types.AttributeValueMemberS)
 		return ok && key.Value == id
 	}
 }
 
-func ids(items []map[string]types.AttributeValue) []string {
+func itemIDs(items []map[string]types.AttributeValue) []string {
 	out := make([]string, len(items))
 	for i, it := range items {
 		out[i] = it["id"].(*types.AttributeValueMemberS).Value
@@ -84,45 +84,45 @@ func (s *QueryFullPageSuite) TestShortFilteredPages_KeepsQueryingUntilFull() {
 		Query(mock.Anything, mock.MatchedBy(func(in *dynamodb.QueryInput) bool {
 			return len(in.ExclusiveStartKey) == 0 && *in.Limit == queryReadSize
 		})).
-		Return(&dynamodb.QueryOutput{Items: []map[string]types.AttributeValue{item("a")}, LastEvaluatedKey: item("c")}, nil).Once()
+		Return(&dynamodb.QueryOutput{Items: []map[string]types.AttributeValue{queryItem("a")}, LastEvaluatedKey: queryItem("c")}, nil).Once()
 	s.mockClient.EXPECT().
-		Query(mock.Anything, mock.MatchedBy(startsAfter("c"))).
-		Return(&dynamodb.QueryOutput{LastEvaluatedKey: item("f")}, nil).Once()
+		Query(mock.Anything, mock.MatchedBy(startsAfterID("c"))).
+		Return(&dynamodb.QueryOutput{LastEvaluatedKey: queryItem("f")}, nil).Once()
 	s.mockClient.EXPECT().
-		Query(mock.Anything, mock.MatchedBy(startsAfter("f"))).
-		Return(&dynamodb.QueryOutput{Items: []map[string]types.AttributeValue{item("g"), item("h")}, LastEvaluatedKey: item("i")}, nil).Once()
+		Query(mock.Anything, mock.MatchedBy(startsAfterID("f"))).
+		Return(&dynamodb.QueryOutput{Items: []map[string]types.AttributeValue{queryItem("g"), queryItem("h")}, LastEvaluatedKey: queryItem("i")}, nil).Once()
 
 	items, lastKey, err := queryFullPage(s.T().Context(), s.mockClient, &dynamodb.QueryInput{}, 3)
 
 	s.Require().NoError(err)
-	s.Equal([]string{"a", "g", "h"}, ids(items))
-	s.Equal(item("i"), lastKey)
+	s.Equal([]string{"a", "g", "h"}, itemIDs(items))
+	s.Equal(queryItem("i"), lastKey)
 }
 
 func (s *QueryFullPageSuite) TestMoreMatchesThanLimit_ResumesAfterLastKept() {
 	s.mockClient.EXPECT().
 		Query(mock.Anything, mock.MatchedBy(func(in *dynamodb.QueryInput) bool { return len(in.ExclusiveStartKey) == 0 })).
-		Return(&dynamodb.QueryOutput{Items: []map[string]types.AttributeValue{item("a")}, LastEvaluatedKey: item("b")}, nil).Once()
+		Return(&dynamodb.QueryOutput{Items: []map[string]types.AttributeValue{queryItem("a")}, LastEvaluatedKey: queryItem("b")}, nil).Once()
 	s.mockClient.EXPECT().
-		Query(mock.Anything, mock.MatchedBy(startsAfter("b"))).
-		Return(&dynamodb.QueryOutput{Items: []map[string]types.AttributeValue{item("c"), item("d")}, LastEvaluatedKey: item("d")}, nil).Once()
+		Query(mock.Anything, mock.MatchedBy(startsAfterID("b"))).
+		Return(&dynamodb.QueryOutput{Items: []map[string]types.AttributeValue{queryItem("c"), queryItem("d")}, LastEvaluatedKey: queryItem("d")}, nil).Once()
 
 	items, lastKey, err := queryFullPage(s.T().Context(), s.mockClient, &dynamodb.QueryInput{}, 2)
 
 	s.Require().NoError(err)
-	s.Equal([]string{"a", "c"}, ids(items))
-	s.Equal(item("c"), lastKey)
+	s.Equal([]string{"a", "c"}, itemIDs(items))
+	s.Equal(queryItem("c"), lastKey)
 }
 
 func (s *QueryFullPageSuite) TestRangeExhausted_ReturnsShortPageWithNoKey() {
 	s.mockClient.EXPECT().
 		Query(mock.Anything, mock.Anything).
-		Return(&dynamodb.QueryOutput{Items: []map[string]types.AttributeValue{item("a")}}, nil).Once()
+		Return(&dynamodb.QueryOutput{Items: []map[string]types.AttributeValue{queryItem("a")}}, nil).Once()
 
 	items, lastKey, err := queryFullPage(s.T().Context(), s.mockClient, &dynamodb.QueryInput{}, 20)
 
 	s.Require().NoError(err)
-	s.Equal([]string{"a"}, ids(items))
+	s.Equal([]string{"a"}, itemIDs(items))
 	s.Empty(lastKey)
 }
 

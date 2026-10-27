@@ -45,9 +45,9 @@ func (r *SwitchRepository) List(
 		return []repository.Switch{}, "", nil
 	}
 
-	startKey, _, _, err := decodeCursor(cursor)
+	startKey, _, err := decodeOwnerCursor(cursor, ownerID)
 	if err != nil {
-		return nil, "", fmt.Errorf("%w: %w", repository.ErrInvalidCursor, err)
+		return nil, "", err
 	}
 
 	visValues := make([]expression.OperandBuilder, len(visibilities))
@@ -391,6 +391,29 @@ func decodeCursor(cursor string) (key map[string]types.AttributeValue, idx, pfx 
 	}
 
 	return out, env.Idx, env.Pfx, nil
+}
+
+// decodeOwnerCursor is decodeCursor for a List over ownerID's base-table
+// partition: a cursor that doesn't decode, or whose key isn't exactly
+// {user_id: ownerID, id}, is repository.ErrInvalidCursor rather than a
+// start key DynamoDB rejects. pfx is the filter value the cursor was
+// minted under.
+func decodeOwnerCursor(cursor, ownerID string) (key map[string]types.AttributeValue, pfx string, err error) {
+	key, _, pfx, err = decodeCursor(cursor)
+	if err != nil {
+		return nil, "", fmt.Errorf("%w: %w", repository.ErrInvalidCursor, err)
+	}
+	if len(key) == 0 {
+		return nil, pfx, nil
+	}
+
+	userID, ok := key["user_id"].(*types.AttributeValueMemberS)
+	_, hasID := key["id"]
+	if len(key) != 2 || !ok || userID.Value != ownerID || !hasID {
+		return nil, "", fmt.Errorf("%w: key is not a position in this owner's list", repository.ErrInvalidCursor)
+	}
+
+	return key, pfx, nil
 }
 
 // encodeCursor is decodeCursor's inverse. Every LastEvaluatedKey paginated
