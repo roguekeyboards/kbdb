@@ -122,6 +122,29 @@ func (s *ConvertSuite) TestJPEGOrientationIsApplied() {
 	s.Greater(b, r, "right half should be at the bottom")
 }
 
+func (s *ConvertSuite) TestJPEGStoredAsPNGBecomesWebP() {
+	conv := &imageConverter{enabled: true}
+	var buf bytes.Buffer
+	s.Require().NoError(jpeg.Encode(&buf, solid(64, 32, color.White), nil))
+
+	out, ct, err := conv.convert(buf.Bytes(), "image/png")
+
+	s.Require().NoError(err)
+	s.Equal("image/webp", ct)
+	s.Equal(image.Rect(0, 0, 64, 32), s.decodeWebP(out).Bounds())
+}
+
+func (s *ConvertSuite) TestKeptImageGetsItsRealContentType() {
+	conv := &imageConverter{enabled: true}
+	data := s.encodeWebP(solid(16, 16, color.White))
+
+	out, ct, err := conv.convert(data, "image/png")
+
+	s.Require().NoError(err)
+	s.Equal("image/webp", ct)
+	s.Equal(data, out)
+}
+
 func (s *ConvertSuite) TestWebPWithinMaxEdgeIsUnchanged() {
 	conv := &imageConverter{enabled: true}
 	data := s.encodeWebP(solid(2560, 10, color.White))

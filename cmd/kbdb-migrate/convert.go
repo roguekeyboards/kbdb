@@ -7,6 +7,7 @@ import (
 	"image/jpeg"
 	"image/png"
 	"math"
+	"net/http"
 
 	"github.com/bep/imagemeta"
 	"github.com/gen2brain/webp"
@@ -36,12 +37,15 @@ type imageConverter struct {
 // PNG become WebP, upright and scaled to fit maxEdge, and a WebP over maxEdge
 // is scaled and re-encoded. Any other image, an animated one, a WebP within
 // maxEdge, or anything at all when conversion is disabled is returned as is.
+// The format comes from the bytes, not ct: some images were stored with
+// another format's content type, and a kept one is returned with its real one.
 func (c *imageConverter) convert(data []byte, ct string) ([]byte, string, error) {
 	if !c.enabled {
 		return data, ct, nil
 	}
+	sniffed := http.DetectContentType(data)
 	var format imagemeta.ImageFormat
-	switch ct {
+	switch sniffed {
 	case "image/jpeg":
 		format = imagemeta.JPEG
 	case "image/png":
@@ -51,6 +55,7 @@ func (c *imageConverter) convert(data []byte, ct string) ([]byte, string, error)
 	default:
 		return data, ct, nil
 	}
+	ct = sniffed
 
 	meta, err := readImageMeta(data, format)
 	if err != nil {
