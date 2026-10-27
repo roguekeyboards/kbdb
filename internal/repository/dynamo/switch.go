@@ -64,25 +64,24 @@ func (r *SwitchRepository) List(
 		return nil, "", fmt.Errorf("building switch list expression: %w", err)
 	}
 
-	out, err := r.client.Query(ctx, &dynamodb.QueryInput{
+	items, lastKey, err := queryFullPage(ctx, r.client, &dynamodb.QueryInput{
 		TableName:                 &r.tableName,
 		KeyConditionExpression:    expr.KeyCondition(),
 		FilterExpression:          expr.Filter(),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
 		ExclusiveStartKey:         startKey,
-		Limit:                     queryLimit(limit),
-	})
+	}, limit)
 	if err != nil {
 		return nil, "", fmt.Errorf("querying switches for owner %q: %w", ownerID, err)
 	}
 
 	switches := []repository.Switch{}
-	if err := attributevalue.UnmarshalListOfMaps(out.Items, &switches); err != nil {
+	if err := attributevalue.UnmarshalListOfMaps(items, &switches); err != nil {
 		return nil, "", fmt.Errorf("unmarshalling switches for owner %q: %w", ownerID, err)
 	}
 
-	nextCursor, err := encodeCursor(out.LastEvaluatedKey, "", "")
+	nextCursor, err := encodeCursor(lastKey, "", "")
 	if err != nil {
 		return nil, "", fmt.Errorf("encoding next cursor: %w", err)
 	}

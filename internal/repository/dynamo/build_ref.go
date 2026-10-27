@@ -34,11 +34,13 @@ type refMarker struct {
 // table. The "z" prefix is deliberate: it sorts after every character a
 // build id (a lowercase hex UUIDv4) can contain, so a user_id partition
 // Query in default ascending order scans every real Build before it reaches
-// any marker - List relies on this to fill a page with builds first rather
-// than a Limit-bounded scan being diluted by interleaved markers.
+// any marker - List's key condition stops at refMarkerPrefix, so it never
+// reads a marker.
 func (m refMarker) sortKey() string {
-	return fmt.Sprintf("zREF#%s#%s#%s", m.refType, m.refID, m.buildID)
+	return fmt.Sprintf("%s%s#%s#%s", refMarkerPrefix, m.refType, m.refID, m.buildID)
 }
+
+const refMarkerPrefix = "zREF#"
 
 // deriveRefMarkers computes the full set of refMarkers for b's current
 // Keyboard/Switches/KeycapKits. A KeycapKit's refID is the composite

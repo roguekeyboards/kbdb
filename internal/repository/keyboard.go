@@ -288,7 +288,7 @@ type KeyboardRepository interface {
 	// List returns up to limit keyboards owned by ownerID whose Visibility
 	// is in visibilities, ordered by ID. cursor, if non-empty, resumes from
 	// a previous call's returned cursor; the returned cursor is empty when
-	// there are no more pages.
+	// there are no more pages. Only the last page has fewer than limit.
 	List(ctx context.Context, ownerID string, visibilities []Visibility, limit int, cursor string) (keyboards []Keyboard, nextCursor string, err error)
 
 	// Get returns the keyboard owned by ownerID with the given id, or

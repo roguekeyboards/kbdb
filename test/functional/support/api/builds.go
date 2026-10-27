@@ -48,6 +48,11 @@ func (c *BuildsClient) List(ctx context.Context, ownerID, token string, limit in
 // ListFiltered is List plus an optional keywordID filter (keyboard_id query
 // param); an empty keyboardID omits it.
 func (c *BuildsClient) ListFiltered(ctx context.Context, ownerID, token, keyboardID string, limit int) (*http.Response, error) {
+	return c.ListPage(ctx, ownerID, token, keyboardID, limit, "")
+}
+
+// ListPage is ListFiltered resuming from cursor; an empty cursor omits it.
+func (c *BuildsClient) ListPage(ctx context.Context, ownerID, token, keyboardID string, limit int, cursor string) (*http.Response, error) {
 	path := "/v1/users/" + ownerID + "/builds"
 
 	query := url.Values{}
@@ -56,6 +61,9 @@ func (c *BuildsClient) ListFiltered(ctx context.Context, ownerID, token, keyboar
 	}
 	if keyboardID != "" {
 		query.Set("keyboard_id", keyboardID)
+	}
+	if cursor != "" {
+		query.Set("cursor", cursor)
 	}
 	if len(query) > 0 {
 		path += "?" + query.Encode()

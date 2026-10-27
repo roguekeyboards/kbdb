@@ -70,25 +70,24 @@ func (r *KeycapSetRepository) List(
 		return nil, "", fmt.Errorf("building keycap set list expression: %w", err)
 	}
 
-	out, err := r.client.Query(ctx, &dynamodb.QueryInput{
+	items, lastKey, err := queryFullPage(ctx, r.client, &dynamodb.QueryInput{
 		TableName:                 &r.tableName,
 		KeyConditionExpression:    expr.KeyCondition(),
 		FilterExpression:          expr.Filter(),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
 		ExclusiveStartKey:         startKey,
-		Limit:                     queryLimit(limit),
-	})
+	}, limit)
 	if err != nil {
 		return nil, "", fmt.Errorf("querying keycap sets for owner %q: %w", ownerID, err)
 	}
 
 	sets := []repository.KeycapSet{}
-	if err := attributevalue.UnmarshalListOfMaps(out.Items, &sets); err != nil {
+	if err := attributevalue.UnmarshalListOfMaps(items, &sets); err != nil {
 		return nil, "", fmt.Errorf("unmarshalling keycap sets for owner %q: %w", ownerID, err)
 	}
 
-	nextCursor, err := encodeCursor(out.LastEvaluatedKey, "", "")
+	nextCursor, err := encodeCursor(lastKey, "", "")
 	if err != nil {
 		return nil, "", fmt.Errorf("encoding next cursor: %w", err)
 	}

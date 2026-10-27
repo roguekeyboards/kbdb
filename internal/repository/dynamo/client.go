@@ -7,6 +7,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
 // queryLimit clamps a caller-supplied page size to [1, math.MaxInt32] and
@@ -21,6 +22,37 @@ func queryLimit(limit int) *int32 {
 		return aws.Int32(math.MaxInt32)
 	}
 	return aws.Int32(int32(limit))
+}
+
+// queryFullPage runs in, a filtered Query on a user_id/id base table, until
+// it has limit matches or the key range runs out. DynamoDB applies Limit
+// before FilterExpression, so a single Query can return a short or empty
+// page that still has a LastEvaluatedKey. Each Query reads at most limit
+// items; matches past limit are dropped and the returned key resumes after
+// the last one kept.
+func queryFullPage(ctx context.Context, client dynamoAPI, in *dynamodb.QueryInput, limit int) ([]map[string]types.AttributeValue, map[string]types.AttributeValue, error) {
+	in.Limit = queryLimit(limit)
+	want := int(*in.Limit)
+
+	var items []map[string]types.AttributeValue
+	for {
+		out, err := client.Query(ctx, in)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if len(items)+len(out.Items) > want {
+			items = append(items, out.Items[:want-len(items)]...)
+			last := items[len(items)-1]
+			return items, map[string]types.AttributeValue{"user_id": last["user_id"], "id": last["id"]}, nil
+		}
+
+		items = append(items, out.Items...)
+		if len(items) == want || len(out.LastEvaluatedKey) == 0 {
+			return items, out.LastEvaluatedKey, nil
+		}
+		in.ExclusiveStartKey = out.LastEvaluatedKey
+	}
 }
 
 // errKitMissingAfterWrite means UpdateKit's own kit isn't present by KitID
