@@ -26,6 +26,14 @@
 //	kbdb-migrate restore   - recreate a dump's entities + images in --base-url's environment
 //	kbdb-migrate verify    - check a restore against the dump (fields + image hashes)
 //
+// # Images
+//
+// dump converts JPEG and PNG images to WebP and scales any image over 2560px
+// down, with the settings mykeebs-web uses on upload, so a restore leaves only
+// WebP behind. The dump's files, manifests and hashes describe the converted
+// bytes, which restore and verify then check against. dump --no-convert keeps
+// the stored bytes exactly.
+//
 // # What it does not do
 //
 // It never touches lookups, which are a static catalog built into the API;

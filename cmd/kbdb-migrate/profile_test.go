@@ -104,7 +104,7 @@ func (s *ProfileSuite) TestDumpProfile_WritesProfileAndAvatar() {
 	s.avatar = []byte("avatar bytes")
 	outDir := s.T().TempDir()
 
-	found, images, err := dumpProfile(context.Background(), s.client, outDir)
+	found, images, err := dumpProfile(context.Background(), s.client, outDir, &imageConverter{})
 
 	s.Require().NoError(err)
 	s.True(found)
@@ -118,7 +118,7 @@ func (s *ProfileSuite) TestDumpProfile_WritesProfileAndAvatar() {
 func (s *ProfileSuite) TestDumpProfile_NoProfileWritesNothing() {
 	outDir := s.T().TempDir()
 
-	found, images, err := dumpProfile(context.Background(), s.client, outDir)
+	found, images, err := dumpProfile(context.Background(), s.client, outDir, &imageConverter{})
 
 	s.Require().NoError(err)
 	s.False(found)
