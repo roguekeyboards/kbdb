@@ -38,7 +38,7 @@ func (s *BuildRepositorySuite) SetupTest() {
 func (s *BuildRepositorySuite) TestList_Succeeds() {
 	s.mockClient.EXPECT().
 		Query(mock.Anything, mock.MatchedBy(func(in *dynamodb.QueryInput) bool {
-			return len(in.ExclusiveStartKey) == 0 && *in.Limit == 20
+			return len(in.ExclusiveStartKey) == 0 && *in.Limit == queryReadSize
 		})).
 		Return(&dynamodb.QueryOutput{
 			Items: []map[string]types.AttributeValue{
@@ -222,6 +222,21 @@ func (s *BuildRepositorySuite) TestList_CursorFromOtherKeyboardFilter_ReturnsErr
 
 	builds, next, err := s.repo.List(s.T().Context(), "alice",
 		[]repository.Visibility{repository.VisibilityPublic}, "kb2", 1, cursor)
+
+	s.Require().ErrorIs(err, repository.ErrInvalidCursor)
+	s.Nil(builds)
+	s.Empty(next)
+}
+
+func (s *BuildRepositorySuite) TestList_CursorPastBuildsKeyRange_ReturnsErrInvalidCursor() {
+	cursor, err := encodeCursor(map[string]types.AttributeValue{
+		"user_id": &types.AttributeValueMemberS{Value: "alice"},
+		"id":      &types.AttributeValueMemberS{Value: "zREF#keyboard#kb1#b1"},
+	}, "", "")
+	s.Require().NoError(err)
+
+	builds, next, err := s.repo.List(s.T().Context(), "alice",
+		[]repository.Visibility{repository.VisibilityPublic}, "", 20, cursor)
 
 	s.Require().ErrorIs(err, repository.ErrInvalidCursor)
 	s.Nil(builds)

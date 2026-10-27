@@ -125,8 +125,8 @@ type Build struct {
 type BuildRepository interface {
 	// List returns ownerID's builds. If keyboardID is non-empty, only
 	// builds whose Keyboard field equals keyboardID are returned. Only the
-	// last page has fewer than limit. A cursor issued under a different
-	// keyboardID is ErrInvalidCursor.
+	// last page has fewer than limit, and it can be empty. A cursor issued
+	// under a different keyboardID is ErrInvalidCursor.
 	List(ctx context.Context, ownerID string, visibilities []Visibility, keyboardID string, limit int, cursor string) (builds []Build, nextCursor string, err error)
 
 	// Get fetches by exact key regardless of visibility; the caller checks

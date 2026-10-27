@@ -356,10 +356,11 @@ func (r *SwitchRepository) SetImageStatus(ctx context.Context, ownerID, id strin
 }
 
 // cursorEnvelope is the JSON payload base64-encoded into a cursor string.
-// idx and pfx bind a cursor to the index and prefix filter it was minted
-// under; List callers that take no filter leave both empty, and decoding
-// always returns "" for them, so those paths behave exactly as before this
-// field existed.
+// idx and pfx bind a cursor to the index and filter value it was minted
+// under (the directory's username/discord prefix, the builds keyboard_id);
+// List callers that take no filter leave both empty, and decoding always
+// returns "" for them, so those paths behave exactly as before this field
+// existed.
 type cursorEnvelope struct {
 	Key map[string]string `json:"k,omitempty"`
 	Idx string            `json:"idx,omitempty"`
@@ -367,8 +368,8 @@ type cursorEnvelope struct {
 }
 
 // decodeCursor reverses encodeCursor, returning a nil key (no key) for an
-// empty cursor. idx/pfx are the index name and active prefix filter the
-// cursor was minted under, empty for callers with no filter.
+// empty cursor. idx/pfx are the index name and filter value the cursor
+// was minted under, empty for callers with no filter.
 func decodeCursor(cursor string) (key map[string]types.AttributeValue, idx, pfx string, err error) {
 	if cursor == "" {
 		return nil, "", "", nil //nolint:nilnil // no key is a valid, expected result

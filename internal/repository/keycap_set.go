@@ -150,7 +150,7 @@ type KeycapSetRepository interface {
 	// Visibility is in visibilities, ordered by ID. cursor, if non-empty,
 	// resumes from a previous call's returned cursor; the returned cursor
 	// is empty when there are no more pages. Only the last page has fewer
-	// than limit.
+	// than limit, and it can be empty.
 	List(ctx context.Context, ownerID string, visibilities []Visibility, limit int, cursor string) (sets []KeycapSet, nextCursor string, err error)
 
 	// Get returns the keycap set owned by ownerID with the given id, or

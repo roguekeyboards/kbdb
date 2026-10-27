@@ -64,6 +64,9 @@ func (r *BuildRepository) List(
 	if len(startKey) > 0 && cursorKeyboardID != keyboardID {
 		return nil, "", fmt.Errorf("%w: keyboard filter changed since this cursor was issued", repository.ErrInvalidCursor)
 	}
+	if id, ok := startKey["id"].(*types.AttributeValueMemberS); len(startKey) > 0 && (!ok || id.Value >= refMarkerPrefix) {
+		return nil, "", fmt.Errorf("%w: cursor is outside the builds key range", repository.ErrInvalidCursor)
+	}
 
 	visValues := make([]expression.OperandBuilder, len(visibilities))
 	for i, v := range visibilities {

@@ -81,7 +81,9 @@ func ids(items []map[string]types.AttributeValue) []string {
 
 func (s *QueryFullPageSuite) TestShortFilteredPages_KeepsQueryingUntilFull() {
 	s.mockClient.EXPECT().
-		Query(mock.Anything, mock.MatchedBy(func(in *dynamodb.QueryInput) bool { return len(in.ExclusiveStartKey) == 0 && *in.Limit == 3 })).
+		Query(mock.Anything, mock.MatchedBy(func(in *dynamodb.QueryInput) bool {
+			return len(in.ExclusiveStartKey) == 0 && *in.Limit == queryReadSize
+		})).
 		Return(&dynamodb.QueryOutput{Items: []map[string]types.AttributeValue{item("a")}, LastEvaluatedKey: item("c")}, nil).Once()
 	s.mockClient.EXPECT().
 		Query(mock.Anything, mock.MatchedBy(startsAfter("c"))).

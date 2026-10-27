@@ -37,7 +37,7 @@ func (s *KeyboardRepositorySuite) SetupTest() {
 func (s *KeyboardRepositorySuite) TestList_Succeeds() {
 	s.mockClient.EXPECT().
 		Query(mock.Anything, mock.MatchedBy(func(in *dynamodb.QueryInput) bool {
-			return len(in.ExclusiveStartKey) == 0 && *in.Limit == 20
+			return len(in.ExclusiveStartKey) == 0 && *in.Limit == queryReadSize
 		})).
 		Return(&dynamodb.QueryOutput{
 			Items: []map[string]types.AttributeValue{
