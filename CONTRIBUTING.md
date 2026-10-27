@@ -69,6 +69,8 @@ bin/kbdb-migrate verify --issuer <target issuer> --base-url <target base url> --
 
 **Moving data between two accounts on the same issuer** (step 1 and step 3 are different people): the second `login` opens the browser with the first account's IdP session still live, so it lands on the consent screen already "Signed in" as the wrong account. Click **"Not you? Use a different account"** on that page to drop the session and sign in as the target account.
 
+`dump` converts JPEG and PNG images to WebP and scales any image over 2560px down, the way mykeebs-web prepares an upload (lossy quality 82, EXIF orientation applied), so whatever an environment holds, a restore leaves only WebP behind. GIFs, animated images and WebPs within 2560px are kept as they are. Pass `--no-convert` for a byte-exact copy of the stored images.
+
 Restore always **creates new** items (new server-generated IDs), recording an old→new `id-map.json` in the dump directory; builds are restored last with their keyboard/switch/keycap-kit references remapped through that map, and a re-run resumes from wherever a failure stopped.
 
 The **profile** is restored first. If the target account has no profile, restore creates one with the dumped username, and stops before writing anything if another account already has that username. If the target already has a profile, restore replaces its fields, and its avatar if the dump has one, but keeps its username. `verify` compares everything but the username.

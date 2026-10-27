@@ -104,8 +104,9 @@ func (c *DumpCmd) Run(ctx context.Context) error {
 	// Builds reference the other entities; dump it last so its resolved body
 	// is captured after everything it points at (not strictly required, since
 	// the resolved GET body is stored verbatim, but it keeps the tree tidy).
+	conv := &imageConverter{enabled: c.Convert}
 	for _, spec := range []entitySpec{keyboardsSpec, switchesSpec} {
-		n, imgs, err := dumpSimpleCollection(ctx, client, c.Out, spec)
+		n, imgs, err := dumpSimpleCollection(ctx, client, c.Out, spec, conv)
 		if err != nil {
 			return err
 		}
@@ -113,14 +114,14 @@ func (c *DumpCmd) Run(ctx context.Context) error {
 		totalImages += imgs
 	}
 
-	ksCount, ksImgs, err := dumpKeycapSets(ctx, client, c.Out)
+	ksCount, ksImgs, err := dumpKeycapSets(ctx, client, c.Out, conv)
 	if err != nil {
 		return err
 	}
 	counts["keycap_sets"] = ksCount
 	totalImages += ksImgs
 
-	hasProfile, avatars, err := dumpProfile(ctx, client, c.Out)
+	hasProfile, avatars, err := dumpProfile(ctx, client, c.Out, conv)
 	if err != nil {
 		return err
 	}
@@ -129,7 +130,7 @@ func (c *DumpCmd) Run(ctx context.Context) error {
 	}
 	totalImages += avatars
 
-	buildsN, buildsImgs, err := dumpSimpleCollection(ctx, client, c.Out, buildsSpec)
+	buildsN, buildsImgs, err := dumpSimpleCollection(ctx, client, c.Out, buildsSpec, conv)
 	if err != nil {
 		return err
 	}
@@ -141,6 +142,7 @@ func (c *DumpCmd) Run(ctx context.Context) error {
 	}
 
 	counts["images"] = totalImages
+	counts["images_converted"] = conv.converted
 	manifest := dumpManifest{
 		ToolVersion:   Version,
 		DumpedAt:      time.Now(),
@@ -155,8 +157,8 @@ func (c *DumpCmd) Run(ctx context.Context) error {
 	fmt.Printf("\ndump complete\n")
 	fmt.Printf("  source:  %s (subject %s)\n", client.baseURL, client.subject)
 	fmt.Printf("  output:  %s\n\n", c.Out)
-	for _, k := range []string{"profile", "keyboards", "switches", "keycap_sets", "builds", "images"} {
-		fmt.Printf("  %-12s %d\n", k, counts[k])
+	for _, k := range []string{"profile", "keyboards", "switches", "keycap_sets", "builds", "images", "images_converted"} {
+		fmt.Printf("  %-16s %d\n", k, counts[k])
 	}
 	fmt.Printf("\nEach collection count above equals the number the API's list endpoint\n")
 	fmt.Printf("returned; cross-check against list_keyboards / list_switches /\n")
@@ -178,7 +180,7 @@ func (c *DumpCmd) token(ctx context.Context) (string, error) {
 
 // dumpSimpleCollection dumps one collection with either an images[] array or a
 // single image slot. Returns (item count, image count).
-func dumpSimpleCollection(ctx context.Context, client *apiClient, outDir string, spec entitySpec) (int, int, error) {
+func dumpSimpleCollection(ctx context.Context, client *apiClient, outDir string, spec entitySpec, conv *imageConverter) (int, int, error) {
 	fmt.Printf("listing %s...\n", spec.name)
 	items, err := client.listAll(ctx, client.userPath(spec.name))
 	if err != nil {
@@ -210,7 +212,7 @@ func dumpSimpleCollection(ctx context.Context, client *apiClient, outDir string,
 		if err != nil {
 			return 0, 0, fmt.Errorf("%s %s: %w", spec.name, id, err)
 		}
-		n, err := saveImageRefs(ctx, itemDir, spec.arrayImages, refs)
+		n, err := saveImageRefs(ctx, itemDir, spec.arrayImages, refs, conv)
 		if err != nil {
 			return 0, 0, fmt.Errorf("%s %s: %w", spec.name, id, err)
 		}
@@ -232,7 +234,7 @@ func plural(n int) string {
 // manifest. For arrayImages it writes images/<image_id>.<ext> +
 // images/images.manifest.json; otherwise image.<ext> + image.manifest.json.
 // Returns the number of images written.
-func saveImageRefs(ctx context.Context, dir string, arrayImages bool, refs []imageRef) (int, error) {
+func saveImageRefs(ctx context.Context, dir string, arrayImages bool, refs []imageRef, conv *imageConverter) (int, error) {
 	if len(refs) == 0 {
 		return 0, nil
 	}
@@ -244,7 +246,7 @@ func saveImageRefs(ctx context.Context, dir string, arrayImages bool, refs []ima
 		}
 		manifest := make([]imageManifestEntry, 0, len(refs))
 		for _, ref := range refs {
-			entry, err := downloadOne(ctx, imgDir, ref.imageID, ref)
+			entry, err := downloadOne(ctx, imgDir, ref.imageID, ref, conv)
 			if err != nil {
 				return 0, err
 			}
@@ -258,7 +260,7 @@ func saveImageRefs(ctx context.Context, dir string, arrayImages bool, refs []ima
 
 	// single slot
 	ref := refs[0]
-	entry, err := downloadOne(ctx, dir, "image", ref)
+	entry, err := downloadOne(ctx, dir, "image", ref, conv)
 	if err != nil {
 		return 0, err
 	}
@@ -268,13 +270,18 @@ func saveImageRefs(ctx context.Context, dir string, arrayImages bool, refs []ima
 	return 1, nil
 }
 
-// downloadOne fetches ref, writes <dir>/<basename>.<ext>, verifies the file on
-// disk, and returns its manifest entry. basename is the image id for array
-// images, or "image"/"avatar" for single slots.
-func downloadOne(ctx context.Context, dir, basename string, ref imageRef) (imageManifestEntry, error) {
+// downloadOne fetches ref, converts it with conv, writes
+// <dir>/<basename>.<ext>, verifies the file on disk, and returns its manifest
+// entry. basename is the image id for array images, or "image"/"avatar" for
+// single slots.
+func downloadOne(ctx context.Context, dir, basename string, ref imageRef, conv *imageConverter) (imageManifestEntry, error) {
 	data, ct, err := downloadImage(ctx, ref.url)
 	if err != nil {
 		return imageManifestEntry{}, fmt.Errorf("downloading image %s: %w", basename, err)
+	}
+	data, ct, err = conv.convert(data, ct)
+	if err != nil {
+		return imageManifestEntry{}, fmt.Errorf("converting image %s: %w", basename, err)
 	}
 	ext, err := extForContentType(ct)
 	if err != nil {
@@ -296,7 +303,7 @@ func downloadOne(ctx context.Context, dir, basename string, ref imageRef) (image
 
 // dumpKeycapSets dumps keycap sets with their nested kits[] and per-kit
 // images. Returns (set count, image count).
-func dumpKeycapSets(ctx context.Context, client *apiClient, outDir string) (int, int, error) {
+func dumpKeycapSets(ctx context.Context, client *apiClient, outDir string, conv *imageConverter) (int, int, error) {
 	fmt.Println("listing keycap-sets...")
 	items, err := client.listAll(ctx, client.userPath("keycap-sets"))
 	if err != nil {
@@ -344,7 +351,7 @@ func dumpKeycapSets(ctx context.Context, client *apiClient, outDir string) (int,
 			if err := os.MkdirAll(kitDir, 0o700); err != nil {
 				return 0, 0, fmt.Errorf("creating %s: %w", kitDir, err)
 			}
-			entry, err := downloadOne(ctx, kitDir, "image", imageRef{url: kit.Image.URL})
+			entry, err := downloadOne(ctx, kitDir, "image", imageRef{url: kit.Image.URL}, conv)
 			if err != nil {
 				return 0, 0, fmt.Errorf("keycap set %s kit %s: %w", id, kit.KitID, err)
 			}

@@ -40,7 +40,7 @@ func isNotFound(err error) bool {
 
 // dumpProfile writes the subject's profile and avatar under outDir/profile.
 // Returns whether there was a profile, and how many images it wrote.
-func dumpProfile(ctx context.Context, client *apiClient, outDir string) (bool, int, error) {
+func dumpProfile(ctx context.Context, client *apiClient, outDir string, conv *imageConverter) (bool, int, error) {
 	fmt.Println("fetching profile...")
 	body, err := client.getRaw(ctx, client.profilePath())
 	if isNotFound(err) {
@@ -64,7 +64,7 @@ func dumpProfile(ctx context.Context, client *apiClient, outDir string) (bool, i
 		fmt.Println("  profile (no avatar)")
 		return true, 0, nil
 	}
-	entry, err := downloadOne(ctx, dir, "avatar", imageRef{url: url})
+	entry, err := downloadOne(ctx, dir, "avatar", imageRef{url: url}, conv)
 	if err != nil {
 		return false, 0, fmt.Errorf("profile: %w", err)
 	}
