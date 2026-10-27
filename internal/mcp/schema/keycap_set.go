@@ -66,7 +66,7 @@ type KeycapKit struct {
 	Purchase *KeycapKitPurchase `json:"purchase,omitempty" jsonschema:"where it was bought and the order's status"`
 
 	ImageStatus          *string `json:"image_status,omitempty" jsonschema:"the image's moderation status: pending until it's checked, then approved or rejected; only ever present for the set's owner"`
-	ImageRejectionReason *string `json:"image_rejection_reason,omitempty" jsonschema:"why a rejected image was rejected: the moderation label, or unprocessable when the file couldn't be checked; only ever present for the set's owner"`
+	ImageRejectionReason *string `json:"image_rejection_reason,omitempty" jsonschema:"why a rejected image was rejected: the moderation label; not_webp when the file isn't a WebP; too_large when its longest side is over 2560px; or unprocessable when the file couldn't be checked; only ever present for the set's owner"`
 }
 
 // KeycapKitPurchase is a kit's purchase and order lifecycle, independent of
@@ -201,8 +201,8 @@ type DeleteKeycapKitOutput struct {
 type SetKeycapKitImageInput struct {
 	KeycapSetID string `json:"keycap_set_id" jsonschema:"the id of the keycap set the kit belongs to"`
 	KitID       string `json:"kit_id" jsonschema:"the id of the kit to set the image on"`
-	ContentType string `json:"content_type" jsonschema:"the image's MIME type; must be an approved image_content_type lookup value"`
-	SizeBytes   int64  `json:"size_bytes" jsonschema:"the image's exact size in bytes, at most 5242880 (5 MB); resize anything larger before calling this tool. The upload must send exactly this many bytes"`
+	ContentType string `json:"content_type" jsonschema:"the image's MIME type; must be image/webp, the only approved image_content_type lookup value"`
+	SizeBytes   int64  `json:"size_bytes" jsonschema:"the image's exact size in bytes, at most 1572864 (1.5 MB). The upload must send exactly this many bytes"`
 }
 
 // SetKeycapKitImageOutput is the set_keycap_kit_image tool output.

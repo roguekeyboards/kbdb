@@ -100,7 +100,7 @@ func ownedReadable[T any](
 // the request validator applies there, for the MCP image tools.
 func validateImageSize(size int64) error {
 	if size < 1 || size > repository.MaxImageSizeBytes {
-		return fmt.Errorf("size_bytes: must be between 1 and %d (5 MB); resize the image first", repository.MaxImageSizeBytes)
+		return fmt.Errorf("size_bytes: must be between 1 and %d (1.5 MB); resize or recompress the image first", repository.MaxImageSizeBytes)
 	}
 	return nil
 }

@@ -3,6 +3,8 @@ package moderation
 import (
 	"bytes"
 	"errors"
+	"image"
+	"image/jpeg"
 	"io"
 	"os"
 	"testing"
@@ -63,17 +65,22 @@ func (s *ModeratorSuite) stored(path string, status repository.ImageStatus) {
 		Return(&repository.Switch{ID: "sw1", ImagePath: &p, ImageStatus: status}, nil)
 }
 
-func (s *ModeratorSuite) contentType(ct string) {
-	s.s3.EXPECT().HeadObject(mock.Anything, mock.Anything).
-		Return(&s3.HeadObjectOutput{ContentType: aws.String(ct)}, nil)
+func (s *ModeratorSuite) object(data []byte) {
+	s.s3.EXPECT().GetObject(mock.Anything, mock.Anything).
+		Return(&s3.GetObjectOutput{Body: io.NopCloser(bytes.NewReader(data))}, nil)
+}
+
+func (s *ModeratorSuite) webp(path string) {
+	data, err := os.ReadFile(path) //nolint:gosec // test fixture.
+	s.Require().NoError(err)
+	s.object(data)
 }
 
 func (s *ModeratorSuite) labels(labels ...rektypes.ModerationLabel) {
 	s.rekognition.EXPECT().
 		DetectModerationLabels(mock.Anything, mock.MatchedBy(func(in *rekognition.DetectModerationLabelsInput) bool {
-			return in.Image.S3Object != nil &&
-				aws.ToString(in.Image.S3Object.Bucket) == testBucket &&
-				aws.ToString(in.Image.S3Object.Name) == testKey &&
+			return in.Image.S3Object == nil &&
+				bytes.HasPrefix(in.Image.Bytes, []byte{0xFF, 0xD8}) &&
 				aws.ToFloat32(in.MinConfidence) == 80
 		})).
 		Return(&rekognition.DetectModerationLabelsOutput{ModerationLabels: labels}, nil)
@@ -97,7 +104,7 @@ func (s *ModeratorSuite) expectTagged() *mock.Call {
 
 func (s *ModeratorSuite) TestNoLabels_Approved() {
 	s.stored(testKey, repository.ImageStatusPending)
-	s.contentType("image/jpeg")
+	s.webp("testdata/half-transparent.webp")
 	s.labels()
 	s.expectStatus(repository.ImageStatusApproved, nil)
 
@@ -106,7 +113,7 @@ func (s *ModeratorSuite) TestNoLabels_Approved() {
 
 func (s *ModeratorSuite) TestLabelOverThreshold_TaggedThenRejectedWithTheLabel() {
 	s.stored(testKey, repository.ImageStatusPending)
-	s.contentType("image/png")
+	s.webp("testdata/half-transparent.webp")
 	s.labels(label("Hate Symbols", "", 1, 95), label("Nazi Party", "Hate Symbols", 2, 95))
 	tagged := s.expectTagged()
 	s.expectStatus(repository.ImageStatusRejected, aws.String("Hate Symbols")).NotBefore(tagged)
@@ -114,27 +121,10 @@ func (s *ModeratorSuite) TestLabelOverThreshold_TaggedThenRejectedWithTheLabel()
 	s.Require().NoError(s.handle(testKey))
 }
 
-func (s *ModeratorSuite) TestWebP_SentAsJPEGBytes() {
-	data, err := os.ReadFile("testdata/half-transparent.webp")
-	s.Require().NoError(err)
-	s.stored(testKey, repository.ImageStatusPending)
-	s.contentType("image/webp")
-	s.s3.EXPECT().GetObject(mock.Anything, mock.Anything).
-		Return(&s3.GetObjectOutput{Body: io.NopCloser(bytes.NewReader(data))}, nil)
-	s.rekognition.EXPECT().
-		DetectModerationLabels(mock.Anything, mock.MatchedBy(func(in *rekognition.DetectModerationLabelsInput) bool {
-			return in.Image.S3Object == nil && bytes.HasPrefix(in.Image.Bytes, []byte{0xFF, 0xD8})
-		})).
-		Return(&rekognition.DetectModerationLabelsOutput{}, nil)
-	s.expectStatus(repository.ImageStatusApproved, nil)
-
-	s.Require().NoError(s.handle(testKey))
-}
-
 func (s *ModeratorSuite) TestCalibration_RequestsEveryLabel() {
 	s.moderator.calibration = true
 	s.stored(testKey, repository.ImageStatusPending)
-	s.contentType("image/jpeg")
+	s.webp("testdata/half-transparent.webp")
 	s.rekognition.EXPECT().
 		DetectModerationLabels(mock.Anything, mock.MatchedBy(func(in *rekognition.DetectModerationLabelsInput) bool {
 			return aws.ToFloat32(in.MinConfidence) == 0
@@ -171,7 +161,7 @@ func (s *ModeratorSuite) TestNotAnImageKey_Ignored() {
 
 func (s *ModeratorSuite) TestRekognitionRefusesImage_RejectedUnprocessable() {
 	s.stored(testKey, repository.ImageStatusPending)
-	s.contentType("image/jpeg")
+	s.webp("testdata/half-transparent.webp")
 	s.rekognition.EXPECT().DetectModerationLabels(mock.Anything, mock.Anything).
 		Return(nil, &rektypes.InvalidImageFormatException{Message: aws.String("bad")})
 	tagged := s.expectTagged()
@@ -182,27 +172,36 @@ func (s *ModeratorSuite) TestRekognitionRefusesImage_RejectedUnprocessable() {
 
 func (s *ModeratorSuite) TestUndecodableWebP_RejectedUnprocessable() {
 	s.stored(testKey, repository.ImageStatusPending)
-	s.contentType("image/webp")
-	s.s3.EXPECT().GetObject(mock.Anything, mock.Anything).
-		Return(&s3.GetObjectOutput{Body: io.NopCloser(bytes.NewReader([]byte("nope")))}, nil)
+	s.object([]byte("RIFF\x10\x00\x00\x00WEBPVP8 not really"))
 	s.expectTagged()
 	s.expectStatus(repository.ImageStatusRejected, aws.String("unprocessable"))
 
 	s.Require().NoError(s.handle(testKey))
 }
 
-func (s *ModeratorSuite) TestUnsupportedContentType_RejectedUnprocessable() {
+func (s *ModeratorSuite) TestNotWebP_RejectedNotWebP() {
+	var buf bytes.Buffer
+	s.Require().NoError(jpeg.Encode(&buf, image.NewRGBA(image.Rect(0, 0, 10, 10)), nil))
 	s.stored(testKey, repository.ImageStatusPending)
-	s.contentType("image/gif")
-	s.expectTagged()
-	s.expectStatus(repository.ImageStatusRejected, aws.String("unprocessable"))
+	s.object(buf.Bytes())
+	tagged := s.expectTagged()
+	s.expectStatus(repository.ImageStatusRejected, aws.String("not_webp")).NotBefore(tagged)
+
+	s.Require().NoError(s.handle(testKey))
+}
+
+func (s *ModeratorSuite) TestOverMaxEdge_RejectedTooLarge() {
+	s.stored(testKey, repository.ImageStatusPending)
+	s.webp("testdata/oversized.webp")
+	tagged := s.expectTagged()
+	s.expectStatus(repository.ImageStatusRejected, aws.String("too_large")).NotBefore(tagged)
 
 	s.Require().NoError(s.handle(testKey))
 }
 
 func (s *ModeratorSuite) TestRekognitionTemporaryError_ReturnedForRetry() {
 	s.stored(testKey, repository.ImageStatusPending)
-	s.contentType("image/jpeg")
+	s.webp("testdata/half-transparent.webp")
 	s.rekognition.EXPECT().DetectModerationLabels(mock.Anything, mock.Anything).
 		Return(nil, &rektypes.ThrottlingException{Message: aws.String("slow down")})
 
@@ -211,7 +210,7 @@ func (s *ModeratorSuite) TestRekognitionTemporaryError_ReturnedForRetry() {
 
 func (s *ModeratorSuite) TestTaggingError_ReturnedBeforeTheStatusWrite() {
 	s.stored(testKey, repository.ImageStatusPending)
-	s.contentType("image/jpeg")
+	s.webp("testdata/half-transparent.webp")
 	s.labels(label("Explicit", "", 1, 99))
 	s.s3.EXPECT().PutObjectTagging(mock.Anything, mock.Anything).Return(nil, errors.New("s3 down"))
 
@@ -220,7 +219,7 @@ func (s *ModeratorSuite) TestTaggingError_ReturnedBeforeTheStatusWrite() {
 
 func (s *ModeratorSuite) TestStatusChangedMeanwhile_NotAnError() {
 	s.stored(testKey, repository.ImageStatusPending)
-	s.contentType("image/jpeg")
+	s.webp("testdata/half-transparent.webp")
 	s.labels()
 	s.switches.EXPECT().
 		SetImageStatus(mock.Anything, "alice", "sw1", repository.SwitchImageKey(testKey), repository.ImageStatusPending, repository.ImageStatusApproved, (*string)(nil)).
@@ -231,7 +230,7 @@ func (s *ModeratorSuite) TestStatusChangedMeanwhile_NotAnError() {
 
 func (s *ModeratorSuite) TestStatusWriteError_Returned() {
 	s.stored(testKey, repository.ImageStatusPending)
-	s.contentType("image/jpeg")
+	s.webp("testdata/half-transparent.webp")
 	s.labels()
 	s.switches.EXPECT().
 		SetImageStatus(mock.Anything, "alice", "sw1", repository.SwitchImageKey(testKey), repository.ImageStatusPending, repository.ImageStatusApproved, (*string)(nil)).

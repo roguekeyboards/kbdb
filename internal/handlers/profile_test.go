@@ -723,7 +723,7 @@ func (s *SetProfileImageSuite) TestSucceeds() {
 	reserved := expectUploadReserved(s.mockUploads)
 	s.mockRepo.EXPECT().Get(mock.Anything, "user-alice").Return(&repository.Profile{}, nil)
 	var presigned repository.ProfileImageKey
-	s.mockImages.EXPECT().PresignPut(mock.Anything, newProfileImageKey(), "image/png", int64(524288)).
+	s.mockImages.EXPECT().PresignPut(mock.Anything, newProfileImageKey(), "image/webp", int64(524288)).
 		Run(func(_ context.Context, key repository.ProfileImageKey, _ string, _ int64) { presigned = key }).
 		Return("https://example.com/presigned-put", nil).
 		NotBefore(reserved)
@@ -732,7 +732,7 @@ func (s *SetProfileImageSuite) TestSucceeds() {
 		Return(nil)
 
 	rec := httptest.NewRecorder()
-	s.handler(rec, s.newRequest(s.ownerCtx(), "user-alice", `{"content_type":"image/png","size_bytes":524288}`))
+	s.handler(rec, s.newRequest(s.ownerCtx(), "user-alice", `{"content_type":"image/webp","size_bytes":524288}`))
 
 	s.Equal(http.StatusCreated, rec.Code)
 	s.Equal("application/json", rec.Header().Get("Content-Type"))
@@ -748,13 +748,13 @@ func (s *SetProfileImageSuite) TestReplacingAvatar_DeletesPreviousObjectFirst() 
 	previous := previousProfileImageTestKey
 	s.mockRepo.EXPECT().Get(mock.Anything, "user-alice").
 		Return(&repository.Profile{AvatarPath: &previous}, nil)
-	s.mockImages.EXPECT().PresignPut(mock.Anything, newProfileImageKey(), "image/png", int64(524288)).
+	s.mockImages.EXPECT().PresignPut(mock.Anything, newProfileImageKey(), "image/webp", int64(524288)).
 		Return("https://example.com/presigned-put", nil)
 	deleted := s.mockImages.EXPECT().Delete(mock.Anything, previousProfileImageTestKey).Return(nil).Call
 	s.mockRepo.EXPECT().SetAvatarPath(mock.Anything, newProfileImageKey()).Return(nil).NotBefore(deleted)
 
 	rec := httptest.NewRecorder()
-	s.handler(rec, s.newRequest(s.ownerCtx(), "user-alice", `{"content_type":"image/png","size_bytes":524288}`))
+	s.handler(rec, s.newRequest(s.ownerCtx(), "user-alice", `{"content_type":"image/webp","size_bytes":524288}`))
 
 	s.Equal(http.StatusCreated, rec.Code)
 }
@@ -763,7 +763,7 @@ func (s *SetProfileImageSuite) TestNotOwner_404() {
 	ctx := kbdbctx.WithUserID(s.T().Context(), "user-bob")
 
 	rec := httptest.NewRecorder()
-	s.handler(rec, s.newRequest(ctx, "user-alice", `{"content_type":"image/png","size_bytes":524288}`))
+	s.handler(rec, s.newRequest(ctx, "user-alice", `{"content_type":"image/webp","size_bytes":524288}`))
 
 	s.Equal(http.StatusNotFound, rec.Code)
 	s.Equal("application/problem+json", rec.Header().Get("Content-Type"))
@@ -771,14 +771,14 @@ func (s *SetProfileImageSuite) TestNotOwner_404() {
 
 func (s *SetProfileImageSuite) TestUsernameIdentifier_404() {
 	rec := httptest.NewRecorder()
-	s.handler(rec, s.newRequest(s.ownerCtx(), "alice", `{"content_type":"image/png","size_bytes":524288}`))
+	s.handler(rec, s.newRequest(s.ownerCtx(), "alice", `{"content_type":"image/webp","size_bytes":524288}`))
 
 	s.Equal(http.StatusNotFound, rec.Code)
 }
 
 func (s *SetProfileImageSuite) TestAnonymous_404() {
 	rec := httptest.NewRecorder()
-	s.handler(rec, s.newRequest(s.T().Context(), "user-alice", `{"content_type":"image/png","size_bytes":524288}`))
+	s.handler(rec, s.newRequest(s.T().Context(), "user-alice", `{"content_type":"image/webp","size_bytes":524288}`))
 
 	s.Equal(http.StatusNotFound, rec.Code)
 }
@@ -808,7 +808,7 @@ func (s *SetProfileImageSuite) TestNoProfile_404() {
 	s.mockRepo.EXPECT().Get(mock.Anything, "user-alice").Return(nil, repository.ErrNotFound)
 
 	rec := httptest.NewRecorder()
-	s.handler(rec, s.newRequest(s.ownerCtx(), "user-alice", `{"content_type":"image/png","size_bytes":524288}`))
+	s.handler(rec, s.newRequest(s.ownerCtx(), "user-alice", `{"content_type":"image/webp","size_bytes":524288}`))
 
 	s.Equal(http.StatusNotFound, rec.Code)
 	s.Equal("application/problem+json", rec.Header().Get("Content-Type"))
@@ -819,11 +819,11 @@ func (s *SetProfileImageSuite) TestPresignError_500() {
 	previous := previousProfileImageTestKey
 	s.mockRepo.EXPECT().Get(mock.Anything, "user-alice").
 		Return(&repository.Profile{AvatarPath: &previous}, nil)
-	s.mockImages.EXPECT().PresignPut(mock.Anything, newProfileImageKey(), "image/png", int64(524288)).
+	s.mockImages.EXPECT().PresignPut(mock.Anything, newProfileImageKey(), "image/webp", int64(524288)).
 		Return("", errors.New("s3: access denied"))
 
 	rec := httptest.NewRecorder()
-	s.handler(rec, s.newRequest(s.ownerCtx(), "user-alice", `{"content_type":"image/png","size_bytes":524288}`))
+	s.handler(rec, s.newRequest(s.ownerCtx(), "user-alice", `{"content_type":"image/webp","size_bytes":524288}`))
 
 	s.Equal(http.StatusInternalServerError, rec.Code)
 }
@@ -833,12 +833,12 @@ func (s *SetProfileImageSuite) TestDeletePreviousError_500() {
 	previous := previousProfileImageTestKey
 	s.mockRepo.EXPECT().Get(mock.Anything, "user-alice").
 		Return(&repository.Profile{AvatarPath: &previous}, nil)
-	s.mockImages.EXPECT().PresignPut(mock.Anything, newProfileImageKey(), "image/png", int64(524288)).
+	s.mockImages.EXPECT().PresignPut(mock.Anything, newProfileImageKey(), "image/webp", int64(524288)).
 		Return("https://example.com/presigned-put", nil)
 	s.mockImages.EXPECT().Delete(mock.Anything, previousProfileImageTestKey).Return(errors.New("s3: access denied"))
 
 	rec := httptest.NewRecorder()
-	s.handler(rec, s.newRequest(s.ownerCtx(), "user-alice", `{"content_type":"image/png","size_bytes":524288}`))
+	s.handler(rec, s.newRequest(s.ownerCtx(), "user-alice", `{"content_type":"image/webp","size_bytes":524288}`))
 
 	s.Equal(http.StatusInternalServerError, rec.Code)
 }
@@ -954,7 +954,7 @@ func (s *SetProfileImageSuite) TestUploadLimitReached_Returns429() {
 		Return(repository.ErrUploadLimitReached)
 
 	rec := httptest.NewRecorder()
-	s.handler(rec, s.newRequest(s.ownerCtx(), "user-alice", `{"content_type":"image/png","size_bytes":524288}`))
+	s.handler(rec, s.newRequest(s.ownerCtx(), "user-alice", `{"content_type":"image/webp","size_bytes":524288}`))
 
 	s.Equal(http.StatusTooManyRequests, rec.Code)
 	s.Equal("application/problem+json", rec.Header().Get("Content-Type"))
@@ -969,7 +969,7 @@ func (s *SetProfileImageSuite) TestReserveError_Returns500() {
 		Return(errors.New("dynamo: boom"))
 
 	rec := httptest.NewRecorder()
-	s.handler(rec, s.newRequest(s.ownerCtx(), "user-alice", `{"content_type":"image/png","size_bytes":524288}`))
+	s.handler(rec, s.newRequest(s.ownerCtx(), "user-alice", `{"content_type":"image/webp","size_bytes":524288}`))
 
 	s.Equal(http.StatusInternalServerError, rec.Code)
 }

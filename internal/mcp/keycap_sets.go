@@ -65,7 +65,7 @@ var deleteKeycapKitTool = &mcp.Tool{
 
 var setKeycapKitImageTool = &mcp.Tool{
 	Name:        "set_keycap_kit_image",
-	Description: "Mints a presigned URL to upload a kit's image to. Doesn't upload the image itself - PUT the image bytes to the returned upload_url using the same content_type as the Content-Type header, an If-None-Match: * header, and a body of exactly size_bytes. The upload_url is for one upload: another PUT to it fails with 412 while that image is stored. Images are capped at 5 MB; resize anything larger first. If image uploads aren't available at the moment, this fails without issuing a URL; try again later. A new image starts pending until it's checked, and only you can see it until it's approved. A rejected image is shown only to you, with the reason, until you replace or delete it.",
+	Description: "Mints a presigned URL to upload a kit's image to. Doesn't upload the image itself - PUT the image bytes to the returned upload_url using the same content_type as the Content-Type header, an If-None-Match: * header, and a body of exactly size_bytes. The upload_url is for one upload: another PUT to it fails with 412 while that image is stored. The image must be a WebP, at most 2560px on its longest side and at most 1.5 MB: before calling this, check the image and convert it to WebP and resize it if it isn't, or tell the user it can't be uploaded. An upload that isn't really a WebP, or is over 2560px, is rejected. If image uploads aren't available at the moment, this fails without issuing a URL; try again later. A new image starts pending until it's checked, and only you can see it until it's approved. A rejected image is shown only to you, with the reason, until you replace or delete it.",
 }
 
 var deleteKeycapKitImageTool = &mcp.Tool{

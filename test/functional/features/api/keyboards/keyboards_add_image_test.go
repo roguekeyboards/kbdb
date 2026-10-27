@@ -149,12 +149,12 @@ var _ = Describe("Adding an image to a keyboard", func() {
 				})
 			})
 
-			Context("given size_bytes over the 5 MB cap", func() {
+			Context("given size_bytes over the 1.5 MB cap", func() {
 				When("adding an image to the keyboard", func() {
 					BeforeEach(func(ctx SpecContext) {
 						var err error
 						resp, err = client.AddImage(ctx, ownerID, keyboardID, ownerToken,
-							`{"content_type":"`+approvedImageContentType+`","size_bytes":5242881}`)
+							`{"content_type":"`+approvedImageContentType+`","size_bytes":`+strconv.Itoa(api.MaxUploadBytes+1)+`}`)
 						Expect(err).NotTo(HaveOccurred())
 					})
 

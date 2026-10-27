@@ -73,7 +73,6 @@ if [[ ! -f "$CERT_DIR/truststore.p12" ]] ||
     { echo "func-setup: could not build $CERT_DIR/truststore.p12" >&2; exit 1; }
 fi
 
-mkdir -p .floci-ai-mock
 docker compose -f docker-compose.floci.yml up -d floci
 
 for _ in $(seq 1 30); do
@@ -157,11 +156,6 @@ API_ID=$(aws apigatewayv2 get-apis --query 'Items[0].ApiId' --output text)
 
 IMAGES_BUCKET=$(out ImagesBucketName)
 
-# docker-compose.floci.yml mounts this directory and points floci's
-# AI_MOCK_CONFIG at mock.json in it; the functional suite writes canned
-# Rekognition responses there.
-AI_MOCK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/.floci-ai-mock"
-
 # func-test.sh sources this directly, so `mise run func-test` picks up a
 # fresh deploy's stack-derived values without any manual export step.
 ENV_FILE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/.env.floci"
@@ -184,7 +178,6 @@ export KBDB_ALARM_TOPIC_ARN=$(out AlarmTopicArn)
 export KBDB_STACK_NAME=$STACK
 export KBDB_AWS_ENDPOINT_URL=$ENDPOINT
 export KBDB_CA_CERT_PATH='$CERT_DIR/ca.crt'
-export KBDB_AI_MOCK_CONFIG='$AI_MOCK_DIR/mock.json'
 export KBDB_OIDC_ISSUER='$ISSUER'
 export KBDB_OIDC_AUDIENCE='$AUDIENCE'
 export KBDB_OIDC_SIGNING_KEY_PATH='$KEY_PATH'

@@ -1684,7 +1684,7 @@ func (s *SetKeycapKitImageSuite) TestSetKeycapKitImage_Succeeds() {
 		Return(setWithKit1(nil), nil)
 	var presigned repository.KeycapKitImageKey
 	s.mockImages.EXPECT().
-		PresignPut(mock.Anything, newKeycapKitImageKey(), "image/png", int64(524288)).
+		PresignPut(mock.Anything, newKeycapKitImageKey(), "image/webp", int64(524288)).
 		Run(func(_ context.Context, key repository.KeycapKitImageKey, _ string, _ int64) { presigned = key }).
 		Return("https://example.com/presigned-put", nil).
 		NotBefore(reserved)
@@ -1693,7 +1693,7 @@ func (s *SetKeycapKitImageSuite) TestSetKeycapKitImage_Succeeds() {
 		Run(func(_ context.Context, _, _ string, key repository.KeycapKitImageKey) { s.Equal(presigned, key) }).
 		Return(nil)
 
-	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
+	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/webp","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
 	s.handler(rec, req)
 
@@ -1714,7 +1714,7 @@ func (s *SetKeycapKitImageSuite) TestSetKeycapKitImage_ReplacingImage_DeletesPre
 		Get(mock.Anything, "alice", "ks1").
 		Return(setWithKit1(&previous), nil)
 	s.mockImages.EXPECT().
-		PresignPut(mock.Anything, newKeycapKitImageKey(), "image/png", int64(524288)).
+		PresignPut(mock.Anything, newKeycapKitImageKey(), "image/webp", int64(524288)).
 		Return("https://example.com/presigned-put", nil)
 	deleted := s.mockImages.EXPECT().
 		Delete(mock.Anything, previousKeycapKitImageTestKey).
@@ -1725,7 +1725,7 @@ func (s *SetKeycapKitImageSuite) TestSetKeycapKitImage_ReplacingImage_DeletesPre
 		Return(nil).
 		NotBefore(deleted)
 
-	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
+	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/webp","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
 	s.handler(rec, req)
 
@@ -1735,7 +1735,7 @@ func (s *SetKeycapKitImageSuite) TestSetKeycapKitImage_ReplacingImage_DeletesPre
 func (s *SetKeycapKitImageSuite) TestSetKeycapKitImage_NotOwner_Returns404() {
 	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
 
-	req := s.newRequest(ctx, `{"content_type":"image/png","size_bytes":524288}`)
+	req := s.newRequest(ctx, `{"content_type":"image/webp","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
 	s.handler(rec, req)
 
@@ -1744,7 +1744,7 @@ func (s *SetKeycapKitImageSuite) TestSetKeycapKitImage_NotOwner_Returns404() {
 }
 
 func (s *SetKeycapKitImageSuite) TestSetKeycapKitImage_Anonymous_Returns404() {
-	req := s.newRequest(s.T().Context(), `{"content_type":"image/png","size_bytes":524288}`)
+	req := s.newRequest(s.T().Context(), `{"content_type":"image/webp","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
 	s.handler(rec, req)
 
@@ -1782,7 +1782,7 @@ func (s *SetKeycapKitImageSuite) TestSetKeycapKitImage_SetNotFound_Returns404() 
 		Get(mock.Anything, "alice", "ks1").
 		Return(nil, repository.ErrNotFound)
 
-	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
+	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/webp","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
 	s.handler(rec, req)
 
@@ -1795,7 +1795,7 @@ func (s *SetKeycapKitImageSuite) TestSetKeycapKitImage_KitNotFound_Returns404() 
 		Get(mock.Anything, "alice", "ks1").
 		Return(&repository.KeycapSet{ID: "ks1"}, nil)
 
-	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
+	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/webp","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
 	s.handler(rec, req)
 
@@ -1810,10 +1810,10 @@ func (s *SetKeycapKitImageSuite) TestSetKeycapKitImage_PresignError_Returns500()
 		Get(mock.Anything, "alice", "ks1").
 		Return(setWithKit1(&previous), nil)
 	s.mockImages.EXPECT().
-		PresignPut(mock.Anything, newKeycapKitImageKey(), "image/png", int64(524288)).
+		PresignPut(mock.Anything, newKeycapKitImageKey(), "image/webp", int64(524288)).
 		Return("", errors.New("s3: access denied"))
 
-	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
+	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/webp","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
 	s.handler(rec, req)
 
@@ -1828,13 +1828,13 @@ func (s *SetKeycapKitImageSuite) TestSetKeycapKitImage_DeletePreviousError_Retur
 		Get(mock.Anything, "alice", "ks1").
 		Return(setWithKit1(&previous), nil)
 	s.mockImages.EXPECT().
-		PresignPut(mock.Anything, newKeycapKitImageKey(), "image/png", int64(524288)).
+		PresignPut(mock.Anything, newKeycapKitImageKey(), "image/webp", int64(524288)).
 		Return("https://example.com/presigned-put", nil)
 	s.mockImages.EXPECT().
 		Delete(mock.Anything, previousKeycapKitImageTestKey).
 		Return(errors.New("s3: access denied"))
 
-	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
+	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/webp","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
 	s.handler(rec, req)
 
@@ -1848,13 +1848,13 @@ func (s *SetKeycapKitImageSuite) TestSetKeycapKitImage_RepositoryError_Returns50
 		Get(mock.Anything, "alice", "ks1").
 		Return(setWithKit1(nil), nil)
 	s.mockImages.EXPECT().
-		PresignPut(mock.Anything, newKeycapKitImageKey(), "image/png", int64(524288)).
+		PresignPut(mock.Anything, newKeycapKitImageKey(), "image/webp", int64(524288)).
 		Return("https://example.com/presigned-put", nil)
 	s.mockRepo.EXPECT().
 		SetKitImagePath(mock.Anything, "ks1", "kit1", newKeycapKitImageKey()).
 		Return(errors.New("put item failed"))
 
-	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
+	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/webp","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
 	s.handler(rec, req)
 
@@ -2085,7 +2085,7 @@ func (s *SetKeycapKitImageSuite) TestSetKeycapKitImage_UploadLimitReached_Return
 		Return(repository.ErrUploadLimitReached)
 
 	rec := httptest.NewRecorder()
-	s.handler(rec, s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`))
+	s.handler(rec, s.newRequest(s.ownerCtx(), `{"content_type":"image/webp","size_bytes":524288}`))
 
 	s.Equal(http.StatusTooManyRequests, rec.Code)
 	s.Equal("application/problem+json", rec.Header().Get("Content-Type"))
@@ -2100,7 +2100,7 @@ func (s *SetKeycapKitImageSuite) TestSetKeycapKitImage_ReserveError_Returns500()
 		Return(errors.New("dynamo: boom"))
 
 	rec := httptest.NewRecorder()
-	s.handler(rec, s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`))
+	s.handler(rec, s.newRequest(s.ownerCtx(), `{"content_type":"image/webp","size_bytes":524288}`))
 
 	s.Equal(http.StatusInternalServerError, rec.Code)
 }

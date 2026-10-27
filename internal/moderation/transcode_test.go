@@ -42,13 +42,13 @@ func (s *TranscodeSuite) TestTransparentPixelsBecomeWhite() {
 	s.Less(b>>8, uint32(40))
 }
 
-func (s *TranscodeSuite) TestOverPixelLimit_UnprocessableWithoutDecoding() {
-	// A 35 KB lossless WebP that decodes to 7000x7000, over maxPixels.
+func (s *TranscodeSuite) TestOverMaxEdge_TooLargeWithoutDecoding() {
+	// A 35 KB lossless WebP that decodes to 7000x7000.
 	data, err := os.ReadFile("testdata/oversized.webp")
 	s.Require().NoError(err)
 
 	_, err = webpToJPEG(data)
-	s.ErrorIs(err, errUnprocessable)
+	s.ErrorIs(err, errTooLarge)
 }
 
 func (s *TranscodeSuite) TestLargeImage_ShrunkToMaxSide() {
@@ -71,7 +71,15 @@ func (s *TranscodeSuite) TestNoise_UnderRekognitionBytesLimit() {
 	s.LessOrEqual(len(out), 5<<20)
 }
 
-func (s *TranscodeSuite) TestNotWebP_Unprocessable() {
-	_, err := webpToJPEG([]byte("not an image"))
+func (s *TranscodeSuite) TestNotWebP_NotWebP() {
+	var buf bytes.Buffer
+	s.Require().NoError(jpeg.Encode(&buf, image.NewRGBA(image.Rect(0, 0, 10, 10)), nil))
+
+	_, err := webpToJPEG(buf.Bytes())
+	s.ErrorIs(err, errNotWebP)
+}
+
+func (s *TranscodeSuite) TestUndecodableWebP_Unprocessable() {
+	_, err := webpToJPEG([]byte("RIFF\x10\x00\x00\x00WEBPVP8 not really"))
 	s.ErrorIs(err, errUnprocessable)
 }

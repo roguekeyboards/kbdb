@@ -31,8 +31,9 @@
 // dump converts JPEG and PNG images to WebP and scales any image over 2560px
 // down, with the settings mykeebs-web uses on upload, so a restore leaves only
 // WebP behind. The dump's files, manifests and hashes describe the converted
-// bytes, which restore and verify then check against. dump --no-convert keeps
-// the stored bytes exactly.
+// bytes, which restore and verify then check against. An image the API would
+// refuse on restore - another format, an animated image, or one still over
+// the API's size cap after conversion - fails the dump.
 //
 // # What it does not do
 //

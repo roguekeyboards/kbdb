@@ -82,7 +82,7 @@ func listProfileUsernames(out listProfilesOutput) []string {
 
 // approvedImageContentType is a value seeded in the image_content_type
 // lookup category.
-const approvedImageContentType = "image/png"
+const approvedImageContentType = "image/webp"
 
 type setProfileImageOutput struct {
 	UploadURL string `json:"upload_url"`

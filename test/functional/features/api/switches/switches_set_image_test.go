@@ -102,7 +102,7 @@ var _ = Describe("Setting a switch's image", func() {
 				When("setting the switch's image", func() {
 					BeforeEach(func(ctx SpecContext) {
 						var err error
-						resp, err = client.SetImage(ctx, ownerID, switchID, ownerToken, api.ImageUploadBody("application/x-not-an-image"))
+						resp, err = client.SetImage(ctx, ownerID, switchID, ownerToken, api.ImageUploadBody("image/png"))
 						Expect(err).NotTo(HaveOccurred())
 					})
 
@@ -151,7 +151,7 @@ var _ = Describe("Setting a switch's image", func() {
 				When("setting the switch's image again", func() {
 					BeforeEach(func(ctx SpecContext) {
 						var err error
-						resp, err = client.SetImage(ctx, ownerID, switchID, ownerToken, api.JPEGUploadBody())
+						resp, err = client.SetImage(ctx, ownerID, switchID, ownerToken, api.WebPUploadBody(api.ReplacementImageBytes))
 						Expect(err).NotTo(HaveOccurred())
 					})
 
@@ -165,8 +165,8 @@ var _ = Describe("Setting a switch's image", func() {
 						Expect(json.NewDecoder(resp.Body).Decode(&created)).To(Succeed())
 
 						By("accepting the replacement bytes at the new upload URL")
-						replacement := api.TestJPEG
-						putResp, err := api.DoBlob(ctx, http.MethodPut, created.UploadURL, "image/jpeg", bytes.NewReader(replacement))
+						replacement := api.ReplacementImageBytes
+						putResp, err := api.DoBlob(ctx, http.MethodPut, created.UploadURL, "image/webp", bytes.NewReader(replacement))
 						Expect(err).NotTo(HaveOccurred())
 						Expect(putResp.StatusCode).To(Equal(http.StatusOK))
 

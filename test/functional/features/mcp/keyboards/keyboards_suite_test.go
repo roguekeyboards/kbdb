@@ -26,7 +26,7 @@ const (
 	approvedLayout           = "WK"
 	approvedCaseMaterial     = "Aluminum"
 	approvedVendor           = "Amazon"
-	approvedImageContentType = "image/png"
+	approvedImageContentType = "image/webp"
 )
 
 type getOutput struct {

@@ -19,26 +19,6 @@ func TestImagesSuite(t *testing.T) {
 	suite.Run(t, new(ImagesSuite))
 }
 
-func (s *ImagesSuite) TestExtForContentType() {
-	cases := map[string]string{
-		"image/png":  ".png",
-		"image/jpeg": ".jpg",
-		"image/webp": ".webp",
-		"image/gif":  ".gif",
-	}
-	for ct, want := range cases {
-		got, err := extForContentType(ct)
-		s.Require().NoError(err, ct)
-		s.Equal(want, got, ct)
-	}
-}
-
-func (s *ImagesSuite) TestExtForContentType_Unsupported() {
-	_, err := extForContentType("image/tiff")
-	s.Require().Error(err)
-	s.ErrorContains(err, "unsupported")
-}
-
 func (s *ImagesSuite) TestDownloadImage_ReturnsBytesAndContentType() {
 	body := []byte("\x89PNG fake bytes")
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

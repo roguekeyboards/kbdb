@@ -12,25 +12,6 @@ import (
 	"time"
 )
 
-// contentTypeExt maps the image content types the API's "image_content_type"
-// lookup allows to a file extension. Kept explicit rather than using
-// mime.ExtensionsByType so the on-disk names are stable and predictable.
-var contentTypeExt = map[string]string{
-	"image/png":  ".png",
-	"image/jpeg": ".jpg",
-	"image/webp": ".webp",
-	"image/gif":  ".gif",
-}
-
-// extForContentType returns the file extension for an image content type, or
-// an error if it is not one the API accepts.
-func extForContentType(ct string) (string, error) {
-	if ext, ok := contentTypeExt[ct]; ok {
-		return ext, nil
-	}
-	return "", fmt.Errorf("unsupported image content type %q", ct)
-}
-
 // sha256Hex is the lowercase hex SHA-256 of data.
 func sha256Hex(data []byte) string {
 	sum := sha256.Sum256(data)

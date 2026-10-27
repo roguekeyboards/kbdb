@@ -1221,11 +1221,11 @@ func (s *AddKeyboardImageSuite) TestAddKeyboardImage_Succeeds() {
 		})).
 		Return(nil)
 	s.mockImages.EXPECT().
-		PresignPutKeyboardImage(mock.Anything, mock.Anything, "image/png", int64(524288)).
+		PresignPutKeyboardImage(mock.Anything, mock.Anything, "image/webp", int64(524288)).
 		Return("https://example.com/presigned-put", nil).
 		NotBefore(reserved)
 
-	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
+	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/webp","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
 	s.handler(rec, req)
 
@@ -1244,7 +1244,7 @@ func (s *AddKeyboardImageSuite) TestAddKeyboardImage_Succeeds() {
 func (s *AddKeyboardImageSuite) TestAddKeyboardImage_NotOwner_Returns404() {
 	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
 
-	req := s.newRequest(ctx, `{"content_type":"image/png","size_bytes":524288}`)
+	req := s.newRequest(ctx, `{"content_type":"image/webp","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
 	s.handler(rec, req)
 
@@ -1253,7 +1253,7 @@ func (s *AddKeyboardImageSuite) TestAddKeyboardImage_NotOwner_Returns404() {
 }
 
 func (s *AddKeyboardImageSuite) TestAddKeyboardImage_Anonymous_Returns404() {
-	req := s.newRequest(s.T().Context(), `{"content_type":"image/png","size_bytes":524288}`)
+	req := s.newRequest(s.T().Context(), `{"content_type":"image/webp","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
 	s.handler(rec, req)
 
@@ -1289,13 +1289,13 @@ func (s *AddKeyboardImageSuite) TestAddKeyboardImage_UnapprovedContentType_Retur
 func (s *AddKeyboardImageSuite) TestAddKeyboardImage_NotFound_Returns404() {
 	expectUploadReserved(s.mockUploads)
 	s.mockImages.EXPECT().
-		PresignPutKeyboardImage(mock.Anything, mock.Anything, "image/png", int64(524288)).
+		PresignPutKeyboardImage(mock.Anything, mock.Anything, "image/webp", int64(524288)).
 		Return("https://example.com/presigned-put", nil)
 	s.mockKeyboardRepo.EXPECT().
 		AddImage(mock.Anything, "kb1", mock.Anything).
 		Return(repository.ErrNotFound)
 
-	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
+	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/webp","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
 	s.handler(rec, req)
 
@@ -1306,13 +1306,13 @@ func (s *AddKeyboardImageSuite) TestAddKeyboardImage_NotFound_Returns404() {
 func (s *AddKeyboardImageSuite) TestAddKeyboardImage_ImageLimitReached_Returns409() {
 	expectUploadReserved(s.mockUploads)
 	s.mockImages.EXPECT().
-		PresignPutKeyboardImage(mock.Anything, mock.Anything, "image/png", int64(524288)).
+		PresignPutKeyboardImage(mock.Anything, mock.Anything, "image/webp", int64(524288)).
 		Return("https://example.com/presigned-put", nil)
 	s.mockKeyboardRepo.EXPECT().
 		AddImage(mock.Anything, "kb1", mock.Anything).
 		Return(fmt.Errorf("adding image: %w", repository.ErrImageLimitReached))
 
-	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
+	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/webp","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
 	s.handler(rec, req)
 
@@ -1323,10 +1323,10 @@ func (s *AddKeyboardImageSuite) TestAddKeyboardImage_ImageLimitReached_Returns40
 func (s *AddKeyboardImageSuite) TestAddKeyboardImage_PresignError_Returns500() {
 	expectUploadReserved(s.mockUploads)
 	s.mockImages.EXPECT().
-		PresignPutKeyboardImage(mock.Anything, mock.Anything, "image/png", int64(524288)).
+		PresignPutKeyboardImage(mock.Anything, mock.Anything, "image/webp", int64(524288)).
 		Return("", errors.New("s3: access denied"))
 
-	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
+	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/webp","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
 	s.handler(rec, req)
 
@@ -1337,13 +1337,13 @@ func (s *AddKeyboardImageSuite) TestAddKeyboardImage_PresignError_Returns500() {
 func (s *AddKeyboardImageSuite) TestAddKeyboardImage_RepositoryError_Returns500() {
 	expectUploadReserved(s.mockUploads)
 	s.mockImages.EXPECT().
-		PresignPutKeyboardImage(mock.Anything, mock.Anything, "image/png", int64(524288)).
+		PresignPutKeyboardImage(mock.Anything, mock.Anything, "image/webp", int64(524288)).
 		Return("https://example.com/presigned-put", nil)
 	s.mockKeyboardRepo.EXPECT().
 		AddImage(mock.Anything, "kb1", mock.Anything).
 		Return(errors.New("put item failed"))
 
-	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
+	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/webp","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
 	s.handler(rec, req)
 
@@ -1527,7 +1527,7 @@ func (s *AddKeyboardImageSuite) TestAddKeyboardImage_UploadLimitReached_Returns4
 		Return(repository.ErrUploadLimitReached)
 
 	rec := httptest.NewRecorder()
-	s.handler(rec, s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`))
+	s.handler(rec, s.newRequest(s.ownerCtx(), `{"content_type":"image/webp","size_bytes":524288}`))
 
 	s.Equal(http.StatusTooManyRequests, rec.Code)
 	s.Equal("application/problem+json", rec.Header().Get("Content-Type"))
@@ -1540,7 +1540,7 @@ func (s *AddKeyboardImageSuite) TestAddKeyboardImage_ReserveError_Returns500() {
 		Return(errors.New("dynamo: boom"))
 
 	rec := httptest.NewRecorder()
-	s.handler(rec, s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`))
+	s.handler(rec, s.newRequest(s.ownerCtx(), `{"content_type":"image/webp","size_bytes":524288}`))
 
 	s.Equal(http.StatusInternalServerError, rec.Code)
 }

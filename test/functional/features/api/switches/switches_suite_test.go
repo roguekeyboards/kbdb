@@ -14,7 +14,7 @@ const (
 	approvedStem             = "POM"
 	approvedSpringMaterial   = "Stainless Steel"
 	approvedVendor           = "Amazon"
-	approvedImageContentType = "image/png"
+	approvedImageContentType = "image/webp"
 )
 
 func TestSwitches(t *testing.T) {

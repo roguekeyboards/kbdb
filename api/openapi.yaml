@@ -1890,25 +1890,27 @@ components:
         profile avatar, keycap kit, build). The upload is two-step: this
         call allocates a slot and returns a presigned S3 PUT URL, then the
         client PUTs the bytes to that URL with a matching Content-Type and
-        exactly size_bytes of body.
+        exactly size_bytes of body. Images must be WebP, at most 2560px on
+        their longest side and at most 1.5 MB; convert and resize anything
+        else before uploading. An upload that isn't really a WebP, or is
+        over 2560px, is rejected in moderation.
       required: [content_type, size_bytes]
       additionalProperties: false
       properties:
         content_type:
           type: string
-          example: image/png
+          example: image/webp
           description: Open vocabulary — validated against the "image_content_type" lookup at request time.
         size_bytes:
           type: integer
           format: int64
           minimum: 1
-          maximum: 5242880
+          maximum: 1572864
           example: 524288
           description: >
-            The exact size of the image in bytes. Images are capped at 5 MB
-            (5,242,880 bytes); resize anything larger before uploading. The
-            presigned URL is signed for this size, so S3 rejects a PUT whose
-            body is any other length.
+            The exact size of the image in bytes. Images are capped at
+            1.5 MB (1,572,864 bytes). The presigned URL is signed for this
+            size, so S3 rejects a PUT whose body is any other length.
 
     ImageStatus:
       type: string
@@ -1944,8 +1946,9 @@ components:
           type: string
           description: >
             Only on a rejected image, and only for its owner: the moderation
-            label that rejected it, or `unprocessable` when the file couldn't
-            be checked at all.
+            label that rejected it; `not_webp` when the file isn't a WebP;
+            `too_large` when its longest side is over 2560px; or
+            `unprocessable` when the file couldn't be checked at all.
 
     KeyboardImageUpload:
       type: object
@@ -2198,8 +2201,9 @@ components:
           type: string
           description: >
             Only on a rejected image, and only for its owner: the moderation
-            label that rejected it, or `unprocessable` when the file couldn't
-            be checked at all.
+            label that rejected it; `not_webp` when the file isn't a WebP;
+            `too_large` when its longest side is over 2560px; or
+            `unprocessable` when the file couldn't be checked at all.
 
     SwitchImageUpload:
       type: object
@@ -2304,8 +2308,9 @@ components:
           type: string
           description: >
             Only on a rejected image, and only for its owner: the moderation
-            label that rejected it, or `unprocessable` when the file couldn't
-            be checked at all.
+            label that rejected it; `not_webp` when the file isn't a WebP;
+            `too_large` when its longest side is over 2560px; or
+            `unprocessable` when the file couldn't be checked at all.
 
     ProfileImageUpload:
       type: object
@@ -2490,8 +2495,9 @@ components:
           type: string
           description: >
             Only on a rejected image, and only for its owner: the moderation
-            label that rejected it, or `unprocessable` when the file couldn't
-            be checked at all.
+            label that rejected it; `not_webp` when the file isn't a WebP;
+            `too_large` when its longest side is over 2560px; or
+            `unprocessable` when the file couldn't be checked at all.
 
     KeycapKitImageUpload:
       type: object
@@ -2894,8 +2900,9 @@ components:
           type: string
           description: >
             Only on a rejected image, and only for its owner: the moderation
-            label that rejected it, or `unprocessable` when the file couldn't
-            be checked at all.
+            label that rejected it; `not_webp` when the file isn't a WebP;
+            `too_large` when its longest side is over 2560px; or
+            `unprocessable` when the file couldn't be checked at all.
 
     BuildImageUpload:
       type: object

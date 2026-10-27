@@ -17,13 +17,13 @@ func TestValidateImageContentTypeSuite(t *testing.T) {
 }
 
 func (s *ValidateImageContentTypeSuite) TestValid_ReturnsNoError() {
-	errs := lookup.ValidateImageContentType(s.T().Context(), "image/png")
+	errs := lookup.ValidateImageContentType(s.T().Context(), "image/webp")
 	s.Empty(errs)
 }
 
 func (s *ValidateImageContentTypeSuite) TestInvalid_ReturnsFieldError() {
-	errs := lookup.ValidateImageContentType(s.T().Context(), "image/bmp")
+	errs := lookup.ValidateImageContentType(s.T().Context(), "image/png")
 	s.Equal([]lookup.FieldError{
-		{Field: "content_type", Value: "image/bmp", Reason: `"image/bmp" is not an approved image_content_type value`},
+		{Field: "content_type", Value: "image/png", Reason: `"image/png" is not an approved image_content_type value`},
 	}, errs)
 }

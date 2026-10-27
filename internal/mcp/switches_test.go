@@ -772,7 +772,7 @@ func newSwitchImageKey() any {
 func (s *HandleSetSwitchImageSuite) call() (schema.SetSwitchImageOutput, error) {
 	_, out, err := handleSetSwitchImage(s.mockSwitches, s.mockImages, uploadlimit.New(s.mockUploads, 500))(callerContext(s.T()), nil, schema.SetSwitchImageInput{
 		SwitchID:    "sw-1",
-		ContentType: "image/png",
+		ContentType: "image/webp",
 		SizeBytes:   524288,
 	})
 	return out, err
@@ -785,7 +785,7 @@ func (s *HandleSetSwitchImageSuite) TestSucceeds() {
 		Return(&repository.Switch{ID: "sw-1"}, nil)
 	var presigned repository.SwitchImageKey
 	s.mockImages.EXPECT().
-		PresignPut(mock.Anything, newSwitchImageKey(), "image/png", int64(524288)).
+		PresignPut(mock.Anything, newSwitchImageKey(), "image/webp", int64(524288)).
 		Run(func(_ context.Context, key repository.SwitchImageKey, _ string, _ int64) { presigned = key }).
 		Return("https://example.com/upload", nil).
 		NotBefore(reserved)
@@ -807,7 +807,7 @@ func (s *HandleSetSwitchImageSuite) TestReplacingImage_DeletesPreviousObjectFirs
 		Get(mock.Anything, callerID, "sw-1").
 		Return(&repository.Switch{ID: "sw-1", ImagePath: &previous}, nil)
 	s.mockImages.EXPECT().
-		PresignPut(mock.Anything, newSwitchImageKey(), "image/png", int64(524288)).
+		PresignPut(mock.Anything, newSwitchImageKey(), "image/webp", int64(524288)).
 		Return("https://example.com/upload", nil)
 	deleted := s.mockImages.EXPECT().
 		Delete(mock.Anything, previous).
@@ -827,7 +827,7 @@ func (s *HandleSetSwitchImageSuite) TestBlankSwitchID_ReturnsError() {
 	handler := handleSetSwitchImage(s.mockSwitches, s.mockImages, uploadlimit.New(s.mockUploads, 500))
 	_, _, err := handler(callerContext(s.T()), nil, schema.SetSwitchImageInput{
 		SwitchID:    " ",
-		ContentType: "image/png",
+		ContentType: "image/webp",
 		SizeBytes:   524288,
 	})
 
@@ -838,7 +838,7 @@ func (s *HandleSetSwitchImageSuite) TestSizeOverCap_ReturnsError() {
 	handler := handleSetSwitchImage(s.mockSwitches, s.mockImages, uploadlimit.New(s.mockUploads, 500))
 	_, _, err := handler(callerContext(s.T()), nil, schema.SetSwitchImageInput{
 		SwitchID:    "sw-1",
-		ContentType: "image/png",
+		ContentType: "image/webp",
 		SizeBytes:   repository.MaxImageSizeBytes + 1,
 	})
 
@@ -872,7 +872,7 @@ func (s *HandleSetSwitchImageSuite) TestPresignError_ReturnsError() {
 		Get(mock.Anything, callerID, "sw-1").
 		Return(&repository.Switch{ID: "sw-1", ImagePath: &previous}, nil)
 	s.mockImages.EXPECT().
-		PresignPut(mock.Anything, newSwitchImageKey(), "image/png", int64(524288)).
+		PresignPut(mock.Anything, newSwitchImageKey(), "image/webp", int64(524288)).
 		Return("", errors.New("s3: access denied"))
 
 	_, err := s.call()
@@ -889,7 +889,7 @@ func (s *HandleSetSwitchImageSuite) TestDeletePreviousError_ReturnsError() {
 		Get(mock.Anything, callerID, "sw-1").
 		Return(&repository.Switch{ID: "sw-1", ImagePath: &previous}, nil)
 	s.mockImages.EXPECT().
-		PresignPut(mock.Anything, newSwitchImageKey(), "image/png", int64(524288)).
+		PresignPut(mock.Anything, newSwitchImageKey(), "image/webp", int64(524288)).
 		Return("https://example.com/upload", nil)
 	s.mockImages.EXPECT().
 		Delete(mock.Anything, previous).

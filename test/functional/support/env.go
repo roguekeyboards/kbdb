@@ -99,13 +99,6 @@ func AWSEndpointURL() string {
 	return os.Getenv("KBDB_AWS_ENDPOINT_URL")
 }
 
-// AIMockConfigPath returns the host path of the file floci reads canned
-// Rekognition responses from, or "" against real AWS, which has no such
-// file.
-func AIMockConfigPath() string {
-	return os.Getenv("KBDB_AI_MOCK_CONFIG")
-}
-
 // S3EndpointURL returns the S3 endpoint specs should talk to. Empty uses
 // default AWS endpoint resolution.
 func S3EndpointURL() string {

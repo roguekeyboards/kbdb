@@ -90,8 +90,8 @@ type ProfileSummary struct {
 // user id - a write always targets the caller's own profile - and doesn't
 // carry the image bytes themselves (see UploadURL on the output).
 type SetProfileImageInput struct {
-	ContentType string `json:"content_type" jsonschema:"the image's MIME type; must be an approved image_content_type lookup value"`
-	SizeBytes   int64  `json:"size_bytes" jsonschema:"the image's exact size in bytes, at most 5242880 (5 MB); resize anything larger before calling this tool. The upload must send exactly this many bytes"`
+	ContentType string `json:"content_type" jsonschema:"the image's MIME type; must be image/webp, the only approved image_content_type lookup value"`
+	SizeBytes   int64  `json:"size_bytes" jsonschema:"the image's exact size in bytes, at most 1572864 (1.5 MB). The upload must send exactly this many bytes"`
 }
 
 // SetProfileImageOutput is the set_profile_image tool's output. UploadURL
@@ -122,5 +122,5 @@ type Profile struct {
 	Preferences     *ProfilePreferences `json:"preferences,omitempty" jsonschema:"display/visibility preferences; only ever present for the profile's owner"`
 
 	AvatarStatus          *string `json:"avatar_status,omitempty" jsonschema:"the avatar's moderation status: pending until it's checked, then approved or rejected; only ever present for the profile's owner"`
-	AvatarRejectionReason *string `json:"avatar_rejection_reason,omitempty" jsonschema:"why a rejected avatar was rejected: the moderation label, or unprocessable when the file couldn't be checked; only ever present for the profile's owner"`
+	AvatarRejectionReason *string `json:"avatar_rejection_reason,omitempty" jsonschema:"why a rejected avatar was rejected: the moderation label; not_webp when the file isn't a WebP; too_large when its longest side is over 2560px; or unprocessable when the file couldn't be checked; only ever present for the profile's owner"`
 }

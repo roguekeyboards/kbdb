@@ -144,8 +144,8 @@ type BuildSummaryKeyboard struct {
 // the image bytes themselves - see UploadURL on the output.
 type AddBuildImageInput struct {
 	BuildID     string `json:"build_id" jsonschema:"the id of the build to add an image to"`
-	ContentType string `json:"content_type" jsonschema:"the image's MIME type; must be an approved image_content_type lookup value"`
-	SizeBytes   int64  `json:"size_bytes" jsonschema:"the image's exact size in bytes, at most 5242880 (5 MB); resize anything larger before calling this tool. The upload must send exactly this many bytes"`
+	ContentType string `json:"content_type" jsonschema:"the image's MIME type; must be image/webp, the only approved image_content_type lookup value"`
+	SizeBytes   int64  `json:"size_bytes" jsonschema:"the image's exact size in bytes, at most 1572864 (1.5 MB). The upload must send exactly this many bytes"`
 }
 
 // AddBuildImageOutput is the add_build_image tool's output. UploadURL is a
@@ -184,5 +184,5 @@ type ListBuildImagesOutput struct {
 type BuildImage struct {
 	ImageID         string  `json:"image_id" jsonschema:"the image's id"`
 	Status          *string `json:"status,omitempty" jsonschema:"the image's moderation status: pending until it's checked, then approved or rejected; only ever present for the build's owner, since anyone else is only shown approved images"`
-	RejectionReason *string `json:"rejection_reason,omitempty" jsonschema:"why a rejected image was rejected: the moderation label, or unprocessable when the file couldn't be checked; only ever present for the build's owner"`
+	RejectionReason *string `json:"rejection_reason,omitempty" jsonschema:"why a rejected image was rejected: the moderation label; not_webp when the file isn't a WebP; too_large when its longest side is over 2560px; or unprocessable when the file couldn't be checked; only ever present for the build's owner"`
 }

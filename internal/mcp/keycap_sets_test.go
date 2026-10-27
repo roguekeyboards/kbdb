@@ -1241,7 +1241,7 @@ func (s *HandleSetKeycapKitImageSuite) call(kitID string) (schema.SetKeycapKitIm
 	_, out, err := handleSetKeycapKitImage(s.mockRepo, s.mockImages, uploadlimit.New(s.mockUploads, 500))(callerContext(s.T()), nil, schema.SetKeycapKitImageInput{
 		KeycapSetID: "ks-1",
 		KitID:       kitID,
-		ContentType: "image/png",
+		ContentType: "image/webp",
 		SizeBytes:   524288,
 	})
 	return out, err
@@ -1254,7 +1254,7 @@ func (s *HandleSetKeycapKitImageSuite) TestSucceeds() {
 		Return(setWithKit(nil), nil)
 	var presigned repository.KeycapKitImageKey
 	s.mockImages.EXPECT().
-		PresignPut(mock.Anything, newKitImageKey(), "image/png", int64(524288)).
+		PresignPut(mock.Anything, newKitImageKey(), "image/webp", int64(524288)).
 		Run(func(_ context.Context, key repository.KeycapKitImageKey, _ string, _ int64) { presigned = key }).
 		Return("https://example.com/upload", nil).
 		NotBefore(reserved)
@@ -1276,7 +1276,7 @@ func (s *HandleSetKeycapKitImageSuite) TestReplacingImage_DeletesPreviousObjectF
 		Get(mock.Anything, callerID, "ks-1").
 		Return(setWithKit(&previous), nil)
 	s.mockImages.EXPECT().
-		PresignPut(mock.Anything, newKitImageKey(), "image/png", int64(524288)).
+		PresignPut(mock.Anything, newKitImageKey(), "image/webp", int64(524288)).
 		Return("https://example.com/upload", nil)
 	deleted := s.mockImages.EXPECT().
 		Delete(mock.Anything, previous).
@@ -1297,7 +1297,7 @@ func (s *HandleSetKeycapKitImageSuite) TestBlankKeycapSetID_ReturnsError() {
 	_, _, err := handler(callerContext(s.T()), nil, schema.SetKeycapKitImageInput{
 		KeycapSetID: " ",
 		KitID:       "kit-1",
-		ContentType: "image/png",
+		ContentType: "image/webp",
 		SizeBytes:   524288,
 	})
 
@@ -1309,7 +1309,7 @@ func (s *HandleSetKeycapKitImageSuite) TestBlankKitID_ReturnsError() {
 	_, _, err := handler(callerContext(s.T()), nil, schema.SetKeycapKitImageInput{
 		KeycapSetID: "ks-1",
 		KitID:       " ",
-		ContentType: "image/png",
+		ContentType: "image/webp",
 		SizeBytes:   524288,
 	})
 
@@ -1321,7 +1321,7 @@ func (s *HandleSetKeycapKitImageSuite) TestSizeOverCap_ReturnsError() {
 	_, _, err := handler(callerContext(s.T()), nil, schema.SetKeycapKitImageInput{
 		KeycapSetID: "ks-1",
 		KitID:       "kit-1",
-		ContentType: "image/png",
+		ContentType: "image/webp",
 		SizeBytes:   repository.MaxImageSizeBytes + 1,
 	})
 
@@ -1367,7 +1367,7 @@ func (s *HandleSetKeycapKitImageSuite) TestPresignError_ReturnsError() {
 		Get(mock.Anything, callerID, "ks-1").
 		Return(setWithKit(&previous), nil)
 	s.mockImages.EXPECT().
-		PresignPut(mock.Anything, newKitImageKey(), "image/png", int64(524288)).
+		PresignPut(mock.Anything, newKitImageKey(), "image/webp", int64(524288)).
 		Return("", errors.New("presign failed"))
 
 	_, err := s.call("kit-1")
@@ -1384,7 +1384,7 @@ func (s *HandleSetKeycapKitImageSuite) TestDeletePreviousError_ReturnsError() {
 		Get(mock.Anything, callerID, "ks-1").
 		Return(setWithKit(&previous), nil)
 	s.mockImages.EXPECT().
-		PresignPut(mock.Anything, newKitImageKey(), "image/png", int64(524288)).
+		PresignPut(mock.Anything, newKitImageKey(), "image/webp", int64(524288)).
 		Return("https://example.com/upload", nil)
 	s.mockImages.EXPECT().
 		Delete(mock.Anything, previous).

@@ -38,7 +38,7 @@ const (
 	approvedLayout           = "WK"
 	approvedCaseMaterial     = "Aluminum"
 	approvedVendor           = "Amazon"
-	approvedImageContentType = "image/png"
+	approvedImageContentType = "image/webp"
 )
 
 func TestKeyboards(t *testing.T) {

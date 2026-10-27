@@ -118,13 +118,13 @@ var _ = Describe("Adding an image to a keyboard over MCP", func() {
 				})
 			})
 
-			Context("given size_bytes over the 5 MB cap", func() {
+			Context("given size_bytes over the 1.5 MB cap", func() {
 				When("the add_keyboard_image tool is called", func() {
 					BeforeEach(func(ctx SpecContext) {
 						result, err = client.CallTool(ctx, "add_keyboard_image", map[string]any{
 							"keyboard_id":  keyboardID,
 							"content_type": approvedImageContentType,
-							"size_bytes":   5242881,
+							"size_bytes":   api.MaxUploadBytes + 1,
 						})
 					})
 
