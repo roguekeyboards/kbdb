@@ -43,6 +43,8 @@ var extraRoutes = []Route{
 	// The privacy policy and terms are public (internal/legal).
 	{Method: "ANY", Path: "/privacy"},
 	{Method: "ANY", Path: "/terms"},
+	// The MCP setup guide is public (internal/help).
+	{Method: "ANY", Path: "/help/mcp"},
 }
 
 const bearerScheme = "BearerAuth"

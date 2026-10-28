@@ -16,6 +16,7 @@ import (
 	"github.com/rogueserenity/kbdb/internal/consent"
 	"github.com/rogueserenity/kbdb/internal/handlers"
 	"github.com/rogueserenity/kbdb/internal/handlers/api"
+	"github.com/rogueserenity/kbdb/internal/help"
 	"github.com/rogueserenity/kbdb/internal/legal"
 	"github.com/rogueserenity/kbdb/internal/mcp"
 	"github.com/rogueserenity/kbdb/internal/middleware"
@@ -84,10 +85,11 @@ func New(
 	mux := http.NewServeMux()
 
 	// Not part of api/openapi.yaml, so not wrapped in validate - see
-	// internal/consent and internal/legal.
+	// internal/consent, internal/legal and internal/help.
 	mux.Handle("GET /authorize", consent.Handler(idpConsentPublicToken, issuerURL))
 	mux.Handle("GET /privacy", legal.PrivacyHandler())
 	mux.Handle("GET /terms", legal.TermsHandler())
+	mux.Handle("GET /help/mcp", help.MCPHandler())
 
 	// security: [] in api/openapi.yaml - always anonymous. No PUT/DELETE:
 	// lookup categories are static, deploy-time data (internal/lookup),

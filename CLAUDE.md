@@ -38,7 +38,8 @@ Transports (each maps to shared logic rather than holding its own):
 - `mcp/` — MCP server over the official `modelcontextprotocol/go-sdk`, reusing the same `auth.Verifier` as REST. `mcp/schema/` holds the tool types.
 - `consent/` — the IdP consent page served at `GET /authorize`, which also handles OIDC logout requests, so MCP clients can authenticate standalone.
 - `legal/` — the privacy policy and terms of service at `GET /privacy` and `GET /terms`. Served here, not by mykeebs-web, because they cover MCP and REST too. The privacy policy names the processors and retention periods in `template.yaml`; change it when those change.
-- `pagebrand/` — the logo, favicon and theme tokens that `consent/` and `legal/` pages embed inline.
+- `help/` — the guide to connecting an AI assistant over MCP at `GET /help/mcp`, which mykeebs-web links to. It describes what the tools can do; change it when they change.
+- `pagebrand/` — the logo, favicon and theme tokens that `consent/`, `legal/` and `help/` pages embed inline.
 - `problem/` — RFC 9457 Problem Details responses.
 
 Data access:
