@@ -34,7 +34,7 @@ func (s *PrecheckSuite) writeImage(dir, name string, size int64) imageManifestEn
 	s.Require().NoError(err)
 	s.Require().NoError(f.Truncate(size))
 	s.Require().NoError(f.Close())
-	return imageManifestEntry{Filename: name, ContentType: "image/png", Bytes: int(size)}
+	return imageManifestEntry{Filename: name, ContentType: "image/webp", Bytes: int(size)}
 }
 
 func (s *PrecheckSuite) writeJSON(path string, v any) {
@@ -48,14 +48,14 @@ func (s *PrecheckSuite) arrayItem(sub, id string, sizes ...int64) {
 	imagesDir := filepath.Join(s.dumpDir, sub, id, "images")
 	manifest := make([]imageManifestEntry, len(sizes))
 	for i, size := range sizes {
-		manifest[i] = s.writeImage(imagesDir, fmt.Sprintf("img%d.png", i), size)
+		manifest[i] = s.writeImage(imagesDir, fmt.Sprintf("img%d.webp", i), size)
 	}
 	s.writeJSON(filepath.Join(imagesDir, "images.manifest.json"), manifest)
 }
 
-// singleSlot writes dir/image.png of size plus its manifest.
+// singleSlot writes dir/image.webp of size plus its manifest.
 func (s *PrecheckSuite) singleSlot(dir string, size int64) {
-	s.writeJSON(filepath.Join(dir, "image.manifest.json"), s.writeImage(dir, "image.png", size))
+	s.writeJSON(filepath.Join(dir, "image.manifest.json"), s.writeImage(dir, "image.webp", size))
 }
 
 // sizes returns n copies of size.
@@ -87,21 +87,30 @@ func (s *PrecheckSuite) TestReportsEveryProblem() {
 	s.singleSlot(filepath.Join(s.dumpDir, "switches", "sw1"), 0)
 	s.singleSlot(filepath.Join(s.dumpDir, "keycap-sets", "ks1", "kits", "kit1"), repository.MaxImageSizeBytes+1)
 	avatarDir := filepath.Join(s.dumpDir, profileDir)
-	s.writeJSON(filepath.Join(avatarDir, "avatar.manifest.json"), s.writeImage(avatarDir, "avatar.png", 0))
+	s.writeJSON(filepath.Join(avatarDir, "avatar.manifest.json"), s.writeImage(avatarDir, "avatar.webp", 0))
 
 	err := checkImageLimits(s.dumpDir)
 
-	s.Require().ErrorContains(err, filepath.Join(profileDir, "avatar.png"))
-	s.Require().ErrorContains(err, filepath.Join("keyboards", "kb1", "images", "img0.png"))
+	s.Require().ErrorContains(err, filepath.Join(profileDir, "avatar.webp"))
+	s.Require().ErrorContains(err, filepath.Join("keyboards", "kb1", "images", "img0.webp"))
 	s.Require().ErrorContains(err, "builds/b1 has 11 images")
-	s.Require().ErrorContains(err, filepath.Join("switches", "sw1", "image.png"))
-	s.Require().ErrorContains(err, filepath.Join("kits", "kit1", "image.png"))
+	s.Require().ErrorContains(err, filepath.Join("switches", "sw1", "image.webp"))
+	s.Require().ErrorContains(err, filepath.Join("kits", "kit1", "image.webp"))
+}
+
+func (s *PrecheckSuite) TestNonWebP_Reported() {
+	dir := filepath.Join(s.dumpDir, "switches", "sw1")
+	entry := s.writeImage(dir, "image.png", 100)
+	entry.ContentType = "image/png"
+	s.writeJSON(filepath.Join(dir, "image.manifest.json"), entry)
+
+	s.Require().ErrorContains(checkImageLimits(s.dumpDir), "image/png")
 }
 
 func (s *PrecheckSuite) TestMissingImageFile_IsError() {
 	imagesDir := filepath.Join(s.dumpDir, "keyboards", "kb1", "images")
 	s.Require().NoError(os.MkdirAll(imagesDir, 0o750))
-	s.writeJSON(filepath.Join(imagesDir, "images.manifest.json"), []imageManifestEntry{{Filename: "gone.png"}})
+	s.writeJSON(filepath.Join(imagesDir, "images.manifest.json"), []imageManifestEntry{{Filename: "gone.webp"}})
 
-	s.Require().ErrorContains(checkImageLimits(s.dumpDir), "gone.png")
+	s.Require().ErrorContains(checkImageLimits(s.dumpDir), "gone.webp")
 }

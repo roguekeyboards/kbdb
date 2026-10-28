@@ -12,7 +12,7 @@ import (
 const (
 	approvedProfile          = "Cherry/CYL"
 	approvedMaterial         = "DyeSub PBT"
-	approvedImageContentType = "image/png"
+	approvedImageContentType = "image/webp"
 )
 
 func TestKeycapSets(t *testing.T) {

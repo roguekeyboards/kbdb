@@ -30,7 +30,6 @@ type DumpCmd struct {
 	PublicToken string `env:"KBDB_IDP_PUBLIC_TOKEN" help:"The Stytch project's public token (IdpConsentPublicToken in samconfig.toml), for --impersonate."`
 	Port        int    `default:"8765" help:"Localhost port for the --impersonate redirect listener. Must match the Stytch project's default Login redirect URL."`
 	Out         string `required:"" type:"path" help:"Output directory for the dump."`
-	Convert     bool   `default:"true" negatable:"" help:"Convert JPEG and PNG images to WebP and scale any image over 2560px down, as mykeebs-web does on upload. --no-convert keeps the stored bytes exactly."`
 }
 
 // RestoreCmd recreates the entities and images in a dump directory in the

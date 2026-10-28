@@ -22,9 +22,13 @@ import (
 	"github.com/rogueserenity/kbdb/internal/repository"
 )
 
-// reasonUnprocessable is the rejection reason for an image that can never
-// be moderated, as opposed to one a label rejected.
-const reasonUnprocessable = "unprocessable"
+// The rejection reasons for an image that can never be moderated, as
+// opposed to one a label rejected.
+const (
+	reasonNotWebP       = "not_webp"
+	reasonTooLarge      = "too_large"
+	reasonUnprocessable = "unprocessable"
+)
 
 // s3API is the subset of the S3 client the moderator and Overrides use.
 type s3API interface {
@@ -94,9 +98,9 @@ func (m *Moderator) moderate(ctx context.Context, bucket, key string) error {
 
 	to, reason := repository.ImageStatusApproved, (*string)(nil)
 	out, err := m.detect(ctx, bucket, key)
-	switch {
-	case errors.Is(err, errUnprocessable):
-		to, reason = repository.ImageStatusRejected, aws.String(reasonUnprocessable)
+	switch r := unmoderatableReason(err); {
+	case r != "":
+		to, reason = repository.ImageStatusRejected, aws.String(r)
 		log.Info("moderated image", "decision", to, "reason", *reason, "error", err.Error())
 	case err != nil:
 		return err
@@ -132,32 +136,20 @@ func (m *Moderator) moderate(ctx context.Context, bucket, key string) error {
 	return nil
 }
 
-// detect sends the image to Rekognition. JPEG and PNG go by reference;
-// WebP, which Rekognition can't read, is re-encoded and sent as bytes.
+// detect sends the image to Rekognition, re-encoded from WebP, which
+// Rekognition can't read, to JPEG.
 func (m *Moderator) detect(ctx context.Context, bucket, key string) (*rekognition.DetectModerationLabelsOutput, error) {
-	head, err := m.s3.HeadObject(ctx, &s3.HeadObjectInput{Bucket: &bucket, Key: &key})
+	data, err := m.read(ctx, bucket, key)
 	if err != nil {
-		return nil, fmt.Errorf("reading %q's metadata: %w", key, err)
+		return nil, err
 	}
-
-	var img rektypes.Image
-	switch ct := aws.ToString(head.ContentType); ct {
-	case "image/jpeg", "image/png":
-		img.S3Object = &rektypes.S3Object{Bucket: &bucket, Name: &key}
-	case "image/webp":
-		data, err := m.read(ctx, bucket, key)
-		if err != nil {
-			return nil, err
-		}
-		if img.Bytes, err = webpToJPEG(data); err != nil {
-			return nil, err
-		}
-	default:
-		return nil, fmt.Errorf("%w: content type %q", errUnprocessable, ct)
+	jpeg, err := webpToJPEG(data)
+	if err != nil {
+		return nil, err
 	}
 
 	out, err := m.rekognition.DetectModerationLabels(ctx, &rekognition.DetectModerationLabelsInput{
-		Image:         &img,
+		Image:         &rektypes.Image{Bytes: jpeg},
 		MinConfidence: aws.Float32(minConfidence(m.calibration)),
 	})
 	if err != nil {
@@ -167,6 +159,21 @@ func (m *Moderator) detect(ctx context.Context, bucket, key string) (*rekognitio
 		return nil, fmt.Errorf("detecting moderation labels for %q: %w", key, err)
 	}
 	return out, nil
+}
+
+// unmoderatableReason is the rejection reason for err if it marks an image
+// that can never be moderated, or "" if it doesn't.
+func unmoderatableReason(err error) string {
+	switch {
+	case errors.Is(err, errNotWebP):
+		return reasonNotWebP
+	case errors.Is(err, errTooLarge):
+		return reasonTooLarge
+	case errors.Is(err, errUnprocessable):
+		return reasonUnprocessable
+	default:
+		return ""
+	}
 }
 
 func (m *Moderator) read(ctx context.Context, bucket, key string) ([]byte, error) {

@@ -11,8 +11,8 @@ import (
 )
 
 // checkImageLimits walks every image restore would upload and reports each
-// one the API would reject - over the size cap, empty, or past an item's
-// image count cap - before restore writes anything, rather than failing
+// one the API would reject - not WebP, over the size cap, empty, or past an
+// item's image count cap - before restore writes anything, rather than failing
 // partway through. Sizes come from the files on disk, not the manifest, so a
 // file shrunk in place after the dump is judged by what will be sent.
 func checkImageLimits(dumpDir string) error {
@@ -38,7 +38,7 @@ func checkImageLimits(dumpDir string) error {
 					sub, id, len(manifest), repository.MaxImagesPerItem))
 			}
 			for _, entry := range manifest {
-				problem, err := checkImageSize(filepath.Join(imagesDir, entry.Filename))
+				problem, err := checkImage(filepath.Join(imagesDir, entry.Filename), entry.ContentType)
 				if err != nil {
 					return err
 				}
@@ -81,7 +81,7 @@ func checkImageLimits(dumpDir string) error {
 		if err := readJSONFile(manifestPath, &entry); err != nil {
 			return err
 		}
-		problem, err := checkImageSize(filepath.Join(slot.dir, entry.Filename))
+		problem, err := checkImage(filepath.Join(slot.dir, entry.Filename), entry.ContentType)
 		if err != nil {
 			return err
 		}
@@ -97,9 +97,12 @@ func checkImageLimits(dumpDir string) error {
 	return nil
 }
 
-// checkImageSize returns a description of why path's size would be
-// rejected, or "" if it's within the API's bounds.
-func checkImageSize(path string) (string, error) {
+// checkImage returns a description of why the API would reject path, an
+// image of content type ct, or "" if it wouldn't.
+func checkImage(path, ct string) (string, error) {
+	if ct != "image/webp" {
+		return fmt.Sprintf("%s is %s, and the API accepts only image/webp", path, ct), nil
+	}
 	info, err := os.Stat(path)
 	if err != nil {
 		return "", fmt.Errorf("checking %s: %w", path, err)

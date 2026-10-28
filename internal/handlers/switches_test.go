@@ -1118,7 +1118,7 @@ func (s *SetSwitchImageSuite) TestSetSwitchImage_Succeeds() {
 		Return(&repository.Switch{ID: "sw1"}, nil)
 	var presigned repository.SwitchImageKey
 	s.mockImages.EXPECT().
-		PresignPut(mock.Anything, newSwitchImageKey(), "image/png", int64(524288)).
+		PresignPut(mock.Anything, newSwitchImageKey(), "image/webp", int64(524288)).
 		Run(func(_ context.Context, key repository.SwitchImageKey, _ string, _ int64) { presigned = key }).
 		Return("https://example.com/presigned-put", nil).
 		NotBefore(reserved)
@@ -1127,7 +1127,7 @@ func (s *SetSwitchImageSuite) TestSetSwitchImage_Succeeds() {
 		Run(func(_ context.Context, _ string, key repository.SwitchImageKey) { s.Equal(presigned, key) }).
 		Return(nil)
 
-	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
+	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/webp","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
 	s.handler(rec, req)
 
@@ -1148,7 +1148,7 @@ func (s *SetSwitchImageSuite) TestSetSwitchImage_ReplacingImage_DeletesPreviousO
 		Get(mock.Anything, "alice", "sw1").
 		Return(&repository.Switch{ID: "sw1", ImagePath: &previous}, nil)
 	s.mockImages.EXPECT().
-		PresignPut(mock.Anything, newSwitchImageKey(), "image/png", int64(524288)).
+		PresignPut(mock.Anything, newSwitchImageKey(), "image/webp", int64(524288)).
 		Return("https://example.com/presigned-put", nil)
 	deleted := s.mockImages.EXPECT().
 		Delete(mock.Anything, previousSwitchImageTestKey).
@@ -1159,7 +1159,7 @@ func (s *SetSwitchImageSuite) TestSetSwitchImage_ReplacingImage_DeletesPreviousO
 		Return(nil).
 		NotBefore(deleted)
 
-	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
+	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/webp","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
 	s.handler(rec, req)
 
@@ -1169,7 +1169,7 @@ func (s *SetSwitchImageSuite) TestSetSwitchImage_ReplacingImage_DeletesPreviousO
 func (s *SetSwitchImageSuite) TestSetSwitchImage_NotOwner_Returns404() {
 	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
 
-	req := s.newRequest(ctx, `{"content_type":"image/png","size_bytes":524288}`)
+	req := s.newRequest(ctx, `{"content_type":"image/webp","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
 	s.handler(rec, req)
 
@@ -1178,7 +1178,7 @@ func (s *SetSwitchImageSuite) TestSetSwitchImage_NotOwner_Returns404() {
 }
 
 func (s *SetSwitchImageSuite) TestSetSwitchImage_Anonymous_Returns404() {
-	req := s.newRequest(s.T().Context(), `{"content_type":"image/png","size_bytes":524288}`)
+	req := s.newRequest(s.T().Context(), `{"content_type":"image/webp","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
 	s.handler(rec, req)
 
@@ -1216,7 +1216,7 @@ func (s *SetSwitchImageSuite) TestSetSwitchImage_NotFound_Returns404() {
 		Get(mock.Anything, "alice", "sw1").
 		Return(nil, repository.ErrNotFound)
 
-	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
+	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/webp","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
 	s.handler(rec, req)
 
@@ -1231,10 +1231,10 @@ func (s *SetSwitchImageSuite) TestSetSwitchImage_PresignError_Returns500() {
 		Get(mock.Anything, "alice", "sw1").
 		Return(&repository.Switch{ID: "sw1", ImagePath: &previous}, nil)
 	s.mockImages.EXPECT().
-		PresignPut(mock.Anything, newSwitchImageKey(), "image/png", int64(524288)).
+		PresignPut(mock.Anything, newSwitchImageKey(), "image/webp", int64(524288)).
 		Return("", errors.New("s3: access denied"))
 
-	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
+	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/webp","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
 	s.handler(rec, req)
 
@@ -1251,13 +1251,13 @@ func (s *SetSwitchImageSuite) TestSetSwitchImage_DeletePreviousError_Returns500(
 		Get(mock.Anything, "alice", "sw1").
 		Return(&repository.Switch{ID: "sw1", ImagePath: &previous}, nil)
 	s.mockImages.EXPECT().
-		PresignPut(mock.Anything, newSwitchImageKey(), "image/png", int64(524288)).
+		PresignPut(mock.Anything, newSwitchImageKey(), "image/webp", int64(524288)).
 		Return("https://example.com/presigned-put", nil)
 	s.mockImages.EXPECT().
 		Delete(mock.Anything, previousSwitchImageTestKey).
 		Return(errors.New("s3: access denied"))
 
-	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
+	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/webp","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
 	s.handler(rec, req)
 
@@ -1273,13 +1273,13 @@ func (s *SetSwitchImageSuite) TestSetSwitchImage_RepositoryError_Returns500() {
 		Get(mock.Anything, "alice", "sw1").
 		Return(&repository.Switch{ID: "sw1"}, nil)
 	s.mockImages.EXPECT().
-		PresignPut(mock.Anything, newSwitchImageKey(), "image/png", int64(524288)).
+		PresignPut(mock.Anything, newSwitchImageKey(), "image/webp", int64(524288)).
 		Return("https://example.com/presigned-put", nil)
 	s.mockRepo.EXPECT().
 		SetImagePath(mock.Anything, "sw1", newSwitchImageKey()).
 		Return(errors.New("put item failed"))
 
-	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`)
+	req := s.newRequest(s.ownerCtx(), `{"content_type":"image/webp","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
 	s.handler(rec, req)
 
@@ -1469,7 +1469,7 @@ func (s *SetSwitchImageSuite) TestSetSwitchImage_UploadLimitReached_Returns429()
 		Return(repository.ErrUploadLimitReached)
 
 	rec := httptest.NewRecorder()
-	s.handler(rec, s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`))
+	s.handler(rec, s.newRequest(s.ownerCtx(), `{"content_type":"image/webp","size_bytes":524288}`))
 
 	s.Equal(http.StatusTooManyRequests, rec.Code)
 	s.Equal("application/problem+json", rec.Header().Get("Content-Type"))
@@ -1484,7 +1484,7 @@ func (s *SetSwitchImageSuite) TestSetSwitchImage_ReserveError_Returns500() {
 		Return(errors.New("dynamo: boom"))
 
 	rec := httptest.NewRecorder()
-	s.handler(rec, s.newRequest(s.ownerCtx(), `{"content_type":"image/png","size_bytes":524288}`))
+	s.handler(rec, s.newRequest(s.ownerCtx(), `{"content_type":"image/webp","size_bytes":524288}`))
 
 	s.Equal(http.StatusInternalServerError, rec.Code)
 }

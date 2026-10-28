@@ -42,7 +42,7 @@ var _ = Describe("Taking down a switch image", func() {
 
 	Context("given an approved image whose URL has been fetched", func() {
 		BeforeEach(func(ctx SpecContext) {
-			resp, err := client.SetImage(ctx, ownerID, switchID, ownerToken, api.JPEGUploadBody())
+			resp, err := client.SetImage(ctx, ownerID, switchID, ownerToken, api.ImageUploadBody("image/webp"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(http.StatusCreated))
 			var created struct {
@@ -50,7 +50,7 @@ var _ = Describe("Taking down a switch image", func() {
 			}
 			Expect(json.NewDecoder(resp.Body).Decode(&created)).To(Succeed())
 
-			putResp, err := api.DoBlob(ctx, http.MethodPut, created.UploadURL, "image/jpeg", bytes.NewReader(api.TestJPEG))
+			putResp, err := api.DoBlob(ctx, http.MethodPut, created.UploadURL, "image/webp", bytes.NewReader(api.TestImageBytes))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(putResp.StatusCode).To(Equal(http.StatusOK))
 

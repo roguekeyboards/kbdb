@@ -14,7 +14,7 @@ const (
 	approvedStabilizerMount  = "Screw-in"
 	approvedCaseMountType    = "Gasket Mount"
 	approvedDurometer        = "70A"
-	approvedImageContentType = "image/png"
+	approvedImageContentType = "image/webp"
 )
 
 func TestBuilds(t *testing.T) {

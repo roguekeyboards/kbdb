@@ -82,7 +82,7 @@ var _ = Describe("Deleting a keycap set", func() {
 				}
 				Expect(json.NewDecoder(createResp.Body).Decode(&created)).To(Succeed())
 
-				setResp, err := client.SetKitImage(ctx, ownerID, keycapSetID, created.KitID, ownerToken, api.ImageUploadBody("image/png"))
+				setResp, err := client.SetKitImage(ctx, ownerID, keycapSetID, created.KitID, ownerToken, api.ImageUploadBody("image/webp"))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(setResp.StatusCode).To(Equal(http.StatusCreated))
 
@@ -91,7 +91,7 @@ var _ = Describe("Deleting a keycap set", func() {
 				}
 				Expect(json.NewDecoder(setResp.Body).Decode(&upload)).To(Succeed())
 
-				putResp, err := api.DoBlob(ctx, http.MethodPut, upload.UploadURL, "image/png", bytes.NewReader(api.TestImageBytes))
+				putResp, err := api.DoBlob(ctx, http.MethodPut, upload.UploadURL, "image/webp", bytes.NewReader(api.TestImageBytes))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(putResp.StatusCode).To(Equal(http.StatusOK))
 

@@ -466,7 +466,7 @@ func (s *HandleSetProfileImageSuite) TestValid_ReturnsUploadURL() {
 	reserved := expectUploadReserved(s.mockUploads)
 	s.mockRepo.EXPECT().Get(mock.Anything, callerID).Return(&repository.Profile{}, nil)
 	var presigned repository.ProfileImageKey
-	s.mockImages.EXPECT().PresignPut(mock.Anything, newAvatarKey(), "image/png", int64(524288)).
+	s.mockImages.EXPECT().PresignPut(mock.Anything, newAvatarKey(), "image/webp", int64(524288)).
 		Run(func(_ context.Context, key repository.ProfileImageKey, _ string, _ int64) { presigned = key }).
 		Return("https://example.com/put", nil).
 		NotBefore(reserved)
@@ -474,7 +474,7 @@ func (s *HandleSetProfileImageSuite) TestValid_ReturnsUploadURL() {
 		Run(func(_ context.Context, key repository.ProfileImageKey) { s.Equal(presigned, key) }).
 		Return(nil)
 
-	out, err := s.call(schema.SetProfileImageInput{ContentType: "image/png", SizeBytes: 524288})
+	out, err := s.call(schema.SetProfileImageInput{ContentType: "image/webp", SizeBytes: 524288})
 
 	s.Require().NoError(err)
 	s.Equal("https://example.com/put", out.UploadURL)
@@ -484,18 +484,18 @@ func (s *HandleSetProfileImageSuite) TestReplacingAvatar_DeletesPreviousObjectFi
 	expectUploadReserved(s.mockUploads)
 	previous := previousAvatarKey()
 	s.mockRepo.EXPECT().Get(mock.Anything, callerID).Return(&repository.Profile{AvatarPath: &previous}, nil)
-	s.mockImages.EXPECT().PresignPut(mock.Anything, newAvatarKey(), "image/png", int64(524288)).
+	s.mockImages.EXPECT().PresignPut(mock.Anything, newAvatarKey(), "image/webp", int64(524288)).
 		Return("https://example.com/put", nil)
 	deleted := s.mockImages.EXPECT().Delete(mock.Anything, previous).Return(nil).Call
 	s.mockRepo.EXPECT().SetAvatarPath(mock.Anything, newAvatarKey()).Return(nil).NotBefore(deleted)
 
-	_, err := s.call(schema.SetProfileImageInput{ContentType: "image/png", SizeBytes: 524288})
+	_, err := s.call(schema.SetProfileImageInput{ContentType: "image/webp", SizeBytes: 524288})
 
 	s.Require().NoError(err)
 }
 
 func (s *HandleSetProfileImageSuite) TestSizeOverCap_ErrorNoRepoCall() {
-	_, err := s.call(schema.SetProfileImageInput{ContentType: "image/png", SizeBytes: repository.MaxImageSizeBytes + 1})
+	_, err := s.call(schema.SetProfileImageInput{ContentType: "image/webp", SizeBytes: repository.MaxImageSizeBytes + 1})
 
 	s.Require().ErrorContains(err, "size_bytes")
 	s.mockRepo.AssertNotCalled(s.T(), "SetAvatarPath", mock.Anything, mock.Anything)
@@ -511,7 +511,7 @@ func (s *HandleSetProfileImageSuite) TestUnapprovedContentType_ErrorNoRepoCall()
 func (s *HandleSetProfileImageSuite) TestNoProfile_NotFoundError() {
 	s.mockRepo.EXPECT().Get(mock.Anything, callerID).Return(nil, repository.ErrNotFound)
 
-	_, err := s.call(schema.SetProfileImageInput{ContentType: "image/png", SizeBytes: 524288})
+	_, err := s.call(schema.SetProfileImageInput{ContentType: "image/webp", SizeBytes: 524288})
 
 	s.Require().ErrorIs(err, errMutationNotFound)
 }
@@ -519,11 +519,11 @@ func (s *HandleSetProfileImageSuite) TestNoProfile_NotFoundError() {
 func (s *HandleSetProfileImageSuite) TestMutationConflict_RetryableError() {
 	expectUploadReserved(s.mockUploads)
 	s.mockRepo.EXPECT().Get(mock.Anything, callerID).Return(&repository.Profile{}, nil)
-	s.mockImages.EXPECT().PresignPut(mock.Anything, newAvatarKey(), "image/png", int64(524288)).
+	s.mockImages.EXPECT().PresignPut(mock.Anything, newAvatarKey(), "image/webp", int64(524288)).
 		Return("https://example.com/put", nil)
 	s.mockRepo.EXPECT().SetAvatarPath(mock.Anything, newAvatarKey()).Return(repository.ErrMutationConflict)
 
-	_, err := s.call(schema.SetProfileImageInput{ContentType: "image/png", SizeBytes: 524288})
+	_, err := s.call(schema.SetProfileImageInput{ContentType: "image/webp", SizeBytes: 524288})
 
 	s.Require().Error(err)
 }
@@ -532,10 +532,10 @@ func (s *HandleSetProfileImageSuite) TestPresignError_GenericError() {
 	expectUploadReserved(s.mockUploads)
 	previous := previousAvatarKey()
 	s.mockRepo.EXPECT().Get(mock.Anything, callerID).Return(&repository.Profile{AvatarPath: &previous}, nil)
-	s.mockImages.EXPECT().PresignPut(mock.Anything, newAvatarKey(), "image/png", int64(524288)).
+	s.mockImages.EXPECT().PresignPut(mock.Anything, newAvatarKey(), "image/webp", int64(524288)).
 		Return("", errors.New("s3 down"))
 
-	_, err := s.call(schema.SetProfileImageInput{ContentType: "image/png", SizeBytes: 524288})
+	_, err := s.call(schema.SetProfileImageInput{ContentType: "image/webp", SizeBytes: 524288})
 
 	s.Require().Error(err)
 	// No .EXPECT() for Delete or SetAvatarPath - verifies neither the
@@ -546,11 +546,11 @@ func (s *HandleSetProfileImageSuite) TestDeletePreviousError_GenericError() {
 	expectUploadReserved(s.mockUploads)
 	previous := previousAvatarKey()
 	s.mockRepo.EXPECT().Get(mock.Anything, callerID).Return(&repository.Profile{AvatarPath: &previous}, nil)
-	s.mockImages.EXPECT().PresignPut(mock.Anything, newAvatarKey(), "image/png", int64(524288)).
+	s.mockImages.EXPECT().PresignPut(mock.Anything, newAvatarKey(), "image/webp", int64(524288)).
 		Return("https://example.com/put", nil)
 	s.mockImages.EXPECT().Delete(mock.Anything, previous).Return(errors.New("s3 down"))
 
-	_, err := s.call(schema.SetProfileImageInput{ContentType: "image/png", SizeBytes: 524288})
+	_, err := s.call(schema.SetProfileImageInput{ContentType: "image/webp", SizeBytes: 524288})
 
 	s.Require().Error(err)
 	// No .EXPECT() for SetAvatarPath - the pointer stays on the previous
@@ -646,7 +646,7 @@ func (s *HandleSetProfileImageSuite) TestUploadLimitReached_ReturnsUploadsUnavai
 		Increment(mock.Anything, mock.Anything, int64(500), mock.Anything).
 		Return(repository.ErrUploadLimitReached)
 
-	_, err := s.call(schema.SetProfileImageInput{ContentType: "image/png", SizeBytes: 524288})
+	_, err := s.call(schema.SetProfileImageInput{ContentType: "image/webp", SizeBytes: 524288})
 
 	s.Require().ErrorIs(err, errUploadsUnavailable)
 }
@@ -658,7 +658,7 @@ func (s *HandleSetProfileImageSuite) TestReserveError_ReturnsFailed() {
 		Increment(mock.Anything, mock.Anything, int64(500), mock.Anything).
 		Return(errors.New("dynamo: boom"))
 
-	_, err := s.call(schema.SetProfileImageInput{ContentType: "image/png", SizeBytes: 524288})
+	_, err := s.call(schema.SetProfileImageInput{ContentType: "image/webp", SizeBytes: 524288})
 
 	s.Require().ErrorIs(err, errMutationFailed)
 }

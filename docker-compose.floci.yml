@@ -28,9 +28,6 @@ services:
       # here rather than as a -D in command because older images reject a -D
       # they don't recognise but ignore an unknown environment variable.
       - FLOCI_SECURITY_ALLOW_UNSAFE_NETWORK_EXPOSURE=true
-      # Canned Rekognition responses the functional suite writes, keyed by
-      # "<bucket>/<key>". floci re-reads the file when it changes.
-      - AI_MOCK_CONFIG=/ai-mock/mock.json
       # Check SigV4 signatures, so a presigned PUT whose body length differs
       # from the signed Content-Length is refused here as it is on AWS.
       - FLOCI_AUTH_VALIDATE_SIGNATURES=true
@@ -56,4 +53,3 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./.floci-certs:/certs:ro
-      - ./.floci-ai-mock:/ai-mock:ro

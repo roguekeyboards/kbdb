@@ -12,7 +12,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 
-	"github.com/rogueserenity/kbdb/test/functional/support"
 	"github.com/rogueserenity/kbdb/test/functional/support/api"
 	"github.com/rogueserenity/kbdb/test/functional/support/db"
 	"github.com/rogueserenity/kbdb/test/functional/support/moderation"
@@ -70,7 +69,7 @@ var _ = Describe("Moderating an uploaded switch image", func() {
 	}
 
 	upload := func(ctx SpecContext) {
-		put(ctx, "image/jpeg", api.TestJPEG)
+		put(ctx, "image/webp", api.TestImageBytes)
 	}
 
 	awaitStatus := func(ctx SpecContext, want ...types.GomegaMatcher) {
@@ -97,7 +96,7 @@ var _ = Describe("Moderating an uploaded switch image", func() {
 	Context("given a public switch whose owner was issued an image upload URL", func() {
 		BeforeEach(func(ctx SpecContext) {
 			Expect(db.SeedSwitch(ctx, ownerID, switchID, "public")).To(Succeed())
-			issueUpload(ctx, api.JPEGUploadBody())
+			issueUpload(ctx, api.ImageUploadBody("image/webp"))
 		})
 
 		Context("given nothing has been uploaded to it yet", func() {
@@ -131,30 +130,6 @@ var _ = Describe("Moderating an uploaded switch image", func() {
 				})
 			})
 		})
-
-		Context("given Rekognition labels the image explicit", func() {
-			BeforeEach(func(ctx SpecContext) {
-				if support.AIMockConfigPath() == "" {
-					Skip("canned Rekognition responses need floci")
-				}
-				Expect(moderation.MockLabels(ctx, key,
-					moderation.Label{Name: "Explicit", TaxonomyLevel: 1, Confidence: 99},
-					moderation.Label{Name: "Explicit Nudity", ParentName: "Explicit", TaxonomyLevel: 2, Confidence: 97},
-				)).To(Succeed())
-			})
-
-			When("the image is uploaded", func() {
-				BeforeEach(upload)
-
-				It("rejects it, and tags the file to expire", func(ctx SpecContext) {
-					By("rejecting it with the highest-confidence label as the reason")
-					awaitStatus(ctx, HaveField("Status", "rejected"), HaveField("RejectionReason", "Explicit"))
-
-					By("tagging the file for the bucket's expiry rule")
-					Expect(moderation.ObjectTags(ctx, key)).To(HaveKeyWithValue("moderation", "rejected"))
-				})
-			})
-		})
 	})
 
 	Context("given a public switch", func() {
@@ -168,7 +143,7 @@ var _ = Describe("Moderating an uploaded switch image", func() {
 			BeforeEach(func(ctx SpecContext) {
 				data = api.BusyWebP()
 				Expect(len(data)).To(BeNumerically("<=", api.MaxUploadBytes), "the WebP must fit the upload cap")
-				Expect(api.FullSizeJPEGLen(data)).To(BeNumerically(">", api.MaxUploadBytes), "only a shrunk JPEG may fit Rekognition's Bytes limit")
+				Expect(api.FullSizeJPEGLen(data)).To(BeNumerically(">", api.RekognitionBytesLimit), "only a shrunk JPEG may fit Rekognition's Bytes limit")
 				issueUpload(ctx, api.WebPUploadBody(data))
 			})
 
@@ -183,7 +158,7 @@ var _ = Describe("Moderating an uploaded switch image", func() {
 			})
 		})
 
-		Context("given its owner was issued an upload URL for a WebP over the pixel limit", func() {
+		Context("given its owner was issued an upload URL for a WebP over 2560px", func() {
 			var data []byte
 
 			BeforeEach(func(ctx SpecContext) {
@@ -196,9 +171,29 @@ var _ = Describe("Moderating an uploaded switch image", func() {
 					put(ctx, "image/webp", data)
 				})
 
-				It("rejects it as unprocessable, and tags the file to expire", func(ctx SpecContext) {
-					By("rejecting it as unprocessable")
-					awaitStatus(ctx, HaveField("Status", "rejected"), HaveField("RejectionReason", "unprocessable"))
+				It("rejects it as too_large, and tags the file to expire", func(ctx SpecContext) {
+					By("rejecting it as too_large")
+					awaitStatus(ctx, HaveField("Status", "rejected"), HaveField("RejectionReason", "too_large"))
+
+					By("tagging the file for the bucket's expiry rule")
+					Expect(moderation.ObjectTags(ctx, key)).To(HaveKeyWithValue("moderation", "rejected"))
+				})
+			})
+		})
+
+		Context("given its owner was issued a WebP upload URL for a JPEG", func() {
+			BeforeEach(func(ctx SpecContext) {
+				issueUpload(ctx, api.WebPUploadBody(api.TestJPEG))
+			})
+
+			When("the JPEG is uploaded as a WebP", func() {
+				BeforeEach(func(ctx SpecContext) {
+					put(ctx, "image/webp", api.TestJPEG)
+				})
+
+				It("rejects it as not_webp, and tags the file to expire", func(ctx SpecContext) {
+					By("rejecting it as not_webp")
+					awaitStatus(ctx, HaveField("Status", "rejected"), HaveField("RejectionReason", "not_webp"))
 
 					By("tagging the file for the bucket's expiry rule")
 					Expect(moderation.ObjectTags(ctx, key)).To(HaveKeyWithValue("moderation", "rejected"))

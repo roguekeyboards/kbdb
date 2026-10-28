@@ -81,7 +81,7 @@ var _ = Describe("Setting a switch's image over MCP", func() {
 					BeforeEach(func(ctx SpecContext) {
 						result, err = client.CallTool(ctx, "set_switch_image", map[string]any{
 							"switch_id":    switchID,
-							"content_type": "application/x-not-an-image",
+							"content_type": "image/png",
 							"size_bytes":   len(api.TestImageBytes),
 						})
 					})

@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"image/color"
 	"io"
 	"maps"
 	"net/http"
@@ -12,6 +14,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/gen2brain/webp"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -101,7 +104,9 @@ const dumpedProfile = `{"user_id":"u-old","username":"jay","discoverable":true,"
 
 func (s *ProfileSuite) TestDumpProfile_WritesProfileAndAvatar() {
 	s.profile = map[string]any{"user_id": "u-1", "username": "jay", "discoverable": true}
-	s.avatar = []byte("avatar bytes")
+	var avatar bytes.Buffer
+	s.Require().NoError(webp.Encode(&avatar, solid(8, 8, color.White)))
+	s.avatar = avatar.Bytes()
 	outDir := s.T().TempDir()
 
 	found, images, err := dumpProfile(context.Background(), s.client, outDir, &imageConverter{})

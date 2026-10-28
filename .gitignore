@@ -217,7 +217,6 @@ bin/
 .sam-local-api.pid
 .sam-local-api.log
 .floci-certs/
-.floci-ai-mock/
 
 # Scratch output of mise run client-gen - dev-only, never committed
 ts-client/

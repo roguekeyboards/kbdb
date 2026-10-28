@@ -22,7 +22,7 @@ func TestKeycapSets(t *testing.T) {
 const (
 	approvedProfile          = "Cherry/CYL"
 	approvedMaterial         = "DyeSub PBT"
-	approvedImageContentType = "image/png"
+	approvedImageContentType = "image/webp"
 	approvedVendor           = "Amazon"
 	approvedOrderStatus      = "Ordered"
 )

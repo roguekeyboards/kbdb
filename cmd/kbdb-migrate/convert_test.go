@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"encoding/binary"
 	"image"
 	"image/color"
@@ -17,6 +18,8 @@ import (
 
 	"github.com/gen2brain/webp"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/rogueserenity/kbdb/internal/repository"
 )
 
 type ConvertSuite struct {
@@ -80,30 +83,28 @@ func (s *ConvertSuite) decodeWebP(data []byte) image.Image {
 }
 
 func (s *ConvertSuite) TestPNGOverMaxEdgeBecomesScaledWebP() {
-	conv := &imageConverter{enabled: true}
+	conv := &imageConverter{}
 
-	out, ct, err := conv.convert(s.encodePNG(solid(3000, 1000, color.White)), "image/png")
+	out, err := conv.convert(s.encodePNG(solid(3000, 1000, color.White)))
 
 	s.Require().NoError(err)
-	s.Equal("image/webp", ct)
 	s.Equal(image.Rect(0, 0, 2560, 853), s.decodeWebP(out).Bounds())
 	s.Equal(1, conv.converted)
 }
 
 func (s *ConvertSuite) TestJPEGWithinMaxEdgeBecomesWebPAtSameSize() {
-	conv := &imageConverter{enabled: true}
+	conv := &imageConverter{}
 	var buf bytes.Buffer
 	s.Require().NoError(jpeg.Encode(&buf, solid(64, 32, color.White), nil))
 
-	out, ct, err := conv.convert(buf.Bytes(), "image/jpeg")
+	out, err := conv.convert(buf.Bytes())
 
 	s.Require().NoError(err)
-	s.Equal("image/webp", ct)
 	s.Equal(image.Rect(0, 0, 64, 32), s.decodeWebP(out).Bounds())
 }
 
 func (s *ConvertSuite) TestJPEGOrientationIsApplied() {
-	conv := &imageConverter{enabled: true}
+	conv := &imageConverter{}
 	img := solid(64, 32, color.RGBA{R: 255, A: 255})
 	for y := range 32 {
 		for x := 32; x < 64; x++ {
@@ -111,7 +112,7 @@ func (s *ConvertSuite) TestJPEGOrientationIsApplied() {
 		}
 	}
 
-	out, _, err := conv.convert(s.jpegWithOrientation(img, 6), "image/jpeg")
+	out, err := conv.convert(s.jpegWithOrientation(img, 6))
 
 	s.Require().NoError(err)
 	got := s.decodeWebP(out)
@@ -123,81 +124,90 @@ func (s *ConvertSuite) TestJPEGOrientationIsApplied() {
 }
 
 func (s *ConvertSuite) TestJPEGStoredAsPNGBecomesWebP() {
-	conv := &imageConverter{enabled: true}
+	conv := &imageConverter{}
 	var buf bytes.Buffer
 	s.Require().NoError(jpeg.Encode(&buf, solid(64, 32, color.White), nil))
 
-	out, ct, err := conv.convert(buf.Bytes(), "image/png")
+	out, err := conv.convert(buf.Bytes())
 
 	s.Require().NoError(err)
-	s.Equal("image/webp", ct)
 	s.Equal(image.Rect(0, 0, 64, 32), s.decodeWebP(out).Bounds())
 }
 
-func (s *ConvertSuite) TestKeptImageGetsItsRealContentType() {
-	conv := &imageConverter{enabled: true}
+func (s *ConvertSuite) TestWebPStoredAsPNGIsKept() {
+	conv := &imageConverter{}
 	data := s.encodeWebP(solid(16, 16, color.White))
 
-	out, ct, err := conv.convert(data, "image/png")
+	out, err := conv.convert(data)
 
 	s.Require().NoError(err)
-	s.Equal("image/webp", ct)
 	s.Equal(data, out)
 }
 
 func (s *ConvertSuite) TestWebPWithinMaxEdgeIsUnchanged() {
-	conv := &imageConverter{enabled: true}
+	conv := &imageConverter{}
 	data := s.encodeWebP(solid(2560, 10, color.White))
 
-	out, ct, err := conv.convert(data, "image/webp")
+	out, err := conv.convert(data)
 
 	s.Require().NoError(err)
-	s.Equal("image/webp", ct)
 	s.Equal(data, out)
 	s.Zero(conv.converted)
 }
 
 func (s *ConvertSuite) TestWebPOverMaxEdgeIsScaled() {
-	conv := &imageConverter{enabled: true}
+	conv := &imageConverter{}
 
-	out, ct, err := conv.convert(s.encodeWebP(solid(100, 3000, color.White)), "image/webp")
+	out, err := conv.convert(s.encodeWebP(solid(100, 3000, color.White)))
 
 	s.Require().NoError(err)
-	s.Equal("image/webp", ct)
 	s.Equal(image.Rect(0, 0, 85, 2560), s.decodeWebP(out).Bounds())
 	s.Equal(1, conv.converted)
 }
 
-func (s *ConvertSuite) TestGIFIsUnchanged() {
-	conv := &imageConverter{enabled: true}
+func (s *ConvertSuite) TestGIFIsRefused() {
+	conv := &imageConverter{}
 	var buf bytes.Buffer
-	s.Require().NoError(gif.Encode(&buf, solid(3000, 10, color.White), nil))
+	s.Require().NoError(gif.Encode(&buf, solid(16, 16, color.White), nil))
 
-	out, ct, err := conv.convert(buf.Bytes(), "image/gif")
+	_, err := conv.convert(buf.Bytes())
 
-	s.Require().NoError(err)
-	s.Equal("image/gif", ct)
-	s.Equal(buf.Bytes(), out)
+	s.ErrorContains(err, "image/gif")
 }
 
-func (s *ConvertSuite) TestDisabledLeavesJPEGUnchanged() {
+func (s *ConvertSuite) TestAnimatedWebPIsRefused() {
 	conv := &imageConverter{}
-	data := []byte("not even decoded")
+	var buf bytes.Buffer
+	s.Require().NoError(webp.EncodeAll(&buf, &webp.WEBP{
+		Image: []image.Image{solid(16, 16, color.White), solid(16, 16, color.Black)},
+		Delay: []int{100, 100},
+	}))
 
-	out, ct, err := conv.convert(data, "image/jpeg")
+	_, err := conv.convert(buf.Bytes())
 
-	s.Require().NoError(err)
-	s.Equal("image/jpeg", ct)
-	s.Equal(data, out)
+	s.ErrorContains(err, "animated")
+}
+
+func (s *ConvertSuite) TestWebPOverSizeCapIsRefused() {
+	conv := &imageConverter{}
+	noise := image.NewGray(image.Rect(0, 0, 1500, 1500))
+	_, _ = rand.Read(noise.Pix)
+	var buf bytes.Buffer
+	s.Require().NoError(webp.Encode(&buf, noise, webp.Options{Lossless: true}))
+	s.Require().Greater(buf.Len(), repository.MaxImageSizeBytes)
+
+	_, err := conv.convert(buf.Bytes())
+
+	s.ErrorContains(err, "cap")
 }
 
 func (s *ConvertSuite) TestOversizedCanvasIsRefusedBeforeDecoding() {
-	conv := &imageConverter{enabled: true}
+	conv := &imageConverter{}
 	data := s.encodePNG(solid(1, 1, color.White))
 	binary.BigEndian.PutUint32(data[16:], 20000)
 	binary.BigEndian.PutUint32(data[20:], 20000)
 
-	_, _, err := conv.convert(data, "image/png")
+	_, err := conv.convert(data)
 
 	s.Require().Error(err)
 	s.ErrorContains(err, "pixels")
@@ -240,7 +250,7 @@ func (s *ConvertSuite) TestDownloadOneWritesConvertedImage() {
 	defer srv.Close()
 	dir := s.T().TempDir()
 
-	entry, err := downloadOne(context.Background(), dir, "img-1", imageRef{imageID: "img-1", url: srv.URL}, &imageConverter{enabled: true})
+	entry, err := downloadOne(context.Background(), dir, "img-1", imageRef{imageID: "img-1", url: srv.URL}, &imageConverter{})
 
 	s.Require().NoError(err)
 	s.Equal("img-1.webp", entry.Filename)

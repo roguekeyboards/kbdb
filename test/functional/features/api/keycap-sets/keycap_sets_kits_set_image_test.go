@@ -61,7 +61,7 @@ var _ = Describe("Setting a keycap kit's image", func() {
 				When("setting the kit's image", func() {
 					BeforeEach(func(ctx SpecContext) {
 						var err error
-						resp, err = client.SetKitImage(ctx, ownerID, keycapSetID, kitID, ownerToken, api.ImageUploadBody("image/png"))
+						resp, err = client.SetKitImage(ctx, ownerID, keycapSetID, kitID, ownerToken, api.ImageUploadBody("image/webp"))
 						Expect(err).NotTo(HaveOccurred())
 					})
 
@@ -77,7 +77,7 @@ var _ = Describe("Setting a keycap kit's image", func() {
 
 						By("uploading a PNG to the presigned PUT URL")
 						imageBytes := api.TestImageBytes
-						putResp, err := api.DoBlob(ctx, http.MethodPut, created.UploadURL, "image/png", bytes.NewReader(imageBytes))
+						putResp, err := api.DoBlob(ctx, http.MethodPut, created.UploadURL, "image/webp", bytes.NewReader(imageBytes))
 						Expect(err).NotTo(HaveOccurred())
 						Expect(putResp.StatusCode).To(Equal(http.StatusOK))
 
@@ -145,7 +145,7 @@ var _ = Describe("Setting a keycap kit's image", func() {
 				When("setting the kit's image", func() {
 					BeforeEach(func(ctx SpecContext) {
 						var err error
-						resp, err = client.SetKitImage(ctx, ownerID, keycapSetID, "no-such-kit-"+uuid.NewString(), ownerToken, api.ImageUploadBody("image/png"))
+						resp, err = client.SetKitImage(ctx, ownerID, keycapSetID, "no-such-kit-"+uuid.NewString(), ownerToken, api.ImageUploadBody("image/webp"))
 						Expect(err).NotTo(HaveOccurred())
 					})
 
@@ -169,7 +169,7 @@ var _ = Describe("Setting a keycap kit's image", func() {
 			When("setting the kit's image", func() {
 				BeforeEach(func(ctx SpecContext) {
 					var err error
-					resp, err = client.SetKitImage(ctx, ownerID, keycapSetID, kitID, token, api.ImageUploadBody("image/png"))
+					resp, err = client.SetKitImage(ctx, ownerID, keycapSetID, kitID, token, api.ImageUploadBody("image/webp"))
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -184,7 +184,7 @@ var _ = Describe("Setting a keycap kit's image", func() {
 			When("setting the kit's image", func() {
 				BeforeEach(func(ctx SpecContext) {
 					var err error
-					resp, err = client.SetKitImage(ctx, ownerID, keycapSetID, kitID, "", api.ImageUploadBody("image/png"))
+					resp, err = client.SetKitImage(ctx, ownerID, keycapSetID, kitID, "", api.ImageUploadBody("image/webp"))
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -199,7 +199,7 @@ var _ = Describe("Setting a keycap kit's image", func() {
 		When("setting a kit's image", func() {
 			BeforeEach(func(ctx SpecContext) {
 				var err error
-				resp, err = client.SetKitImage(ctx, ownerID, "no-such-keycap-set-"+uuid.NewString(), "some-kit-id", ownerToken, api.ImageUploadBody("image/png"))
+				resp, err = client.SetKitImage(ctx, ownerID, "no-such-keycap-set-"+uuid.NewString(), "some-kit-id", ownerToken, api.ImageUploadBody("image/webp"))
 				Expect(err).NotTo(HaveOccurred())
 			})
 

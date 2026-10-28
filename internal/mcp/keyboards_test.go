@@ -799,14 +799,14 @@ func (s *HandleAddKeyboardImageSuite) TestSucceeds() {
 		})).
 		Return(nil)
 	s.mockImages.EXPECT().
-		PresignPutKeyboardImage(mock.Anything, mock.Anything, "image/png", int64(524288)).
+		PresignPutKeyboardImage(mock.Anything, mock.Anything, "image/webp", int64(524288)).
 		Return("https://example.com/upload", nil).
 		NotBefore(reserved)
 
 	handler := handleAddKeyboardImage(s.mockKeyboards, s.mockImages, uploadlimit.New(s.mockUploads, 500))
 	_, out, err := handler(callerContext(s.T()), nil, schema.AddKeyboardImageInput{
 		KeyboardID:  "kb-1",
-		ContentType: "image/png",
+		ContentType: "image/webp",
 		SizeBytes:   524288,
 	})
 
@@ -819,7 +819,7 @@ func (s *HandleAddKeyboardImageSuite) TestBlankKeyboardID_ReturnsError() {
 	handler := handleAddKeyboardImage(s.mockKeyboards, s.mockImages, uploadlimit.New(s.mockUploads, 500))
 	_, _, err := handler(callerContext(s.T()), nil, schema.AddKeyboardImageInput{
 		KeyboardID:  " ",
-		ContentType: "image/png",
+		ContentType: "image/webp",
 		SizeBytes:   524288,
 	})
 
@@ -829,7 +829,7 @@ func (s *HandleAddKeyboardImageSuite) TestBlankKeyboardID_ReturnsError() {
 func (s *HandleAddKeyboardImageSuite) TestImageLimitReached_ReturnsError() {
 	expectUploadReserved(s.mockUploads)
 	s.mockImages.EXPECT().
-		PresignPutKeyboardImage(mock.Anything, mock.Anything, "image/png", int64(524288)).
+		PresignPutKeyboardImage(mock.Anything, mock.Anything, "image/webp", int64(524288)).
 		Return("https://example.com/upload", nil)
 	s.mockKeyboards.EXPECT().
 		AddImage(mock.Anything, "kb-1", mock.Anything).
@@ -838,7 +838,7 @@ func (s *HandleAddKeyboardImageSuite) TestImageLimitReached_ReturnsError() {
 	handler := handleAddKeyboardImage(s.mockKeyboards, s.mockImages, uploadlimit.New(s.mockUploads, 500))
 	_, _, err := handler(callerContext(s.T()), nil, schema.AddKeyboardImageInput{
 		KeyboardID:  "kb-1",
-		ContentType: "image/png",
+		ContentType: "image/webp",
 		SizeBytes:   524288,
 	})
 
@@ -849,7 +849,7 @@ func (s *HandleAddKeyboardImageSuite) TestSizeOverCap_ReturnsError() {
 	handler := handleAddKeyboardImage(s.mockKeyboards, s.mockImages, uploadlimit.New(s.mockUploads, 500))
 	_, _, err := handler(callerContext(s.T()), nil, schema.AddKeyboardImageInput{
 		KeyboardID:  "kb-1",
-		ContentType: "image/png",
+		ContentType: "image/webp",
 		SizeBytes:   repository.MaxImageSizeBytes + 1,
 	})
 
@@ -869,7 +869,7 @@ func (s *HandleAddKeyboardImageSuite) TestUnapprovedContentType_ReturnsError() {
 func (s *HandleAddKeyboardImageSuite) TestNotFound_ReturnsError() {
 	expectUploadReserved(s.mockUploads)
 	s.mockImages.EXPECT().
-		PresignPutKeyboardImage(mock.Anything, mock.Anything, "image/png", int64(524288)).
+		PresignPutKeyboardImage(mock.Anything, mock.Anything, "image/webp", int64(524288)).
 		Return("https://example.com/upload", nil)
 	s.mockKeyboards.EXPECT().
 		AddImage(mock.Anything, "kb-1", mock.Anything).
@@ -878,7 +878,7 @@ func (s *HandleAddKeyboardImageSuite) TestNotFound_ReturnsError() {
 	handler := handleAddKeyboardImage(s.mockKeyboards, s.mockImages, uploadlimit.New(s.mockUploads, 500))
 	_, _, err := handler(callerContext(s.T()), nil, schema.AddKeyboardImageInput{
 		KeyboardID:  "kb-1",
-		ContentType: "image/png",
+		ContentType: "image/webp",
 		SizeBytes:   524288,
 	})
 
@@ -888,13 +888,13 @@ func (s *HandleAddKeyboardImageSuite) TestNotFound_ReturnsError() {
 func (s *HandleAddKeyboardImageSuite) TestPresignError_ReturnsError() {
 	expectUploadReserved(s.mockUploads)
 	s.mockImages.EXPECT().
-		PresignPutKeyboardImage(mock.Anything, mock.Anything, "image/png", int64(524288)).
+		PresignPutKeyboardImage(mock.Anything, mock.Anything, "image/webp", int64(524288)).
 		Return("", errors.New("s3: access denied"))
 
 	handler := handleAddKeyboardImage(s.mockKeyboards, s.mockImages, uploadlimit.New(s.mockUploads, 500))
 	_, _, err := handler(callerContext(s.T()), nil, schema.AddKeyboardImageInput{
 		KeyboardID:  "kb-1",
-		ContentType: "image/png",
+		ContentType: "image/webp",
 		SizeBytes:   524288,
 	})
 
@@ -1057,7 +1057,7 @@ func (s *HandleAddKeyboardImageSuite) TestUploadLimitReached_ReturnsUploadsUnava
 
 	_, _, err := handleAddKeyboardImage(s.mockKeyboards, s.mockImages, uploadlimit.New(s.mockUploads, 500))(callerContext(s.T()), nil, schema.AddKeyboardImageInput{
 		KeyboardID:  "kb-1",
-		ContentType: "image/png",
+		ContentType: "image/webp",
 		SizeBytes:   524288,
 	})
 
@@ -1071,7 +1071,7 @@ func (s *HandleAddKeyboardImageSuite) TestReserveError_ReturnsFailed() {
 
 	_, _, err := handleAddKeyboardImage(s.mockKeyboards, s.mockImages, uploadlimit.New(s.mockUploads, 500))(callerContext(s.T()), nil, schema.AddKeyboardImageInput{
 		KeyboardID:  "kb-1",
-		ContentType: "image/png",
+		ContentType: "image/webp",
 		SizeBytes:   524288,
 	})
 

@@ -15,7 +15,7 @@ import (
 	"github.com/rogueserenity/kbdb/test/functional/support/db"
 )
 
-const approvedImageContentType = "image/png"
+const approvedImageContentType = "image/webp"
 
 var _ = Describe("Adding an image to a build over MCP", func() {
 	var (

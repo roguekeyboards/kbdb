@@ -13,12 +13,14 @@ import (
 	"github.com/gen2brain/webp"
 	"golang.org/x/image/draw"
 	"golang.org/x/image/math/f64"
+
+	"github.com/rogueserenity/kbdb/internal/repository"
 )
 
 // maxEdge and webpQuality match mykeebs-web's src/lib/image-resize.ts, so a
 // migrated image is what uploading it through the web app would have stored.
 const (
-	maxEdge     = 2560
+	maxEdge     = repository.MaxImageEdge
 	webpQuality = 82
 
 	// maxDecodePixels refuses a canvas too large to decode in memory, which
@@ -29,20 +31,17 @@ const (
 // imageConverter rewrites dumped images as WebP no larger than maxEdge on
 // either side, counting each one it changes.
 type imageConverter struct {
-	enabled   bool
 	converted int
 }
 
-// convert returns the bytes and content type to dump for an image. JPEG and
-// PNG become WebP, upright and scaled to fit maxEdge, and a WebP over maxEdge
-// is scaled and re-encoded. Any other image, an animated one, a WebP within
-// maxEdge, or anything at all when conversion is disabled is returned as is.
-// The format comes from the bytes, not ct: some images were stored with
-// another format's content type, and a kept one is returned with its real one.
-func (c *imageConverter) convert(data []byte, ct string) ([]byte, string, error) {
-	if !c.enabled {
-		return data, ct, nil
-	}
+// convert returns the WebP bytes to dump for an image. JPEG and PNG become
+// WebP, upright and scaled to fit maxEdge, a WebP over maxEdge is scaled and
+// re-encoded, and a WebP within maxEdge is returned as is. The format comes
+// from the bytes, not the stored content type: some images were stored with
+// another format's. Anything restore would have the API refuse - another
+// format, an animated image, or a result over the API's size cap - is an
+// error, so a dump is never one that can't be restored.
+func (c *imageConverter) convert(data []byte) ([]byte, error) {
 	sniffed := http.DetectContentType(data)
 	var format imagemeta.ImageFormat
 	switch sniffed {
@@ -53,22 +52,21 @@ func (c *imageConverter) convert(data []byte, ct string) ([]byte, string, error)
 	case "image/webp":
 		format = imagemeta.WebP
 	default:
-		return data, ct, nil
+		return nil, fmt.Errorf("%s can't be converted to WebP", sniffed)
 	}
-	ct = sniffed
 
 	meta, err := readImageMeta(data, format)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	if meta.frames > 1 {
-		return data, ct, nil
+		return nil, fmt.Errorf("animated %s can't be converted to WebP", sniffed)
 	}
 	if format == imagemeta.WebP && max(meta.width, meta.height) <= maxEdge {
-		return data, ct, nil
+		return checkSize(data)
 	}
 	if meta.width*meta.height > maxDecodePixels {
-		return nil, "", fmt.Errorf("%dx%d is over %d pixels", meta.width, meta.height, maxDecodePixels)
+		return nil, fmt.Errorf("%dx%d is over %d pixels", meta.width, meta.height, maxDecodePixels)
 	}
 
 	var src image.Image
@@ -81,15 +79,22 @@ func (c *imageConverter) convert(data []byte, ct string) ([]byte, string, error)
 		src, err = webp.Decode(bytes.NewReader(data))
 	}
 	if err != nil {
-		return nil, "", fmt.Errorf("decoding %s: %w", ct, err)
+		return nil, fmt.Errorf("decoding %s: %w", sniffed, err)
 	}
 
 	var out bytes.Buffer
 	if err := webp.Encode(&out, orientAndFit(src, meta.orientation), webp.Options{Quality: webpQuality}); err != nil {
-		return nil, "", fmt.Errorf("encoding webp: %w", err)
+		return nil, fmt.Errorf("encoding webp: %w", err)
 	}
 	c.converted++
-	return out.Bytes(), "image/webp", nil
+	return checkSize(out.Bytes())
+}
+
+func checkSize(data []byte) ([]byte, error) {
+	if len(data) > repository.MaxImageSizeBytes {
+		return nil, fmt.Errorf("the WebP is %d bytes, over the API's %d-byte cap", len(data), repository.MaxImageSizeBytes)
+	}
+	return data, nil
 }
 
 type imageMeta struct {

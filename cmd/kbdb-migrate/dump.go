@@ -104,7 +104,7 @@ func (c *DumpCmd) Run(ctx context.Context) error {
 	// Builds reference the other entities; dump it last so its resolved body
 	// is captured after everything it points at (not strictly required, since
 	// the resolved GET body is stored verbatim, but it keeps the tree tidy).
-	conv := &imageConverter{enabled: c.Convert}
+	conv := &imageConverter{}
 	for _, spec := range []entitySpec{keyboardsSpec, switchesSpec} {
 		n, imgs, err := dumpSimpleCollection(ctx, client, c.Out, spec, conv)
 		if err != nil {
@@ -275,19 +275,15 @@ func saveImageRefs(ctx context.Context, dir string, arrayImages bool, refs []ima
 // entry. basename is the image id for array images, or "image"/"avatar" for
 // single slots.
 func downloadOne(ctx context.Context, dir, basename string, ref imageRef, conv *imageConverter) (imageManifestEntry, error) {
-	data, ct, err := downloadImage(ctx, ref.url)
+	data, _, err := downloadImage(ctx, ref.url)
 	if err != nil {
 		return imageManifestEntry{}, fmt.Errorf("downloading image %s: %w", basename, err)
 	}
-	data, ct, err = conv.convert(data, ct)
+	data, err = conv.convert(data)
 	if err != nil {
 		return imageManifestEntry{}, fmt.Errorf("converting image %s: %w", basename, err)
 	}
-	ext, err := extForContentType(ct)
-	if err != nil {
-		return imageManifestEntry{}, fmt.Errorf("image %s: %w", basename, err)
-	}
-	filename := basename + ext
+	filename := basename + ".webp"
 	sha := sha256Hex(data)
 	if err := writeAndVerify(filepath.Join(dir, filename), data, sha); err != nil {
 		return imageManifestEntry{}, err
@@ -295,7 +291,7 @@ func downloadOne(ctx context.Context, dir, basename string, ref imageRef, conv *
 	return imageManifestEntry{
 		ImageID:     ref.imageID,
 		Filename:    filename,
-		ContentType: ct,
+		ContentType: "image/webp",
 		Bytes:       len(data),
 		SHA256:      sha,
 	}, nil

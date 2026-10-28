@@ -33,7 +33,7 @@ TIME                 ENTITY  OWNER       REASON         CONFIDENCE  KEY
 2026-10-11 09:00:00  profile user-def…   unprocessable  -           profiles/user-def…/avatar/…
 ```
 
-- **REASON** is the Rekognition label that triggered the rejection, or `unprocessable` when Rekognition couldn't read the image at all (wrong format, too large).
+- **REASON** is the Rekognition label that triggered the rejection; `not_webp` when the file isn't a WebP, whatever its content type said; `too_large` when its longest side is over 2560px; or `unprocessable` when the WebP doesn't decode (corrupt or animated) or Rekognition couldn't read it.
 - **CONFIDENCE** is Rekognition's confidence in that label, in percent.
 
 For each row:

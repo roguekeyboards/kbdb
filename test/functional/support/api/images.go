@@ -6,29 +6,28 @@ import (
 	"fmt"
 	"image"
 	"image/jpeg"
-	"image/png"
 
 	"github.com/HugoSmits86/nativewebp"
 	"golang.org/x/image/webp"
 )
 
-// MaxUploadBytes is the API's cap on an uploaded image, and also
-// Rekognition's limit on an image sent as Bytes.
-const MaxUploadBytes = 5 << 20
+// MaxUploadBytes is the API's cap on an uploaded image.
+const MaxUploadBytes = 1536 << 10
 
-// TestImageBytes is a real 100x100 PNG, the payload every spec PUTs to a
-// presigned upload URL. It has to be one Rekognition reads, or the
-// moderation function rejects it as unprocessable, which hides it from the
-// specs that read it back. The URL is signed for the size_bytes declared
-// when it was minted, so specs declare len(TestImageBytes) (ImageUploadBody
-// does) and PUT exactly these bytes.
-var TestImageBytes = func() []byte {
-	var buf bytes.Buffer
-	if err := png.Encode(&buf, grey100()); err != nil {
-		panic(err)
-	}
-	return buf.Bytes()
-}()
+// RekognitionBytesLimit is Rekognition's limit on an image sent as Bytes.
+const RekognitionBytesLimit = 5 << 20
+
+// TestImageBytes is a real 100x100 WebP, the payload every spec PUTs to a
+// presigned upload URL. It has to be one the moderation function decodes,
+// or it's rejected, which hides it from the specs that read it back. The
+// URL is signed for the size_bytes declared when it was minted, so specs
+// declare len(TestImageBytes) (ImageUploadBody does) and PUT exactly these
+// bytes.
+var TestImageBytes = encodeWebP(grey100(128))
+
+// ReplacementImageBytes is a real 100x100 WebP that differs from
+// TestImageBytes, for the specs that replace one image with another.
+var ReplacementImageBytes = encodeWebP(grey100(64))
 
 // ImageUploadBody is an ImageUploadRequest JSON body for contentType, sized
 // for TestImageBytes.
@@ -36,27 +35,22 @@ func ImageUploadBody(contentType string) string {
 	return fmt.Sprintf(`{"content_type":%q,"size_bytes":%d}`, contentType, len(TestImageBytes))
 }
 
-// TestJPEG is a real 100x100 JPEG, for the moderation specs that upload
-// one.
+// TestJPEG is a real 100x100 JPEG, for the specs that need an image that
+// isn't a WebP.
 var TestJPEG = func() []byte {
 	var buf bytes.Buffer
-	if err := jpeg.Encode(&buf, grey100(), nil); err != nil {
+	if err := jpeg.Encode(&buf, grey100(128), nil); err != nil {
 		panic(err)
 	}
 	return buf.Bytes()
 }()
 
-func grey100() image.Image {
+func grey100(level uint8) image.Image {
 	img := image.NewGray(image.Rect(0, 0, 100, 100))
 	for i := range img.Pix {
-		img.Pix[i] = 128
+		img.Pix[i] = level
 	}
 	return img
-}
-
-// JPEGUploadBody is an ImageUploadRequest JSON body sized for TestJPEG.
-func JPEGUploadBody() string {
-	return fmt.Sprintf(`{"content_type":"image/jpeg","size_bytes":%d}`, len(TestJPEG))
 }
 
 // BusyWebP returns a 2560x2560 WebP of random black and white pixels:
@@ -73,7 +67,7 @@ func BusyWebP() []byte {
 }
 
 // OversizedWebP returns a single-colour 7000x7000 WebP: a few KB of file
-// whose canvas is over the moderation function's pixel limit.
+// whose longest side is over the 2560px the moderation function allows.
 func OversizedWebP() []byte {
 	img := image.NewGray(image.Rect(0, 0, 7000, 7000))
 	for i := range img.Pix {
