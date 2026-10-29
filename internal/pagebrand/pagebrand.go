@@ -1,6 +1,7 @@
 // Package pagebrand holds the mykeebs artwork kbdb's own HTML pages (the
-// consent page, the privacy policy and terms, and the MCP guide) embed
-// inline, so they render without depending on the web app being up.
+// consent page, the privacy policy and terms, the MCP guide and the AI
+// statement) embed inline, so they render without depending on the web app
+// being up.
 package pagebrand
 
 import (

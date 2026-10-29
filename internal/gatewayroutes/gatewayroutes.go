@@ -45,6 +45,8 @@ var extraRoutes = []Route{
 	{Method: "ANY", Path: "/terms"},
 	// The MCP setup guide is public (internal/help).
 	{Method: "ANY", Path: "/help/mcp"},
+	// The AI statement is public (internal/about).
+	{Method: "ANY", Path: "/about/ai"},
 }
 
 const bearerScheme = "BearerAuth"

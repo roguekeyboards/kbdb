@@ -11,6 +11,7 @@ import (
 	"github.com/getkin/kin-openapi/openapi3filter"
 	nethttpmiddleware "github.com/oapi-codegen/nethttp-middleware"
 
+	"github.com/rogueserenity/kbdb/internal/about"
 	"github.com/rogueserenity/kbdb/internal/accountdelete"
 	"github.com/rogueserenity/kbdb/internal/auth"
 	"github.com/rogueserenity/kbdb/internal/consent"
@@ -85,11 +86,12 @@ func New(
 	mux := http.NewServeMux()
 
 	// Not part of api/openapi.yaml, so not wrapped in validate - see
-	// internal/consent, internal/legal and internal/help.
+	// internal/consent, internal/legal, internal/help and internal/about.
 	mux.Handle("GET /authorize", consent.Handler(idpConsentPublicToken, issuerURL))
 	mux.Handle("GET /privacy", legal.PrivacyHandler())
 	mux.Handle("GET /terms", legal.TermsHandler())
 	mux.Handle("GET /help/mcp", help.MCPHandler())
+	mux.Handle("GET /about/ai", about.AIHandler())
 
 	// security: [] in api/openapi.yaml - always anonymous. No PUT/DELETE:
 	// lookup categories are static, deploy-time data (internal/lookup),

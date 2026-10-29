@@ -39,7 +39,8 @@ Transports (each maps to shared logic rather than holding its own):
 - `consent/` — the IdP consent page served at `GET /authorize`, which also handles OIDC logout requests, so MCP clients can authenticate standalone.
 - `legal/` — the privacy policy and terms of service at `GET /privacy` and `GET /terms`. Served here, not by mykeebs-web, because they cover MCP and REST too. The privacy policy names the processors and retention periods in `template.yaml`; change it when those change.
 - `help/` — the guide to connecting an AI assistant over MCP at `GET /help/mcp`, which mykeebs-web links to. It describes what the tools can do; change it when they change.
-- `pagebrand/` — the logo, favicon and theme tokens that `consent/`, `legal/` and `help/` pages embed inline.
+- `about/` — the statement on how AI is used to build mykeebs, at `GET /about/ai`. It describes how the project is developed; change it when that changes.
+- `pagebrand/` — the logo, favicon and theme tokens that `consent/`, `legal/`, `help/` and `about/` pages embed inline.
 - `problem/` — RFC 9457 Problem Details responses.
 
 Data access:
