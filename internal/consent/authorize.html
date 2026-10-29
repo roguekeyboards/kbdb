@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <!--
-  This page is the only IdP-specific code in kbdb: it embeds the deployment's
-  IdP browser SDK (currently Stytch's @stytch/vanilla-js) by its own symbol and
-  custom-element names. Swapping IdPs means rewriting this file; nothing else
-  in the codebase references the IdP by name.
+  This page is the only IdP-specific code in kbdb: it uses the deployment's
+  IdP browser SDK (currently Stytch's @stytch/vanilla-js, vendored beside it)
+  by its own symbol and custom-element names. Swapping IdPs means rewriting
+  this file and replacing the SDK file; nothing else in the codebase
+  references the IdP by name.
 -->
 <html>
 <head>
@@ -12,7 +13,7 @@
 <title>mykeebs — Sign in</title>
 <link rel="icon" type="image/svg+xml" href="{{.Brand.Favicon}}" />
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+  {{.Brand.Fonts}}
   {{.Brand.Tokens}}
   stytch-login, stytch-identity-provider { display: block; min-height: 400px; min-width: 300px; }
   body {
@@ -56,10 +57,11 @@
   <button type="button" id="switch-account" hidden>Not you? Use a different account</button>
   <stytch-login id="login-el"></stytch-login>
   <stytch-identity-provider id="idp-el"></stytch-identity-provider>
-  <footer class="legal"><a href="/privacy">Privacy Policy</a> · <a href="/terms">Terms of Service</a></footer>
+  <footer class="legal"><a href="https://mykeebs.com/privacy">Privacy Policy</a> · <a href="https://mykeebs.com/terms">Terms of Service</a></footer>
 
+  <script src="{{.IDPScriptPath}}" integrity="{{.IDPScriptIntegrity}}"></script>
   <script type="module">
-    import { StytchClient, StytchIdentityProvider, StytchUI, Products, OAuthProviders } from 'https://esm.sh/@stytch/vanilla-js@6.2.0';
+    const { StytchClient, StytchIdentityProvider, StytchUI, Products, OAuthProviders } = window.stytch;
 
     const PUBLIC_TOKEN = {{.IDPConsentPublicToken}};
     // customBaseUrl keeps the OIDC "iss" matching the discovery domain.

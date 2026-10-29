@@ -67,7 +67,7 @@ type Tokens struct {
 	// Logo holds the colours the logo artwork is drawn in.
 	Logo Palette `json:"logo"`
 	// Theme holds the UI theme: colours and font stacks shared by every
-	// page mykeebs serves (the web app, kbdb's sign-in and legal pages).
+	// page mykeebs serves (the web app, mykeebs.com, kbdb's sign-in page).
 	Theme Palette `json:"theme"`
 }
 

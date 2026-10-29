@@ -20,11 +20,13 @@ It exposes two first-class APIs — REST and an MCP server, so you can manage yo
 
 **API versioning is explicit where it needs to be.** REST routes are prefixed `/v1/...`. MCP tool schemas and descriptions evolve additive-only instead, since tool descriptions steer which tool an LLM client picks, not just the schema shape a version number would cover.
 
+**The privacy policy, terms and MCP guide live in [mykeebs.com](https://github.com/rogueserenity/mykeebs.com)**, and kbdb redirects its old `/privacy`, `/terms` and `/help/mcp` paths there. Changes here still drive them: the privacy policy names the processors and retention periods in `template.yaml`, and the MCP guide describes what the MCP tools can do, so change those pages when these change.
+
 **The whole stack runs at effectively $0** on AWS free-tier usage — a cost-budget tripwire is wired into every AWS account, so a real bill showing up is itself the alarm.
 
 ## Identity provider requirements
 
-kbdb's backend has no IdP-specific code (the one exception is the two embedded HTML files in `internal/consent`, which load the deployment's IdP browser SDK for the `GET /authorize` login page). It's currently deployed against Stytch but doesn't depend on it. Any IdP works as long as it:
+kbdb's backend has no IdP-specific code (the one exception is `internal/consent`, whose `GET /authorize` login page uses the deployment's IdP browser SDK, vendored beside it). It's currently deployed against Stytch but doesn't depend on it. Any IdP works as long as it:
 
 - Publishes standard OIDC discovery (`.well-known/openid-configuration`) and a JWKS endpoint, since both API Gateway's native JWT authorizer and the application's own `go-oidc`-based verifier resolve signing keys that way.
 - Issues RS256-signed JWTs with standard `iss`, `aud`, and `exp` claims.

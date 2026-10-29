@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/rogueserenity/kbdb/internal/consent"
 	"github.com/rogueserenity/kbdb/test/functional/support/api"
 )
 
@@ -43,6 +44,21 @@ var _ = Describe("Fetching the IdP consent page", func() {
 				// Matches scripts/func-setup.sh's IdpConsentPublicToken deploy
 				// parameter for this stack.
 				Expect(string(body)).To(ContainSubstring(`"public-token-test-local-kbdb"`))
+			})
+		})
+
+		When("the page's IdP browser SDK is fetched", func() {
+			BeforeEach(func(ctx SpecContext) {
+				resp, err = client.Do(ctx, http.MethodGet, consent.IDPScriptPath, "", nil)
+			})
+
+			It("returns the script", func() {
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				Expect(resp.Header.Get("Content-Type")).To(Equal("text/javascript; charset=utf-8"))
+				body, readErr := io.ReadAll(resp.Body)
+				Expect(readErr).NotTo(HaveOccurred())
+				Expect(string(body)).To(HavePrefix("var stytch="))
 			})
 		})
 	})
