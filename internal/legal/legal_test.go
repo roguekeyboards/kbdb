@@ -57,5 +57,12 @@ func (s *HandlerSuite) TestNonGet_MethodNotAllowed() {
 	rec := s.get(TermsHandler(), http.MethodPost)
 
 	s.Equal(http.StatusMethodNotAllowed, rec.Code)
-	s.Equal(http.MethodGet, rec.Header().Get("Allow"))
+	s.Equal("GET, HEAD", rec.Header().Get("Allow"))
+}
+
+func (s *HandlerSuite) TestHead_OK() {
+	rec := s.get(PrivacyHandler(), http.MethodHead)
+
+	s.Equal(http.StatusOK, rec.Code)
+	s.Equal("text/html; charset=utf-8", rec.Header().Get("Content-Type"))
 }

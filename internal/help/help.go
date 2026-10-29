@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/rogueserenity/kbdb/internal/mcp"
 	"github.com/rogueserenity/kbdb/internal/pagebrand"
 )
 
@@ -26,23 +27,16 @@ type templateData struct {
 // MCPHandler serves GET /help/mcp.
 func MCPHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			w.Header().Set("Allow", http.MethodGet)
+		if r.Method != http.MethodGet && r.Method != http.MethodHead {
+			w.Header().Set("Allow", "GET, HEAD")
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		data := templateData{Brand: pagebrand.Assets, MCPURL: schemeOf(r) + "://" + r.Host + "/mcp"}
+		data := templateData{Brand: pagebrand.Assets, MCPURL: mcp.ResourceURL(r)}
 		if err := mcpTemplate.Execute(w, data); err != nil {
 			log.Printf("help: rendering mcp.html: %v", err)
 		}
 	})
-}
-
-func schemeOf(r *http.Request) string {
-	if fp := r.Header.Get("X-Forwarded-Proto"); fp != "" {
-		return fp
-	}
-	return "https"
 }
