@@ -141,6 +141,11 @@ func identityMiddleware() sdkmcp.Middleware {
 	}
 }
 
+// ResourceURL is the MCP endpoint's URL as reached by r.
+func ResourceURL(r *http.Request) string {
+	return schemeOf(r) + "://" + r.Host + "/mcp"
+}
+
 func schemeOf(r *http.Request) string {
 	if fp := r.Header.Get("X-Forwarded-Proto"); fp != "" {
 		return fp
@@ -159,10 +164,8 @@ func metadataHandler(issuerURL string) http.Handler {
 			return
 		}
 
-		resourceURL := schemeOf(r) + "://" + r.Host + "/mcp"
-
 		metadata := oauthex.ProtectedResourceMetadata{
-			Resource:             resourceURL,
+			Resource:             ResourceURL(r),
 			AuthorizationServers: []string{issuerURL},
 			ScopesSupported:      []string{"openid", "email", "profile", "offline_access"},
 		}

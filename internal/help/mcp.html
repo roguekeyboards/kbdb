@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>mykeebs — Using mykeebs with an AI assistant</title>
+<link rel="icon" type="image/svg+xml" href="{{.Favicon}}" />
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&family=Inter:wght@400;500;600&display=swap');
+  {{.Tokens}}
+  body {
+    font-family: var(--font-body);
+    line-height: 1.6;
+    max-width: 680px;
+    margin: 4rem auto;
+    padding: 0 1rem;
+    background: var(--bg);
+    color: var(--text);
+  }
+  .logo { margin-bottom: 2rem; }
+  .logo svg { display: block; height: 40px; width: auto; }
+  h1, h2, h3 { font-family: var(--font-display); font-weight: 600; line-height: 1.3; }
+  h1 { font-size: 1.75rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.125rem; margin-top: 2rem; }
+  h3 { font-size: 1rem; margin-top: 1.5rem; }
+  .lede { color: var(--text-muted); margin-top: 0; }
+  code, pre { font-family: var(--font-display); font-size: 0.875rem; }
+  code { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 0.1rem 0.3rem; white-space: nowrap; }
+  .codeblock { position: relative; margin: 1rem 0; }
+  pre { background: var(--bg-raised); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 6px; padding: 0.75rem 5rem 0.75rem 1rem; margin: 0; line-height: 1.5; }
+  pre code { background: none; border: 0; padding: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  pre.shell code::before { content: "$ "; color: var(--text-faint); user-select: none; }
+  .copy { position: absolute; top: 0.5rem; right: 0.5rem; font: 500 0.75rem var(--font-body); color: var(--text-muted); background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 0.25rem 0.6rem; cursor: pointer; }
+  .copy:hover { color: var(--text); background: var(--surface-hover); border-color: var(--border-strong); }
+  .copy:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .tools { padding-left: 1.25rem; }
+  .tools li { margin-bottom: 1rem; }
+  a { color: var(--accent); text-underline-offset: 2px; }
+  a:hover { color: var(--accent-strong); }
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border); font-size: 0.875rem; color: var(--text-muted); }
+  footer a { color: var(--text-muted); }
+</style>
+</head>
+<body>
+  <header class="logo">{{.Logo}}</header>
+  <main>
+    <h1>Using mykeebs with an AI assistant</h1>
+    <p class="lede">Connect Claude, or any other assistant that supports MCP, to your mykeebs collection and manage it by just asking.</p>
+
+    <h2>What it does</h2>
+    <p>mykeebs has an MCP server. MCP (Model Context Protocol) is a standard way for an AI assistant to use outside services. Once connected, your assistant can do almost anything the mykeebs website can:</p>
+    <ul>
+      <li>Add, change and remove keyboards (with their plates and PCBs), switches, keycap sets (with their kits) and builds.</li>
+      <li>Add and remove photos.</li>
+      <li>Set up and edit your profile: username, bio, links, avatar and price preferences.</li>
+      <li>Look through other people's public collections and the profile directory.</li>
+    </ul>
+    <p>It acts as you: it can see and change only what you could, and other people see only what you've made visible to them.</p>
+
+    <h2>What you need</h2>
+    <ul>
+      <li>A Discord account. You sign in to mykeebs with Discord.</li>
+      <li>An AI assistant that can connect to a remote MCP server, such as Claude (on the web, desktop or mobile) or Claude Code.</li>
+    </ul>
+    <p>The mykeebs MCP server address is:</p>
+    <div class="codeblock"><pre><code>{{.MCPURL}}</code></pre></div>
+
+    <h2>Setting it up</h2>
+
+    <h3>Claude (web, desktop and mobile)</h3>
+    <ol>
+      <li>Open <strong>Settings</strong>, then <strong>Connectors</strong>.</li>
+      <li>Choose <strong>Add custom connector</strong>.</li>
+      <li>Name it <code>mykeebs</code> and paste the server address above as its URL. Leave the advanced settings empty.</li>
+      <li>Choose <strong>Connect</strong> and sign in (see below).</li>
+    </ol>
+    <p>Connectors you add on the web also show up in the desktop and mobile apps.</p>
+
+    <h3>Claude Code</h3>
+    <p>Run:</p>
+    <div class="codeblock"><pre class="shell"><code>claude mcp add --transport http mykeebs {{.MCPURL}}</code></pre></div>
+    <p>Then start Claude Code, type <code>/mcp</code>, pick <strong>mykeebs</strong> and choose <strong>Authenticate</strong>.</p>
+
+    <h3>Other assistants</h3>
+    <p>Add a remote MCP server with the address above. It uses the Streamable HTTP transport and signs you in with OAuth, and your assistant registers itself automatically, so you don't need a client ID or an API key. If your assistant asks for one anyway, it can't connect to mykeebs yet.</p>
+
+    <h2>Signing in</h2>
+    <p>When you connect, your assistant opens a mykeebs sign-in page in your browser. Sign in with Discord, then allow the assistant to access your mykeebs account. Then you're sent back to your assistant, ready to go.</p>
+    <p>New to mykeebs? Signing in creates your account. Then ask your assistant to create your profile and pick a username, or set it up on the mykeebs website.</p>
+
+    <h2>Things to try</h2>
+    <ul>
+      <li>"Add my Gateron Oil Kings to mykeebs. I bought 90 of them from KBDfans for $40."</li>
+      <li>"Make a build from my Mode Envoy, the Oil Kings and GMK Olivia, and make it public."</li>
+      <li>"Which of my keyboards haven't been delivered yet?"</li>
+      <li>"How much have I spent on keycaps this year?"</li>
+      <li>"Show me the public builds in jane's collection."</li>
+      <li>"Hide my prices from other people."</li>
+    </ul>
+    <p>Some fields only take values from a fixed list, such as vendors, switch types and keyboard sizes. Your assistant can look these up, so you can just describe things in your own words. If something you need is missing from a list, let us know at <a href="mailto:support@mykeebs.com">support@mykeebs.com</a>.</p>
+
+    <h2>Good to know</h2>
+    <p><strong>Who can see what.</strong> Each keyboard, switch, keycap set and build is public (anyone), visible to signed-in mykeebs users only, or private (just you). Prices you paid are shown to others only if your profile allows it.</p>
+    <p><strong>Photos.</strong> Give your assistant a photo, or a link to one, and it uploads it for you. Every photo is checked automatically, and only you can see it until it passes. A keyboard or build can have up to 10 photos; a switch, keycap kit and profile have one each.</p>
+    <p>Photos must be WebP, at most 2560 pixels on their longest side and at most 1.5 MB. If yours isn't, your assistant converts it first, which needs one of these tools on your computer (it may offer to install one). You can also run them yourself:</p>
+    <ul class="tools">
+      <li><a href="https://www.libvips.org/install.html">libvips</a>: fast, and reads iPhone HEIC photos.
+        <div class="codeblock"><pre class="shell"><code>vipsthumbnail photo.jpg --size '2560x2560&gt;' -o 'photo.webp[Q=82,keep=none]'</code></pre></div></li>
+      <li><a href="https://imagemagick.org/script/download.php">ImageMagick</a>: widely available.
+        <div class="codeblock"><pre class="shell"><code>magick photo.jpg -auto-orient -resize '2560x2560&gt;' -quality 82 -strip photo.webp</code></pre></div></li>
+    </ul>
+    <p><strong>Deleting.</strong> Your assistant can delete things, including your whole account, and deleted items can't be brought back. If a build still uses a keyboard, switch or keycap set, deleting it fails unless you also delete the builds that use it. Most assistants ask before using a tool; read what it's about to do before you allow anything that deletes.</p>
+    <p><strong>Mistakes.</strong> AI assistants can misread what you meant. Check what was saved, especially prices and dates.</p>
+
+    <h2>Disconnecting</h2>
+    <p>Remove the connector in your assistant's settings. This stops your assistant using your account; your collection stays on mykeebs. In Claude Code, run:</p>
+    <div class="codeblock"><pre class="shell"><code>claude mcp remove mykeebs</code></pre></div>
+
+    <h2>Need help?</h2>
+    <p>Email <a href="mailto:support@mykeebs.com">support@mykeebs.com</a>.</p>
+  </main>
+  <footer><a href="/privacy">Privacy Policy</a> · <a href="/terms">Terms of Service</a></footer>
+<script>
+  for (const block of document.querySelectorAll('.codeblock')) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'copy';
+    button.textContent = 'Copy';
+    button.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(block.querySelector('code').textContent);
+        button.textContent = 'Copied';
+      } catch {
+        button.textContent = 'Copy failed';
+      }
+      setTimeout(() => { button.textContent = 'Copy'; }, 2000);
+    });
+    block.append(button);
+  }
+</script>
+</body>
+</html>

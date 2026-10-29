@@ -32,8 +32,8 @@ func handler(content string) http.Handler {
 	page := buf.Bytes()
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			w.Header().Set("Allow", http.MethodGet)
+		if r.Method != http.MethodGet && r.Method != http.MethodHead {
+			w.Header().Set("Allow", "GET, HEAD")
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
