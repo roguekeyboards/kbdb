@@ -14,6 +14,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/rogueserenity/kbdb/internal/pagebrand"
 )
@@ -34,6 +35,8 @@ var idpScriptSum = sha512.Sum384(idpScript)
 
 // IDPScriptPath is where IDPScriptHandler is served. It names the file by
 // its hash, so browsers can cache it for good and a new SDK gets a new URL.
+// The page links to it by a relative URL, so it also loads behind a
+// path prefix such as floci's stage path.
 var IDPScriptPath = "/authorize/idp-sdk-" + hex.EncodeToString(idpScriptSum[:8]) + ".js"
 
 var idpScriptIntegrity = "sha384-" + base64.StdEncoding.EncodeToString(idpScriptSum[:])
@@ -45,7 +48,7 @@ var idpScriptIntegrity = "sha384-" + base64.StdEncoding.EncodeToString(idpScript
 type templateData struct {
 	IDPConsentPublicToken string
 	OIDCIssuerBaseURL     string
-	IDPScriptPath         string
+	IDPScriptSrc          string
 	IDPScriptIntegrity    string
 	Brand                 pagebrand.Brand
 }
@@ -56,7 +59,7 @@ func Handler(idpConsentPublicToken, oidcIssuerBaseURL string) http.Handler {
 	data := templateData{
 		IDPConsentPublicToken: idpConsentPublicToken,
 		OIDCIssuerBaseURL:     oidcIssuerBaseURL,
-		IDPScriptPath:         IDPScriptPath,
+		IDPScriptSrc:          strings.TrimPrefix(IDPScriptPath, "/"),
 		IDPScriptIntegrity:    idpScriptIntegrity,
 		Brand:                 pagebrand.Assets,
 	}

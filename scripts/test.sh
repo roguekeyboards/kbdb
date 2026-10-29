@@ -5,3 +5,4 @@ while IFS= read -r pkg; do
   packages+=("$pkg")
 done < <(go list ./... | grep -v /test/functional)
 go test "${packages[@]}"
+node --test internal/consent/idp-sdk.test.mjs

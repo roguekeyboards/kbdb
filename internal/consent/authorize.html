@@ -59,7 +59,7 @@
   <stytch-identity-provider id="idp-el"></stytch-identity-provider>
   <footer class="legal"><a href="https://mykeebs.com/privacy">Privacy Policy</a> · <a href="https://mykeebs.com/terms">Terms of Service</a></footer>
 
-  <script src="{{.IDPScriptPath}}" integrity="{{.IDPScriptIntegrity}}"></script>
+  <script src="{{.IDPScriptSrc}}" integrity="{{.IDPScriptIntegrity}}"></script>
   <script type="module">
     const { StytchClient, StytchIdentityProvider, StytchUI, Products, OAuthProviders } = window.stytch;
 

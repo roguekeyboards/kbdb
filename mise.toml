@@ -32,6 +32,7 @@ tools = { node = "24.22.1" }
 alias = "t"
 description = "Run unit tests (excludes test/functional)"
 file = "scripts/test.sh"
+tools = { node = "24.22.1" }
 
 [tasks.build]
 alias = "b"

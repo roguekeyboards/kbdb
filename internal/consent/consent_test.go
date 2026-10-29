@@ -100,7 +100,7 @@ func (s *HandlerSuite) TestGet_LoadsIDPScriptWithIntegrity() {
 	s.Equal(http.StatusOK, rec.Code)
 	s.Regexp(`^/authorize/idp-sdk-[0-9a-f]{16}\.js$`, IDPScriptPath)
 	sum := sha512.Sum384(idpScript)
-	s.Contains(html.UnescapeString(rec.Body.String()), `<script src="`+IDPScriptPath+`" integrity="sha384-`+base64.StdEncoding.EncodeToString(sum[:])+`"></script>`)
+	s.Contains(html.UnescapeString(rec.Body.String()), `<script src="`+strings.TrimPrefix(IDPScriptPath, "/")+`" integrity="sha384-`+base64.StdEncoding.EncodeToString(sum[:])+`"></script>`)
 	s.NotContains(rec.Body.String(), "esm.sh")
 }
 
