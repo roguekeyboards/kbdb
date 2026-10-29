@@ -113,7 +113,7 @@ func (s *HandlerSuite) TestIDPScript_ServesSDK() {
 	s.Equal(http.StatusOK, rec.Code)
 	s.Equal("text/javascript; charset=utf-8", rec.Header().Get("Content-Type"))
 	s.Equal("public, max-age=31536000, immutable", rec.Header().Get("Cache-Control"))
-	s.True(strings.HasPrefix(rec.Body.String(), "var stytch=function(e){"))
+	s.Equal(idpScript, rec.Body.Bytes())
 }
 
 func (s *HandlerSuite) TestNonGet_MethodNotAllowed() {

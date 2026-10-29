@@ -1,6 +1,8 @@
 package authorize_test
 
 import (
+	"crypto/sha512"
+	"encoding/hex"
 	"io"
 	"net/http"
 
@@ -58,7 +60,8 @@ var _ = Describe("Fetching the IdP consent page", func() {
 				Expect(resp.Header.Get("Content-Type")).To(Equal("text/javascript; charset=utf-8"))
 				body, readErr := io.ReadAll(resp.Body)
 				Expect(readErr).NotTo(HaveOccurred())
-				Expect(string(body)).To(HavePrefix("var stytch="))
+				sum := sha512.Sum384(body)
+				Expect(consent.IDPScriptPath).To(ContainSubstring(hex.EncodeToString(sum[:8])))
 			})
 		})
 	})

@@ -67,6 +67,7 @@ type Session struct {
 
 	context playwright.BrowserContext
 	origin  string
+	idpBase string
 
 	mu         sync.Mutex
 	signedIn   bool
@@ -75,9 +76,10 @@ type Session struct {
 	pageErrors []string
 }
 
-// NewSession opens a browser profile whose calls to the IdP's API are
-// answered by the stub. Requests to any origin other than the stack, the
-// IdP and mykeebs.com's fonts are refused and recorded.
+// NewSession opens a browser profile whose calls to the IdP's API at
+// support.OidcIssuer(), the base URL the page gives the SDK, are answered by
+// the stub. Requests anywhere else other than the stack and mykeebs.com's
+// fonts, including the IdP's API on any other host, are refused and recorded.
 func (b *Browser) NewSession(opts Options) (*Session, error) {
 	base, err := url.Parse(support.BaseURL())
 	if err != nil {
@@ -87,7 +89,12 @@ func (b *Browser) NewSession(opts Options) (*Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &Session{context: ctx, origin: base.Scheme + "://" + base.Host, signedIn: opts.SignedIn}
+	s := &Session{
+		context:  ctx,
+		origin:   base.Scheme + "://" + base.Host,
+		idpBase:  strings.TrimSuffix(support.OidcIssuer(), "/") + "/",
+		signedIn: opts.SignedIn,
+	}
 
 	if opts.SignedIn {
 		state, err := json.Marshal(map[string]any{"session": stubSession, "user": stubUser})
@@ -178,7 +185,7 @@ func (s *Session) route(r playwright.Route, opts Options) {
 			return
 		}
 		_ = r.Continue()
-	case strings.Contains(u.Path, "/sdk/v1/") || strings.Contains(u.Path, "/v1/public/oauth/"):
+	case strings.HasPrefix(u.Scheme+"://"+u.Host+u.Path, s.idpBase):
 		s.answer(r, u)
 	default:
 		s.mu.Lock()
