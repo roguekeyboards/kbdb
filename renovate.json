@@ -18,6 +18,17 @@
       "matchManagers": ["mise", "dockerfile"],
       "matchPackageNames": ["golang/go", "golang"],
       "semanticCommitType": "fix"
+    },
+    {
+      "description": "The consent page's IdP SDK ships in the Lambda image, so bumps must release. scripts/idp-sdk.sh copies the new version into the file the page embeds",
+      "matchFileNames": ["internal/consent/package.json"],
+      "semanticCommitType": "fix",
+      "postUpgradeTasks": {
+        "commands": ["scripts/idp-sdk.sh"],
+        "fileFilters": ["internal/consent/idp-sdk.js"],
+        "executionMode": "branch",
+        "installTools": { "node": {} }
+      }
     }
   ],
   "lockFileMaintenance": {

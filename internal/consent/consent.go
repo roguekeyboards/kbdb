@@ -10,6 +10,7 @@ import (
 	"crypto/sha512"
 	_ "embed"
 	"encoding/base64"
+	"encoding/hex"
 	"html/template"
 	"log"
 	"net/http"
@@ -22,26 +23,25 @@ var authorizeHTML string
 
 var authorizeTemplate = template.Must(template.New("authorize.html").Parse(authorizeHTML))
 
-// idpScript is the IdP's browser SDK, unmodified: for @stytch/vanilla-js,
-// the npm package's dist/iife/index.js. To upgrade, replace the file and
-// put the new version in its name and IDPScriptPath.
+// idpScript is the IdP's browser SDK, unmodified, at the version pinned in
+// package-lock.json: for @stytch/vanilla-js, the npm package's
+// dist/iife/index.js. scripts/idp-sdk.sh copies it in; Renovate bumps it.
 //
-//go:embed stytch-vanilla-js-6.2.0.js
+//go:embed idp-sdk.js
 var idpScript []byte
 
-// IDPScriptPath is where IDPScriptHandler is served. The version in
-// the name lets browsers cache it for good.
-const IDPScriptPath = "/authorize/stytch-vanilla-js-6.2.0.js"
+var idpScriptSum = sha512.Sum384(idpScript)
 
-var idpScriptIntegrity = func() string {
-	sum := sha512.Sum384(idpScript)
-	return "sha384-" + base64.StdEncoding.EncodeToString(sum[:])
-}()
+// IDPScriptPath is where IDPScriptHandler is served. It names the file by
+// its hash, so browsers can cache it for good and a new SDK gets a new URL.
+var IDPScriptPath = "/authorize/idp-sdk-" + hex.EncodeToString(idpScriptSum[:8]) + ".js"
 
-// templateData fields are rendered by html/template into a <script> block -
-// its context-aware escaping renders them as safe JS string literals
-// (including escaping a </script> breakout attempt), so fields are passed
-// raw, not pre-quoted.
+var idpScriptIntegrity = "sha384-" + base64.StdEncoding.EncodeToString(idpScriptSum[:])
+
+// templateData fields are passed raw, not pre-quoted: html/template's
+// context-aware escaping renders IDPConsentPublicToken and OIDCIssuerBaseURL
+// as safe JS string literals in the <script> block (including escaping a
+// </script> breakout attempt), and the IDPScript fields as attribute values.
 type templateData struct {
 	IDPConsentPublicToken string
 	OIDCIssuerBaseURL     string
