@@ -20,6 +20,8 @@ It exposes two first-class APIs — REST and an MCP server, so you can manage yo
 
 **API versioning is explicit where it needs to be.** REST routes are prefixed `/v1/...`. MCP tool schemas and descriptions evolve additive-only instead, since tool descriptions steer which tool an LLM client picks, not just the schema shape a version number would cover.
 
+**The sign-in page at `GET /authorize` is built in [mykeebs-consent](https://github.com/roguekeyboards/mykeebs-consent)**, which delivers it as one self-contained file through a Go module, and the logo and fonts in it come from [mykeebs-brand](https://github.com/roguekeyboards/mykeebs-brand).
+
 **The privacy policy, terms and MCP guide live in [mykeebs.com](https://github.com/roguekeyboards/mykeebs.com)**, and kbdb redirects its old `/privacy`, `/terms` and `/help/mcp` paths there. Changes here still drive them: the privacy policy names the processors and retention periods in `template.yaml`, and the MCP guide describes what the MCP tools can do, so change those pages when these change.
 
 **The whole stack runs at effectively $0** on AWS free-tier usage — a cost-budget tripwire is wired into every AWS account, so a real bill showing up is itself the alarm.
