@@ -40,8 +40,6 @@ var extraRoutes = []Route{
 	{Method: http.MethodGet, Path: "/.well-known/oauth-protected-resource/mcp"},
 	// ANY so a non-GET request reaches the handler's own 405 instead of a 404.
 	{Method: "ANY", Path: "/authorize"},
-	// The consent page's IdP browser SDK (internal/consent).
-	{Method: "ANY", Path: "/authorize/{file}"},
 	// Redirects to the pages' new home on mykeebs.com.
 	{Method: "ANY", Path: "/privacy"},
 	{Method: "ANY", Path: "/terms"},

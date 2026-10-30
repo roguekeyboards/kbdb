@@ -224,5 +224,3 @@ ts-client/
 # cf CLI cache
 .cloudflare/
 
-# npm install output of scripts/idp-sdk.sh
-node_modules/

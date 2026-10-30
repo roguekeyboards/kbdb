@@ -202,6 +202,8 @@ github.com/onsi/gomega v1.44.0/go.mod h1:e/C2HwaZ1DhvjzXXuFhcR7hY7Sh9pl7MmoWKEjz
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/rogpeppe/go-internal v1.16.0 h1:O9DK+vNMDVGLr2BeZqmpLeMjiMNkuXfcqntWbZV6S5g=
 github.com/rogpeppe/go-internal v1.16.0/go.mod h1:DrUVZyrJU+txYW5/1kwtXQSMFio52ZOxX7yM1VHvnxs=
+github.com/roguekeyboards/mykeebs-consent v1.0.0 h1:IRsmVzFjeeU0ovX+vqzv5ZVL2Z+Cl+H6a+twMjvE3mQ=
+github.com/roguekeyboards/mykeebs-consent v1.0.0/go.mod h1:Znz6Wo9QxDQaLz+dQIFIX5cl3ahnEYO81fZ9cgPtIto=
 github.com/roguekeyboards/oidc-testkit v1.0.4 h1:LVOJySFuMhesWPnr3ohYdy9DTr3QRTbutU3H/nFMUq8=
 github.com/roguekeyboards/oidc-testkit v1.0.4/go.mod h1:BoTAPnq8Wp1GeN63I09GU61UzFTa71AZE9fjznX/u2E=
 github.com/santhosh-tekuri/jsonschema/v6 v6.0.3 h1:1EYB5IzjZawrrnELUi78f9fPu57HuXjmddZPjrls/28=
