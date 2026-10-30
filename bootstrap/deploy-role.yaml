@@ -41,8 +41,8 @@ Resources:
       RoleName: kbdb-github-actions-deploy
       Description: !If
         - IsCI
-        - Assumed by GitHub Actions (rogueserenity/kbdb pull_request workflows) via OIDC federation, no long-lived keys
-        - Assumed by GitHub Actions (rogueserenity/kbdb deploy-prod.yml, v* tags only) via OIDC federation, no long-lived keys
+        - Assumed by GitHub Actions (roguekeyboards/kbdb pull_request workflows) via OIDC federation, no long-lived keys
+        - Assumed by GitHub Actions (roguekeyboards/kbdb deploy-prod.yml, v* tags only) via OIDC federation, no long-lived keys
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -50,22 +50,18 @@ Resources:
             Principal:
               Federated: !Ref GitHubOidcProvider
             Action: sts:AssumeRoleWithWebIdentity
+            # The roguekeyboards org's tokens use GitHub's immutable subject
+            # format, which names the owner and repo by name@id.
             Condition: !If
               - IsCI
               - StringEquals:
                   token.actions.githubusercontent.com:aud: sts.amazonaws.com
-                  token.actions.githubusercontent.com:sub:
-                    - repo:rogueserenity/kbdb:pull_request
-                    - repo:roguekeyboards/kbdb:pull_request
+                  token.actions.githubusercontent.com:sub: repo:roguekeyboards@350380721/kbdb@1288529592:pull_request
               - StringEquals:
                   token.actions.githubusercontent.com:aud: sts.amazonaws.com
                 StringLike:
-                  token.actions.githubusercontent.com:sub:
-                    - repo:rogueserenity/kbdb:ref:refs/tags/v*
-                    - repo:roguekeyboards/kbdb:ref:refs/tags/v*
-                  token.actions.githubusercontent.com:job_workflow_ref:
-                    - rogueserenity/kbdb/.github/workflows/deploy-prod.yml@refs/tags/v*
-                    - roguekeyboards/kbdb/.github/workflows/deploy-prod.yml@refs/tags/v*
+                  token.actions.githubusercontent.com:sub: repo:roguekeyboards@350380721/kbdb@1288529592:ref:refs/tags/v*
+                  token.actions.githubusercontent.com:job_workflow_ref: roguekeyboards/kbdb/.github/workflows/deploy-prod.yml@refs/tags/v*
       Policies:
         - PolicyName: kbdb-deploy-permissions
           PolicyDocument:
