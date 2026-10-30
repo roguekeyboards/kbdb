@@ -8,7 +8,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/rogueserenity/kbdb/internal/repository"
+	"github.com/roguekeyboards/kbdb/internal/repository"
 )
 
 // Limiter reserves one upload against the day's limit.

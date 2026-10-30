@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/rogueserenity/kbdb/brand/internal/art"
-	"github.com/rogueserenity/kbdb/brand/internal/tokens"
+	"github.com/roguekeyboards/kbdb/brand/internal/art"
+	"github.com/roguekeyboards/kbdb/brand/internal/tokens"
 )
 
 // Paths within the brand directory.

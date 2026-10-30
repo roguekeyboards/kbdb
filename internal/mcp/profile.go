@@ -9,16 +9,16 @@ import (
 	"github.com/google/uuid"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/rogueserenity/kbdb/internal/accountdelete"
-	"github.com/rogueserenity/kbdb/internal/authz"
-	"github.com/rogueserenity/kbdb/internal/log"
-	"github.com/rogueserenity/kbdb/internal/lookup"
-	"github.com/rogueserenity/kbdb/internal/mcp/schema"
-	"github.com/rogueserenity/kbdb/internal/profileread"
-	"github.com/rogueserenity/kbdb/internal/profilevalidate"
-	"github.com/rogueserenity/kbdb/internal/repomcp"
-	"github.com/rogueserenity/kbdb/internal/repository"
-	"github.com/rogueserenity/kbdb/internal/uploadlimit"
+	"github.com/roguekeyboards/kbdb/internal/accountdelete"
+	"github.com/roguekeyboards/kbdb/internal/authz"
+	"github.com/roguekeyboards/kbdb/internal/log"
+	"github.com/roguekeyboards/kbdb/internal/lookup"
+	"github.com/roguekeyboards/kbdb/internal/mcp/schema"
+	"github.com/roguekeyboards/kbdb/internal/profileread"
+	"github.com/roguekeyboards/kbdb/internal/profilevalidate"
+	"github.com/roguekeyboards/kbdb/internal/repomcp"
+	"github.com/roguekeyboards/kbdb/internal/repository"
+	"github.com/roguekeyboards/kbdb/internal/uploadlimit"
 )
 
 var errProfileNotFound = errors.New("profile not found")

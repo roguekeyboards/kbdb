@@ -9,7 +9,7 @@ import (
 	"io/fs"
 	"strings"
 
-	"github.com/rogueserenity/kbdb/brand"
+	"github.com/roguekeyboards/kbdb/brand"
 )
 
 // fontBaseURL serves the brand fonts for dev and prod alike. Files under a

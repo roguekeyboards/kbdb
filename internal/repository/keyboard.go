@@ -6,7 +6,7 @@ import (
 	"math"
 	"sort"
 
-	kbdbctx "github.com/rogueserenity/kbdb/internal/ctx"
+	kbdbctx "github.com/roguekeyboards/kbdb/internal/ctx"
 )
 
 // KeyboardMaterialColor is a physical part described by material and color
@@ -297,7 +297,7 @@ type KeyboardRepository interface {
 	// argument: unlike List, it fetches by exact key regardless of
 	// visibility - the caller (a handler) checks the returned item's
 	// Visibility via
-	// [github.com/rogueserenity/kbdb/internal/authz.CanReadVisibility].
+	// [github.com/roguekeyboards/kbdb/internal/authz.CanReadVisibility].
 	Get(ctx context.Context, ownerID, id string) (*Keyboard, error)
 
 	// Create stores kb (UserID is set from ctx, kb.ID must already be set).
@@ -339,7 +339,7 @@ type KeyboardRepository interface {
 	// Delete removes the caller's keyboard with the given id. Callers clean
 	// up any images it had in a KeyboardImageStore themselves, before
 	// calling Delete - see
-	// [github.com/rogueserenity/kbdb/internal/cascadedelete.DeleteKeyboard].
+	// [github.com/roguekeyboards/kbdb/internal/cascadedelete.DeleteKeyboard].
 	// Idempotent: a nonexistent id is not an error.
 	Delete(ctx context.Context, id string) error
 

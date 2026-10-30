@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math"
 
-	kbdbctx "github.com/rogueserenity/kbdb/internal/ctx"
+	kbdbctx "github.com/roguekeyboards/kbdb/internal/ctx"
 )
 
 // KeycapKitPurchase tracks a kit's own purchase lifecycle, independent of
@@ -158,7 +158,7 @@ type KeycapSetRepository interface {
 	// argument: unlike List, it fetches by exact key regardless of
 	// visibility - the caller (a handler) checks the returned item's
 	// Visibility via
-	// [github.com/rogueserenity/kbdb/internal/authz.CanReadVisibility].
+	// [github.com/roguekeyboards/kbdb/internal/authz.CanReadVisibility].
 	Get(ctx context.Context, ownerID, id string) (*KeycapSet, error)
 
 	// Create stores ks (UserID is set from ctx, ks.ID must already be set).

@@ -7,9 +7,9 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/rogueserenity/kbdb/internal/imagekey"
-	"github.com/rogueserenity/kbdb/internal/repository"
-	repomocks "github.com/rogueserenity/kbdb/internal/repository/mocks"
+	"github.com/roguekeyboards/kbdb/internal/imagekey"
+	"github.com/roguekeyboards/kbdb/internal/repository"
+	repomocks "github.com/roguekeyboards/kbdb/internal/repository/mocks"
 )
 
 type ImagesSuite struct {

@@ -4,8 +4,8 @@ mykeebs' logo, icons and design tokens. They live in kbdb because the brand belo
 
 - **Source of truth:** `tokens.json` (colours and font stacks) and the designs in `internal/art`.
 - **Generated:** everything in `dist/`, by `mise run gen`. Never edit `dist/` by hand.
-- **Go consumers** (kbdb's pages) import `github.com/rogueserenity/kbdb/brand`: `brand.Files` holds `dist/`, `brand.Tokens` holds `tokens.json`. Embed the logo inline rather than linking to the web app, so the pages don't depend on it being up.
-- **mykeebs-web** installs `@rogueserenity/mykeebs-brand` from GitHub Packages, published on every kbdb release by `publish-clients.yml`. Renovate bumps it like the API client.
+- **Go consumers** (kbdb's pages) import `github.com/roguekeyboards/kbdb/brand`: `brand.Files` holds `dist/`, `brand.Tokens` holds `tokens.json`. Embed the logo inline rather than linking to the web app, so the pages don't depend on it being up.
+- **mykeebs-web** installs `@roguekeyboards/mykeebs-brand` from GitHub Packages, published on every kbdb release by `publish-clients.yml`. Renovate bumps it like the API client.
 
 ## Files
 
@@ -26,11 +26,11 @@ In the SVGs the wordmark's text is converted to outlines, so they render the sam
 ### Using it in mykeebs-web
 
 ```ts
-import favicon from '@rogueserenity/mykeebs-brand/favicon.svg';
+import favicon from '@roguekeyboards/mykeebs-brand/favicon.svg';
 ```
 
 ```css
-@import '@rogueserenity/mykeebs-brand/tokens.css';
+@import '@roguekeyboards/mykeebs-brand/tokens.css';
 ```
 
 ## Changing the brand

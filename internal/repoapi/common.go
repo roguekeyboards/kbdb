@@ -7,8 +7,8 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	"github.com/rogueserenity/kbdb/internal/handlers/api"
-	"github.com/rogueserenity/kbdb/internal/repository"
+	"github.com/roguekeyboards/kbdb/internal/handlers/api"
+	"github.com/roguekeyboards/kbdb/internal/repository"
 )
 
 // dateLayout matches how openapi_types.Date marshals/unmarshals.

@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/rogueserenity/kbdb/internal/deletenotice/mocks"
+	"github.com/roguekeyboards/kbdb/internal/deletenotice/mocks"
 )
 
 type SNSSuite struct {

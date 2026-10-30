@@ -8,9 +8,9 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/rogueserenity/kbdb/internal/lookup"
-	"github.com/rogueserenity/kbdb/internal/mcp/schema"
-	"github.com/rogueserenity/kbdb/internal/repomcp"
+	"github.com/roguekeyboards/kbdb/internal/lookup"
+	"github.com/roguekeyboards/kbdb/internal/mcp/schema"
+	"github.com/roguekeyboards/kbdb/internal/repomcp"
 )
 
 var listLookupsTool = &mcp.Tool{

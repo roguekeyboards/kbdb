@@ -183,7 +183,7 @@ type KeyboardPartPurchaseInput struct {
 
 // KeyboardPurchase is a keyboard's purchase and order lifecycle. Dates
 // are strings, not a date type - see
-// [github.com/rogueserenity/kbdb/internal/repomcp.KeyboardToMCP].
+// [github.com/roguekeyboards/kbdb/internal/repomcp.KeyboardToMCP].
 type KeyboardPurchase struct {
 	Vendor       *string  `json:"vendor,omitempty" jsonschema:"where the keyboard was bought"`
 	Price        *float64 `json:"price,omitempty" jsonschema:"price paid"`

@@ -3,10 +3,10 @@ package middleware
 import (
 	"net/http"
 
-	"github.com/rogueserenity/kbdb/internal/log"
-	"github.com/rogueserenity/kbdb/internal/ownerprefs"
-	"github.com/rogueserenity/kbdb/internal/problem"
-	"github.com/rogueserenity/kbdb/internal/repository"
+	"github.com/roguekeyboards/kbdb/internal/log"
+	"github.com/roguekeyboards/kbdb/internal/ownerprefs"
+	"github.com/roguekeyboards/kbdb/internal/problem"
+	"github.com/roguekeyboards/kbdb/internal/repository"
 )
 
 // OwnerPreferences puts the {userId} path segment's owner preferences on the

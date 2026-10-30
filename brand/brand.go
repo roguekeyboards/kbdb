@@ -4,7 +4,7 @@
 //
 // The source of truth is tokens.json (colours and font stacks) plus the
 // designs in internal/art; dist/ is generated from them by `mise run gen`
-// and also published to npm as @rogueserenity/mykeebs-brand for mykeebs-web.
+// and also published to npm as @roguekeyboards/mykeebs-brand for mykeebs-web.
 // See README.md for which file is meant for what.
 package brand
 
@@ -12,7 +12,7 @@ import (
 	"embed"
 	"io/fs"
 
-	"github.com/rogueserenity/kbdb/brand/internal/tokens"
+	"github.com/roguekeyboards/kbdb/brand/internal/tokens"
 )
 
 type (

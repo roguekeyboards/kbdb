@@ -40,7 +40,7 @@ mise run func-test     # runs the functional test suite against it
 mise run func-teardown # tears it all down
 ```
 
-`func-setup` deploys kbdb's real `template.yaml` to [floci](https://github.com/floci-io/floci) (a local AWS emulator) via a genuine `sam deploy` — not `sam local start-api`, which never emulates API Gateway's native JWT authorizer, so it couldn't exercise any auth-required write route (see `internal/middleware.RequireAuthorizerIdentity`). It also runs [`oidc-testkit-gen`](https://github.com/rogueserenity/oidc-testkit) to produce the signing key + discovery doc + JWKS. All `KBDB_*` values land in `.env.floci`, which `func-test` sources automatically.
+`func-setup` deploys kbdb's real `template.yaml` to [floci](https://github.com/floci-io/floci) (a local AWS emulator) via a genuine `sam deploy` — not `sam local start-api`, which never emulates API Gateway's native JWT authorizer, so it couldn't exercise any auth-required write route (see `internal/middleware.RequireAuthorizerIdentity`). It also runs [`oidc-testkit-gen`](https://github.com/roguekeyboards/oidc-testkit) to produce the signing key + discovery doc + JWKS. All `KBDB_*` values land in `.env.floci`, which `func-test` sources automatically.
 
 Most iteration just needs `mise run func-test` again — Go code and test changes are picked up automatically. Restart (`mise run func-teardown && mise run func-setup`) after editing `template.yaml` or `docker-compose.floci.yml`.
 
@@ -196,7 +196,7 @@ Two test layers, kept separate — don't mix them:
 
 Functional specs follow a consistent BDD shape: `Describe` the subject (and, for multi-action resources, a nested `Describe` per action) → `Context("given <precondition>")` → `When("<action>")` → one `It` with a `By(...)` per assertion. Build the actual request inside the innermost `BeforeEach`, not an outer one — Ginkgo's context is scoped to the node that received it.
 
-Functional tests run no auth server. [`oidc-testkit`](https://github.com/rogueserenity/oidc-testkit) generates a signing key + discovery doc + JWKS pre-deploy; the JSON is published where the deployed authorizer and `auth.NewVerifier` can fetch it (floci's S3 locally, the public `kbdb-jwks` bucket in CI), and the suite signs its own tokens via `pkg/oidctest` (see `test/functional/support/api/token.go`).
+Functional tests run no auth server. [`oidc-testkit`](https://github.com/roguekeyboards/oidc-testkit) generates a signing key + discovery doc + JWKS pre-deploy; the JSON is published where the deployed authorizer and `auth.NewVerifier` can fetch it (floci's S3 locally, the public `kbdb-jwks` bucket in CI), and the suite signs its own tokens via `pkg/oidctest` (see `test/functional/support/api/token.go`).
 
 ## Conventions
 

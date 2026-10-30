@@ -8,8 +8,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/rogueserenity/kbdb/test/functional/support"
-	"github.com/rogueserenity/kbdb/test/functional/support/browser"
+	"github.com/roguekeyboards/kbdb/test/functional/support"
+	"github.com/roguekeyboards/kbdb/test/functional/support/browser"
 )
 
 const authorizeQuery = "client_id=client-test&redirect_uri=https%3A%2F%2Fexample.com%2Fcallback" +

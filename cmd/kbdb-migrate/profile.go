@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"reflect"
 
-	"github.com/rogueserenity/kbdb/internal/handlers/api"
+	"github.com/roguekeyboards/kbdb/internal/handlers/api"
 )
 
 // profileDir is where a dump keeps the profile: profile.json plus the avatar

@@ -1,8 +1,8 @@
 package repomcp
 
 import (
-	"github.com/rogueserenity/kbdb/internal/lookup"
-	"github.com/rogueserenity/kbdb/internal/mcp/schema"
+	"github.com/roguekeyboards/kbdb/internal/lookup"
+	"github.com/roguekeyboards/kbdb/internal/mcp/schema"
 )
 
 // Lookup maps lookup.Lookup to its MCP tool shape. It has no dependencies -

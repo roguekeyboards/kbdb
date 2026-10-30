@@ -10,11 +10,11 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/rogueserenity/kbdb/test/functional/support"
-	"github.com/rogueserenity/kbdb/test/functional/support/api"
-	"github.com/rogueserenity/kbdb/test/functional/support/cdn"
-	"github.com/rogueserenity/kbdb/test/functional/support/db"
-	"github.com/rogueserenity/kbdb/test/functional/support/moderation"
+	"github.com/roguekeyboards/kbdb/test/functional/support"
+	"github.com/roguekeyboards/kbdb/test/functional/support/api"
+	"github.com/roguekeyboards/kbdb/test/functional/support/cdn"
+	"github.com/roguekeyboards/kbdb/test/functional/support/db"
+	"github.com/roguekeyboards/kbdb/test/functional/support/moderation"
 )
 
 var _ = Describe("Taking down a switch image", func() {

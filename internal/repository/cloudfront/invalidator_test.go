@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/rogueserenity/kbdb/internal/repository/cloudfront/mocks"
+	"github.com/roguekeyboards/kbdb/internal/repository/cloudfront/mocks"
 )
 
 type InvalidatorSuite struct {

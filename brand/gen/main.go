@@ -9,7 +9,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/rogueserenity/kbdb/brand/internal/assets"
+	"github.com/roguekeyboards/kbdb/brand/internal/assets"
 )
 
 func main() {

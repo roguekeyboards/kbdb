@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/rogueserenity/kbdb/test/functional/support/api"
+	"github.com/roguekeyboards/kbdb/test/functional/support/api"
 )
 
 var _ = Describe("Getting a category", func() {

@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/rogueserenity/kbdb/internal/repository/cloudfront/mocks"
+	"github.com/roguekeyboards/kbdb/internal/repository/cloudfront/mocks"
 )
 
 var testGetNow = time.Date(2026, 10, 25, 3, 0, 0, 0, time.UTC)

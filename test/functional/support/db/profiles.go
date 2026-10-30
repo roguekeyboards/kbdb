@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/rogueserenity/kbdb/test/functional/support"
+	"github.com/roguekeyboards/kbdb/test/functional/support"
 )
 
 // SeedProfileOptions is the fixture shape for SeedProfile. Only Username is

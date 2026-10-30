@@ -7,7 +7,7 @@ package mocks
 import (
 	"context"
 
-	"github.com/rogueserenity/kbdb/internal/repository"
+	"github.com/roguekeyboards/kbdb/internal/repository"
 	mock "github.com/stretchr/testify/mock"
 )
 

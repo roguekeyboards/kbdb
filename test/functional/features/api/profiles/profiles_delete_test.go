@@ -8,10 +8,10 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/rogueserenity/kbdb/test/functional/support/account"
-	"github.com/rogueserenity/kbdb/test/functional/support/api"
-	"github.com/rogueserenity/kbdb/test/functional/support/db"
-	"github.com/rogueserenity/kbdb/test/functional/support/notices"
+	"github.com/roguekeyboards/kbdb/test/functional/support/account"
+	"github.com/roguekeyboards/kbdb/test/functional/support/api"
+	"github.com/roguekeyboards/kbdb/test/functional/support/db"
+	"github.com/roguekeyboards/kbdb/test/functional/support/notices"
 )
 
 var _ = Describe("Deleting a profile", func() {

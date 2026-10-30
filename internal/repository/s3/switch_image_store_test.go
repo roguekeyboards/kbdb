@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/rogueserenity/kbdb/internal/repository/s3/mocks"
+	"github.com/roguekeyboards/kbdb/internal/repository/s3/mocks"
 )
 
 type SwitchImageStoreSuite struct {

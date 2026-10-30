@@ -1,7 +1,7 @@
-// Package repomcp maps [github.com/rogueserenity/kbdb/internal/repository]'s
-// DB-shaped types to [github.com/rogueserenity/kbdb/internal/mcp/schema]'s
+// Package repomcp maps [github.com/roguekeyboards/kbdb/internal/repository]'s
+// DB-shaped types to [github.com/roguekeyboards/kbdb/internal/mcp/schema]'s
 // MCP tool types, mirroring
-// [github.com/rogueserenity/kbdb/internal/repoapi]'s relationship to
-// [github.com/rogueserenity/kbdb/internal/handlers/api] for the MCP
+// [github.com/roguekeyboards/kbdb/internal/repoapi]'s relationship to
+// [github.com/roguekeyboards/kbdb/internal/handlers/api] for the MCP
 // transport instead of REST.
 package repomcp
