@@ -192,6 +192,7 @@ Two test layers, kept separate — don't mix them:
 
 - **Unit tests** (`*_test.go` next to the code they test): `testify/suite` + `mockery`-generated mocks. No real infra, no network calls.
 - **Functional tests** (`test/functional/features/`): Ginkgo + Gomega, driving real HTTP/MCP calls against a running stack (local via `func-setup`, or a real deployed stack via `KBDB_API_BASE_URL`).
+  - The `authorize` suite also opens the sign-in page in headless Chromium ([`playwright-go`](https://github.com/mxschmitt/playwright-go), installed by `func-test`). The stacks under test aren't connected to a real IdP, so `test/functional/support/browser` answers the IdP SDK's API calls with a stub and refuses requests to any origin other than the stack, the IdP and mykeebs.com's fonts. These specs are what check an IdP SDK bump.
 
 Functional specs follow a consistent BDD shape: `Describe` the subject (and, for multi-action resources, a nested `Describe` per action) → `Context("given <precondition>")` → `When("<action>")` → one `It` with a `By(...)` per assertion. Build the actual request inside the innermost `BeforeEach`, not an outer one — Ginkgo's context is scoped to the node that received it.
 

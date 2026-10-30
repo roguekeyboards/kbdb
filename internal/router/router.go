@@ -16,8 +16,6 @@ import (
 	"github.com/rogueserenity/kbdb/internal/consent"
 	"github.com/rogueserenity/kbdb/internal/handlers"
 	"github.com/rogueserenity/kbdb/internal/handlers/api"
-	"github.com/rogueserenity/kbdb/internal/help"
-	"github.com/rogueserenity/kbdb/internal/legal"
 	"github.com/rogueserenity/kbdb/internal/mcp"
 	"github.com/rogueserenity/kbdb/internal/middleware"
 	"github.com/rogueserenity/kbdb/internal/problem"
@@ -85,11 +83,14 @@ func New(
 	mux := http.NewServeMux()
 
 	// Not part of api/openapi.yaml, so not wrapped in validate - see
-	// internal/consent, internal/legal and internal/help.
+	// internal/consent.
 	mux.Handle("GET /authorize", consent.Handler(idpConsentPublicToken, issuerURL))
-	mux.Handle("GET /privacy", legal.PrivacyHandler())
-	mux.Handle("GET /terms", legal.TermsHandler())
-	mux.Handle("GET /help/mcp", help.MCPHandler())
+	mux.Handle("GET "+consent.IDPScriptPath, consent.IDPScriptHandler())
+
+	// These pages moved to mykeebs.com; old links still reach them.
+	for _, path := range []string{"/privacy", "/terms", "/help/mcp"} {
+		mux.Handle("GET "+path, http.RedirectHandler("https://mykeebs.com"+path, http.StatusMovedPermanently))
+	}
 
 	// security: [] in api/openapi.yaml - always anonymous. No PUT/DELETE:
 	// lookup categories are static, deploy-time data (internal/lookup),

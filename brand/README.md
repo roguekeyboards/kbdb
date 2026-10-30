@@ -1,6 +1,6 @@
 # brand
 
-mykeebs' logo, icons and design tokens. They live in kbdb because the brand belongs to the whole system, not one client: kbdb's own pages (sign-in, sign-out, legal) use them, and so does mykeebs-web.
+mykeebs' logo, icons and design tokens. They live in kbdb because the brand belongs to the whole system, not one client: kbdb's sign-in and sign-out page uses them, and so does mykeebs-web.
 
 - **Source of truth:** `tokens.json` (colours and font stacks) and the designs in `internal/art`.
 - **Generated:** everything in `dist/`, by `mise run gen`. Never edit `dist/` by hand.

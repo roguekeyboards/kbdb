@@ -18,18 +18,21 @@ file = "scripts/lint.sh"
 
 [tasks.gen]
 alias = "g"
-description = "Regenerate mocks, OpenAPI types, brand/dist, and go.mod/go.sum"
+description = "Regenerate mocks, OpenAPI types, brand/dist, the consent page's IdP SDK, and go.mod/go.sum"
 file = "scripts/gen.sh"
+tools = { node = "24.22.1" }
 
 [tasks.check-generated]
 alias = "cg"
 description = "Run gen and fail if it changed anything"
 file = "scripts/check-generated.sh"
+tools = { node = "24.22.1" }
 
 [tasks.test]
 alias = "t"
 description = "Run unit tests (excludes test/functional)"
 file = "scripts/test.sh"
+tools = { node = "24.22.1" }
 
 [tasks.build]
 alias = "b"

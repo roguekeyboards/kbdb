@@ -1,4 +1,4 @@
-package help_test
+package moved_test
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestHelp(t *testing.T) {
+func TestMoved(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "GET /help/mcp Suite")
+	RunSpecs(t, "Pages moved to mykeebs.com Suite")
 }

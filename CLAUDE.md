@@ -36,10 +36,9 @@ Transports (each maps to shared logic rather than holding its own):
 - `router/` — wires handlers + middleware into the application's `http.Handler`. No logic of its own.
 - `gatewayroutes/` — generates `api/gateway.gen.yaml`, the API Gateway routes `template.yaml` includes, from `api/openapi.yaml` (each operation's `security` decides whether the gateway's JWT authorizer applies). A new REST route needs only the spec and `router.go`, then `mise run gen`; a route outside the spec goes in `extraRoutes`. Never add SAM `HttpApi` events: each adds a resource-policy statement, and ApiFunction's policy hit Lambda's 20 KB limit.
 - `mcp/` — MCP server over the official `modelcontextprotocol/go-sdk`, reusing the same `auth.Verifier` as REST. `mcp/schema/` holds the tool types.
-- `consent/` — the IdP consent page served at `GET /authorize`, which also handles OIDC logout requests, so MCP clients can authenticate standalone.
-- `legal/` — the privacy policy and terms of service at `GET /privacy` and `GET /terms`. Served here, not by mykeebs-web, because they cover MCP and REST too. The privacy policy names the processors and retention periods in `template.yaml`; change it when those change.
-- `help/` — the guide to connecting an AI assistant over MCP at `GET /help/mcp`, which mykeebs-web links to. It describes what the tools can do; change it when they change.
-- `pagebrand/` — the logo, favicon and theme tokens that `consent/`, `legal/` and `help/` pages embed inline.
+- `consent/` — the IdP consent page served at `GET /authorize`, which also handles OIDC logout requests, so MCP clients can authenticate standalone. It loads the IdP's browser SDK from kbdb, never a CDN: `internal/consent/package.json` pins it so Renovate bumps it and Dependabot alerts cover it, and `scripts/idp-sdk.sh` (run by `mise run gen` and by Renovate after a bump) copies it into the embedded `idp-sdk.js`.
+- `pagebrand/` — the logo, favicon, theme tokens and font faces the consent page embeds inline. The fonts load from mykeebs.com's `/fonts/v1/`; bump the version here when mykeebs.com does.
+- The privacy policy, terms of service and MCP guide live in [rogueserenity/mykeebs.com](https://github.com/rogueserenity/mykeebs.com); `router.go` 301s `GET /privacy`, `/terms` and `/help/mcp` there. Changes here still drive them: the privacy policy names the processors and retention periods in `template.yaml`, and the MCP guide describes what the MCP tools can do. Update that repo when either changes.
 - `problem/` — RFC 9457 Problem Details responses.
 
 Data access:

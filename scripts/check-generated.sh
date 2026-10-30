@@ -9,7 +9,7 @@ scripts/gen.sh
 # compare them pixel by pixel within a tolerance instead. Its text files
 # (SVG, CSS) are deterministic and checked here like everything else.
 if ! git diff --exit-code --stat -- go.mod go.sum '**/mocks/*.go' internal/handlers/api/api.gen.go api/gateway.gen.yaml \
-  'brand/dist/*.svg' 'brand/dist/*.css'; then
+  internal/consent/idp-sdk.js 'brand/dist/*.svg' 'brand/dist/*.css'; then
   echo
   echo "Generated files are out of date - run the commands above locally and commit the result." >&2
   exit 1
