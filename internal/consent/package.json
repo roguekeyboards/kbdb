@@ -3,6 +3,6 @@
   "private": true,
   "description": "The IdP browser SDK the consent page serves. Copied into idp-sdk.js by scripts/idp-sdk.sh.",
   "dependencies": {
-    "@stytch/vanilla-js": "6.2.0"
+    "@stytch/vanilla-js": "6.3.0"
   }
 }
