@@ -3,8 +3,9 @@
 // same artwork and colours the web app uses rather than copying them.
 //
 // The source of truth is tokens.json (colours and font stacks) plus the
-// designs in internal/art; dist/ is generated from them by `mise run gen`
-// and also published to npm as @roguekeyboards/mykeebs-brand for mykeebs-web.
+// designs in internal/art; dist/ is generated from them by `mise run gen`.
+// This is a copy kept for the consent page: the brand's home, which publishes
+// @roguekeyboards/mykeebs-brand, is github.com/roguekeyboards/mykeebs-brand.
 // See README.md for which file is meant for what.
 package brand
 

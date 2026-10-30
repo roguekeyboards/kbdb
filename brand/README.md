@@ -1,11 +1,13 @@
 # brand
 
+> **Moved.** The brand now lives in [mykeebs-brand](https://github.com/roguekeyboards/mykeebs-brand), which publishes `@roguekeyboards/mykeebs-brand`. Make brand changes there. This copy only serves kbdb's consent page, until [#632](https://github.com/roguekeyboards/kbdb/issues/632) removes it.
+
 mykeebs' logo, icons and design tokens. They live in kbdb because the brand belongs to the whole system, not one client: kbdb's sign-in and sign-out page uses them, and so does mykeebs-web.
 
 - **Source of truth:** `tokens.json` (colours and font stacks) and the designs in `internal/art`.
 - **Generated:** everything in `dist/`, by `mise run gen`. Never edit `dist/` by hand.
 - **Go consumers** (kbdb's pages) import `github.com/roguekeyboards/kbdb/brand`: `brand.Files` holds `dist/`, `brand.Tokens` holds `tokens.json`. Embed the logo inline rather than linking to the web app, so the pages don't depend on it being up.
-- **mykeebs-web** installs `@roguekeyboards/mykeebs-brand` from GitHub Packages, published on every kbdb release by `publish-clients.yml`. Renovate bumps it like the API client.
+- **mykeebs-web** installs `@roguekeyboards/mykeebs-brand` from GitHub Packages, published by that repo. Renovate bumps it like the API client.
 
 ## Files
 
