@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/rogueserenity/kbdb/internal/cascadedelete"
+	"github.com/roguekeyboards/kbdb/internal/cascadedelete"
 )
 
 type ParseOnDeleteSuite struct {

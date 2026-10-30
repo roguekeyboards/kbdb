@@ -9,12 +9,12 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/rogueserenity/kbdb/internal/accountdelete"
-	ctxpkg "github.com/rogueserenity/kbdb/internal/ctx"
-	"github.com/rogueserenity/kbdb/internal/mcp/schema"
-	"github.com/rogueserenity/kbdb/internal/repository"
-	"github.com/rogueserenity/kbdb/internal/repository/mocks"
-	"github.com/rogueserenity/kbdb/internal/uploadlimit"
+	"github.com/roguekeyboards/kbdb/internal/accountdelete"
+	ctxpkg "github.com/roguekeyboards/kbdb/internal/ctx"
+	"github.com/roguekeyboards/kbdb/internal/mcp/schema"
+	"github.com/roguekeyboards/kbdb/internal/repository"
+	"github.com/roguekeyboards/kbdb/internal/repository/mocks"
+	"github.com/roguekeyboards/kbdb/internal/uploadlimit"
 )
 
 type HandleGetProfileSuite struct {

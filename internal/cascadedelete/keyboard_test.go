@@ -7,9 +7,9 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/rogueserenity/kbdb/internal/cascadedelete"
-	"github.com/rogueserenity/kbdb/internal/repository"
-	"github.com/rogueserenity/kbdb/internal/repository/mocks"
+	"github.com/roguekeyboards/kbdb/internal/cascadedelete"
+	"github.com/roguekeyboards/kbdb/internal/repository"
+	"github.com/roguekeyboards/kbdb/internal/repository/mocks"
 )
 
 type DeleteKeyboardSuite struct {

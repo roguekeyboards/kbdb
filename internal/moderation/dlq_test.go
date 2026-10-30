@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/rogueserenity/kbdb/internal/moderation/mocks"
+	"github.com/roguekeyboards/kbdb/internal/moderation/mocks"
 )
 
 const (

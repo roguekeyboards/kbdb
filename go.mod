@@ -1,4 +1,4 @@
-module github.com/rogueserenity/kbdb
+module github.com/roguekeyboards/kbdb
 
 go 1.26.4
 
@@ -34,7 +34,7 @@ require (
 	github.com/oapi-codegen/runtime v1.8.0
 	github.com/onsi/ginkgo/v2 v2.33.1
 	github.com/onsi/gomega v1.44.0
-	github.com/rogueserenity/oidc-testkit v1.0.3
+	github.com/roguekeyboards/oidc-testkit v1.0.4
 	github.com/stretchr/testify v1.12.1
 	go.yaml.in/yaml/v3 v3.0.5
 	golang.org/x/image v0.47.0

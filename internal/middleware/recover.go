@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"runtime/debug"
 
-	"github.com/rogueserenity/kbdb/internal/log"
-	"github.com/rogueserenity/kbdb/internal/problem"
+	"github.com/roguekeyboards/kbdb/internal/log"
+	"github.com/roguekeyboards/kbdb/internal/problem"
 )
 
 // Recover must stay wrapped inside Logging (see router.go), not the other

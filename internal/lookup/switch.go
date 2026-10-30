@@ -3,7 +3,7 @@ package lookup
 import (
 	"context"
 
-	"github.com/rogueserenity/kbdb/internal/repository"
+	"github.com/roguekeyboards/kbdb/internal/repository"
 )
 
 // ValidateSwitch returns every field on sw that isn't an approved value for

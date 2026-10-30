@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/rogueserenity/kbdb/internal/repository/dynamo/mocks"
+	"github.com/roguekeyboards/kbdb/internal/repository/dynamo/mocks"
 )
 
 type QueryLimitSuite struct {

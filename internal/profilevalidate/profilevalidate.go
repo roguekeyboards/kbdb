@@ -10,7 +10,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/rogueserenity/kbdb/internal/repository"
+	"github.com/roguekeyboards/kbdb/internal/repository"
 )
 
 // FieldError reports that Name (a JSON pointer-ish field path, e.g.

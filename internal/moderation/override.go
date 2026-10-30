@@ -14,9 +14,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 
-	"github.com/rogueserenity/kbdb/internal/imagekey"
-	"github.com/rogueserenity/kbdb/internal/repository"
-	"github.com/rogueserenity/kbdb/internal/repository/cloudfront"
+	"github.com/roguekeyboards/kbdb/internal/imagekey"
+	"github.com/roguekeyboards/kbdb/internal/repository"
+	"github.com/roguekeyboards/kbdb/internal/repository/cloudfront"
 )
 
 // ErrNotCurrent is returned for a key no item's image slot holds any more.

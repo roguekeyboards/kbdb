@@ -3,9 +3,9 @@ package mcp
 import (
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/rogueserenity/kbdb/internal/accountdelete"
-	"github.com/rogueserenity/kbdb/internal/repository"
-	"github.com/rogueserenity/kbdb/internal/uploadlimit"
+	"github.com/roguekeyboards/kbdb/internal/accountdelete"
+	"github.com/roguekeyboards/kbdb/internal/repository"
+	"github.com/roguekeyboards/kbdb/internal/uploadlimit"
 )
 
 // registerTools is the single list of every tool this server exposes -

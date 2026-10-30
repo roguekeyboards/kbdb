@@ -19,7 +19,7 @@ import (
 	"github.com/gen2brain/webp"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/rogueserenity/kbdb/internal/repository"
+	"github.com/roguekeyboards/kbdb/internal/repository"
 )
 
 type ConvertSuite struct {

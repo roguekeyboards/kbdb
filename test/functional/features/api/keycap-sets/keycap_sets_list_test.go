@@ -9,8 +9,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/rogueserenity/kbdb/test/functional/support/api"
-	"github.com/rogueserenity/kbdb/test/functional/support/db"
+	"github.com/roguekeyboards/kbdb/test/functional/support/api"
+	"github.com/roguekeyboards/kbdb/test/functional/support/db"
 )
 
 func kitsOf(item map[string]any) []map[string]any {

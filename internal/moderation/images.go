@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/rogueserenity/kbdb/internal/imagekey"
-	"github.com/rogueserenity/kbdb/internal/repository"
+	"github.com/roguekeyboards/kbdb/internal/imagekey"
+	"github.com/roguekeyboards/kbdb/internal/repository"
 )
 
 // Images reads and writes an image's moderation status by its object key,

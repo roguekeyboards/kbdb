@@ -1,11 +1,11 @@
 {
-  "name": "@rogueserenity/mykeebs-brand",
+  "name": "@roguekeyboards/mykeebs-brand",
   "version": "0.0.0",
   "description": "mykeebs logo, icons and design tokens, generated in kbdb's brand/",
   "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rogueserenity/kbdb.git",
+    "url": "git+https://github.com/roguekeyboards/kbdb.git",
     "directory": "brand"
   },
   "files": [

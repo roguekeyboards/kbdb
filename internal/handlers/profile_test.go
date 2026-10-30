@@ -12,14 +12,14 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/rogueserenity/kbdb/internal/accountdelete"
-	kbdbctx "github.com/rogueserenity/kbdb/internal/ctx"
-	"github.com/rogueserenity/kbdb/internal/handlers/api"
-	"github.com/rogueserenity/kbdb/internal/problem"
-	"github.com/rogueserenity/kbdb/internal/repoapi"
-	"github.com/rogueserenity/kbdb/internal/repository"
-	"github.com/rogueserenity/kbdb/internal/repository/mocks"
-	"github.com/rogueserenity/kbdb/internal/uploadlimit"
+	"github.com/roguekeyboards/kbdb/internal/accountdelete"
+	kbdbctx "github.com/roguekeyboards/kbdb/internal/ctx"
+	"github.com/roguekeyboards/kbdb/internal/handlers/api"
+	"github.com/roguekeyboards/kbdb/internal/problem"
+	"github.com/roguekeyboards/kbdb/internal/repoapi"
+	"github.com/roguekeyboards/kbdb/internal/repository"
+	"github.com/roguekeyboards/kbdb/internal/repository/mocks"
+	"github.com/roguekeyboards/kbdb/internal/uploadlimit"
 )
 
 type GetProfileSuite struct {

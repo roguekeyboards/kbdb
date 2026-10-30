@@ -9,13 +9,13 @@ import (
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/modelcontextprotocol/go-sdk/oauthex"
 
-	"github.com/rogueserenity/kbdb/internal/accountdelete"
-	"github.com/rogueserenity/kbdb/internal/auth"
-	ctxpkg "github.com/rogueserenity/kbdb/internal/ctx"
-	logpkg "github.com/rogueserenity/kbdb/internal/log"
-	"github.com/rogueserenity/kbdb/internal/middleware"
-	"github.com/rogueserenity/kbdb/internal/repository"
-	"github.com/rogueserenity/kbdb/internal/uploadlimit"
+	"github.com/roguekeyboards/kbdb/internal/accountdelete"
+	"github.com/roguekeyboards/kbdb/internal/auth"
+	ctxpkg "github.com/roguekeyboards/kbdb/internal/ctx"
+	logpkg "github.com/roguekeyboards/kbdb/internal/log"
+	"github.com/roguekeyboards/kbdb/internal/middleware"
+	"github.com/roguekeyboards/kbdb/internal/repository"
+	"github.com/roguekeyboards/kbdb/internal/uploadlimit"
 )
 
 // Handlers holds the HTTP handlers the router needs to mount: the MCP

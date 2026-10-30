@@ -5,8 +5,8 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/rogueserenity/kbdb/internal/lookup"
-	"github.com/rogueserenity/kbdb/internal/mcp/schema"
+	"github.com/roguekeyboards/kbdb/internal/lookup"
+	"github.com/roguekeyboards/kbdb/internal/mcp/schema"
 )
 
 type HandleListLookupsSuite struct {

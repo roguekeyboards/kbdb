@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/rogueserenity/kbdb/internal/repository"
+	"github.com/roguekeyboards/kbdb/internal/repository"
 )
 
 // DeleteKeyboardPlate deletes the plate identified by (keyboardID, plateID)

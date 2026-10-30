@@ -17,8 +17,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	"github.com/rogueserenity/kbdb/internal/imagekey"
-	"github.com/rogueserenity/kbdb/internal/moderation"
+	"github.com/roguekeyboards/kbdb/internal/imagekey"
+	"github.com/roguekeyboards/kbdb/internal/moderation"
 )
 
 // viewURLLifetime is how long a view URL works.

@@ -6,9 +6,9 @@ import (
 	"os"
 	"sync"
 
-	"github.com/rogueserenity/oidc-testkit/pkg/oidctest"
+	"github.com/roguekeyboards/oidc-testkit/pkg/oidctest"
 
-	"github.com/rogueserenity/kbdb/test/functional/support"
+	"github.com/roguekeyboards/kbdb/test/functional/support"
 )
 
 var (

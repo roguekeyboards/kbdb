@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/rogueserenity/kbdb/internal/handlers/api"
-	"github.com/rogueserenity/kbdb/internal/repository"
+	"github.com/roguekeyboards/kbdb/internal/handlers/api"
+	"github.com/roguekeyboards/kbdb/internal/repository"
 )
 
 // Switch maps repository.Switch to and from its wire representations.

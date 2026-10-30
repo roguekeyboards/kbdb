@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sort"
 
-	kbdbctx "github.com/rogueserenity/kbdb/internal/ctx"
+	kbdbctx "github.com/roguekeyboards/kbdb/internal/ctx"
 )
 
 // BuildSwitchEntry is one entry in Build.Switches.
@@ -21,7 +21,7 @@ type BuildKeycapKitEntry struct {
 }
 
 // BuildStabs has open-vocabulary Name and MountType, validated via
-// [github.com/rogueserenity/kbdb/internal/lookup.ValidateBuild], not
+// [github.com/roguekeyboards/kbdb/internal/lookup.ValidateBuild], not
 // closed Go enums.
 type BuildStabs struct {
 	Name      *string  `dynamodbav:"name,omitempty" json:"name,omitempty"`
@@ -30,7 +30,7 @@ type BuildStabs struct {
 }
 
 // BuildCaseMountType has open-vocabulary Type and Durometer, validated
-// via [github.com/rogueserenity/kbdb/internal/lookup.ValidateBuild], not
+// via [github.com/roguekeyboards/kbdb/internal/lookup.ValidateBuild], not
 // closed Go enums.
 type BuildCaseMountType struct {
 	Type      *string `dynamodbav:"type,omitempty" json:"type,omitempty"`
@@ -131,7 +131,7 @@ type BuildRepository interface {
 
 	// Get fetches by exact key regardless of visibility; the caller checks
 	// the result via
-	// [github.com/rogueserenity/kbdb/internal/authz.CanReadVisibility].
+	// [github.com/roguekeyboards/kbdb/internal/authz.CanReadVisibility].
 	Get(ctx context.Context, ownerID, id string) (*Build, error)
 
 	// Create returns ErrAlreadyExists on an ID collision.

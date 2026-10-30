@@ -107,7 +107,7 @@ jobs:
           ISSUER="https://${BUCKET}.s3.us-east-2.amazonaws.com/${PREFIX}"
           OIDC_DIR="${RUNNER_TEMP}/oidc"
           KEY_PATH="${OIDC_DIR}/signing-key.pem"
-          go run github.com/rogueserenity/oidc-testkit/cmd/oidc-testkit-gen@v1.0.0 \
+          go run github.com/roguekeyboards/oidc-testkit/cmd/oidc-testkit-gen@v1.0.4 \
             --issuer "$ISSUER" --out-dir "$OIDC_DIR" --key-out "$KEY_PATH" >/dev/null
           aws s3 cp "$OIDC_DIR/openid-configuration" \
             "s3://${BUCKET}/${PREFIX}/.well-known/openid-configuration" \

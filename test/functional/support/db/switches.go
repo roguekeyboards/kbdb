@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/rogueserenity/kbdb/test/functional/support"
+	"github.com/roguekeyboards/kbdb/test/functional/support"
 )
 
 // SeedSwitch PutItems a switch directly into DynamoDB, bypassing the API -

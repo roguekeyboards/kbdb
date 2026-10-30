@@ -13,7 +13,7 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/rogueserenity/kbdb/internal/handlers/api"
+	"github.com/roguekeyboards/kbdb/internal/handlers/api"
 )
 
 type RestoreSuite struct {

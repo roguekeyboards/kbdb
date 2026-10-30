@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/rogueserenity/kbdb/brand/internal/tokens"
+	"github.com/roguekeyboards/kbdb/brand/internal/tokens"
 )
 
 type SceneSuite struct {

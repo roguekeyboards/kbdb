@@ -23,7 +23,7 @@ OIDC_BUCKET="kbdb-floci-oidc"
 # the same port, so only the issuer changes scheme.
 ISSUER="${ENDPOINT/#http:/https:}/$OIDC_BUCKET"
 AUDIENCE="client_local_kbdb"
-OIDC_TESTKIT_VERSION="v1.0.0"
+OIDC_TESTKIT_VERSION="v1.0.4"
 
 # floci serves TLS with a certificate from our own CA, generated before floci
 # starts so its trust store (docker-compose.floci.yml) can already hold the
@@ -94,7 +94,7 @@ REPO_URI=$(aws ecr describe-repositories \
 
 OIDC_DIR="$(mktemp -d)"
 KEY_PATH="$OIDC_DIR/signing-key.pem"
-go run "github.com/rogueserenity/oidc-testkit/cmd/oidc-testkit-gen@${OIDC_TESTKIT_VERSION}" \
+go run "github.com/roguekeyboards/oidc-testkit/cmd/oidc-testkit-gen@${OIDC_TESTKIT_VERSION}" \
   --issuer "$ISSUER" --out-dir "$OIDC_DIR" --key-out "$KEY_PATH" >/dev/null
 
 aws s3api create-bucket --bucket "$OIDC_BUCKET" \

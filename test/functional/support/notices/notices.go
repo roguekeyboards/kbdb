@@ -18,7 +18,7 @@ import (
 	sqstypes "github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	"github.com/google/uuid"
 
-	"github.com/rogueserenity/kbdb/test/functional/support"
+	"github.com/roguekeyboards/kbdb/test/functional/support"
 )
 
 // Listener is one queue subscribed to the alarm topic.

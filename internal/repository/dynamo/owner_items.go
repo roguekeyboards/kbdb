@@ -10,8 +10,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 
-	kbdbctx "github.com/rogueserenity/kbdb/internal/ctx"
-	"github.com/rogueserenity/kbdb/internal/repository"
+	kbdbctx "github.com/roguekeyboards/kbdb/internal/ctx"
+	"github.com/roguekeyboards/kbdb/internal/repository"
 )
 
 // batchWriteLimit is BatchWriteItem's per-request item cap.

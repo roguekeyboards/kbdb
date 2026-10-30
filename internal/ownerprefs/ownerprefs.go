@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 
-	"github.com/rogueserenity/kbdb/internal/repository"
+	"github.com/roguekeyboards/kbdb/internal/repository"
 )
 
 // ErrMissing means the route isn't wrapped in
-// [github.com/rogueserenity/kbdb/internal/middleware.OwnerPreferences].
+// [github.com/roguekeyboards/kbdb/internal/middleware.OwnerPreferences].
 var ErrMissing = errors.New("no owner preferences on context")
 
 type key struct{}

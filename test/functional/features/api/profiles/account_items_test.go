@@ -6,8 +6,8 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	"github.com/rogueserenity/kbdb/test/functional/support/account"
-	"github.com/rogueserenity/kbdb/test/functional/support/api"
+	"github.com/roguekeyboards/kbdb/test/functional/support/account"
+	"github.com/roguekeyboards/kbdb/test/functional/support/api"
 )
 
 func expectItemsGone(ctx context.Context, items account.Items, ownerID, token string) {

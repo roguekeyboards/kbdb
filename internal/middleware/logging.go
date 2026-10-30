@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
-	logpkg "github.com/rogueserenity/kbdb/internal/log"
+	logpkg "github.com/roguekeyboards/kbdb/internal/log"
 )
 
 // Logging generates a request ID, builds a request-scoped slog.Logger, and

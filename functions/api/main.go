@@ -25,14 +25,14 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 
-	"github.com/rogueserenity/kbdb/internal/accountdelete"
-	"github.com/rogueserenity/kbdb/internal/auth"
-	"github.com/rogueserenity/kbdb/internal/deletenotice"
-	"github.com/rogueserenity/kbdb/internal/repository/cloudfront"
-	"github.com/rogueserenity/kbdb/internal/repository/dynamo"
-	imagestore "github.com/rogueserenity/kbdb/internal/repository/s3"
-	"github.com/rogueserenity/kbdb/internal/router"
-	"github.com/rogueserenity/kbdb/internal/uploadlimit"
+	"github.com/roguekeyboards/kbdb/internal/accountdelete"
+	"github.com/roguekeyboards/kbdb/internal/auth"
+	"github.com/roguekeyboards/kbdb/internal/deletenotice"
+	"github.com/roguekeyboards/kbdb/internal/repository/cloudfront"
+	"github.com/roguekeyboards/kbdb/internal/repository/dynamo"
+	imagestore "github.com/roguekeyboards/kbdb/internal/repository/s3"
+	"github.com/roguekeyboards/kbdb/internal/router"
+	"github.com/roguekeyboards/kbdb/internal/uploadlimit"
 )
 
 // Version is set at build time via -ldflags "-X main.Version=...", derived

@@ -4,7 +4,7 @@ import (
 	"context"
 	"strconv"
 
-	"github.com/rogueserenity/kbdb/test/functional/support"
+	"github.com/roguekeyboards/kbdb/test/functional/support"
 )
 
 // SeedKeycapSet PutItems a keycap set directly into DynamoDB, bypassing the

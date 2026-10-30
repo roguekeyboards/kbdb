@@ -4,8 +4,8 @@ import (
 	"context"
 	"slices"
 
-	kbdbctx "github.com/rogueserenity/kbdb/internal/ctx"
-	"github.com/rogueserenity/kbdb/internal/repository"
+	kbdbctx "github.com/roguekeyboards/kbdb/internal/ctx"
+	"github.com/roguekeyboards/kbdb/internal/repository"
 )
 
 // ReadableVisibilities reports which visibility tiers the caller identified

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/rogueserenity/kbdb/brand/internal/tokens"
+	"github.com/roguekeyboards/kbdb/brand/internal/tokens"
 )
 
 // Colors are the logo colours, read from tokens.json's "logo" section.

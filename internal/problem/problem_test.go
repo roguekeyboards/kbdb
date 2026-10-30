@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/rogueserenity/kbdb/internal/problem"
+	"github.com/roguekeyboards/kbdb/internal/problem"
 )
 
 type StillReferencedSuite struct {

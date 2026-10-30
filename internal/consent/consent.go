@@ -16,7 +16,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/rogueserenity/kbdb/internal/pagebrand"
+	"github.com/roguekeyboards/kbdb/internal/pagebrand"
 )
 
 //go:embed authorize.html

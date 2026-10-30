@@ -15,8 +15,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/rekognition"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	"github.com/rogueserenity/kbdb/internal/moderation"
-	"github.com/rogueserenity/kbdb/internal/repository/dynamo"
+	"github.com/roguekeyboards/kbdb/internal/moderation"
+	"github.com/roguekeyboards/kbdb/internal/repository/dynamo"
 )
 
 func main() {

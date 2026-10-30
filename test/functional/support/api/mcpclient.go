@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/ginkgo/v2" //nolint:staticcheck,revive // Ginkgo's dot-import convention, matching every spec file
 	. "github.com/onsi/gomega"    //nolint:staticcheck,revive // ditto
 
-	"github.com/rogueserenity/kbdb/test/functional/support"
+	"github.com/roguekeyboards/kbdb/test/functional/support"
 )
 
 // MCPClient speaks MCP over the streamable-HTTP transport, unlike Client's

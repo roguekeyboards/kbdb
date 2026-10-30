@@ -11,7 +11,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/rogueserenity/kbdb/test/functional/support"
+	"github.com/roguekeyboards/kbdb/test/functional/support"
 )
 
 // Client issues authenticated requests against support.BaseURL(). Zero
