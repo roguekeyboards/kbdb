@@ -20,19 +20,19 @@ file = "scripts/lint.sh"
 alias = "g"
 description = "Regenerate mocks, OpenAPI types, brand/dist, the consent page's IdP SDK, and go.mod/go.sum"
 file = "scripts/gen.sh"
-tools = { node = "24.22.1" }
+tools = { node = "24.22.2" }
 
 [tasks.check-generated]
 alias = "cg"
 description = "Run gen and fail if it changed anything"
 file = "scripts/check-generated.sh"
-tools = { node = "24.22.1" }
+tools = { node = "24.22.2" }
 
 [tasks.test]
 alias = "t"
 description = "Run unit tests (excludes test/functional)"
 file = "scripts/test.sh"
-tools = { node = "24.22.1" }
+tools = { node = "24.22.2" }
 
 [tasks.build]
 alias = "b"
@@ -50,17 +50,17 @@ file = "scripts/bootstrap-check.sh"
 [tasks.cf-login]
 description = "Sign in to Cloudflare for the dns and setup tasks (opens the browser): mise run cf-login"
 run = "cf auth login --use-keyring"
-tools = { node = "24.22.1", "npm:cf" = "1.0.0-beta.26" }
+tools = { node = "24.22.2", "npm:cf" = "1.0.0-beta.26" }
 
 [tasks.dns]
 description = "Point an environment's custom domains at its stack in Cloudflare: mise run dns [env] (needs cf auth login and the env's AWS credentials)"
 file = "scripts/dns.sh"
-tools = { node = "24.22.1", "npm:cf" = "1.0.0-beta.26" }
+tools = { node = "24.22.2", "npm:cf" = "1.0.0-beta.26" }
 
 [tasks.setup]
 description = "One-time setup of an environment's ECR repo + stack: mise run setup [env], env defaults to dev-$(whoami) (requires an authenticated AWS profile)"
 file = "scripts/setup.sh"
-tools = { node = "24.22.1", "npm:cf" = "1.0.0-beta.26" }
+tools = { node = "24.22.2", "npm:cf" = "1.0.0-beta.26" }
 
 [tasks.deploy]
 description = "Deploy the current code to an environment: mise run deploy [env], env defaults to dev-$(whoami) (run setup first)"
