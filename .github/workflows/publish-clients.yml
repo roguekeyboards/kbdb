@@ -48,32 +48,3 @@ jobs:
         working-directory: ${{ env.CLIENT_GEN_OUT_DIR }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # brand/dist is committed (check-generated and brand's tests keep it in
-  # step with its sources), so this only stamps the release version and
-  # publishes it - no generation step.
-  publish-brand:
-    name: Publish Brand
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.event.release.tag_name }}
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24 # Active LTS; 24 doesn't enter LTS until Oct 2026
-          registry-url: https://npm.pkg.github.com
-          scope: "@roguekeyboards"
-
-      - name: Stamp version
-        env:
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: npm version "${RELEASE_TAG#v}" --no-git-tag-version
-        working-directory: brand
-
-      - name: Publish to GitHub Packages
-        run: npm publish
-        working-directory: brand
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
