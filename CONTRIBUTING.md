@@ -19,7 +19,7 @@ Deploying uses two logins: an AWS one (see [AWS accounts](#aws-accounts)), and a
 mise run lint             # golangci-lint + actionlint + shellcheck
 mise run test             # unit tests
 mise run build            # sam build
-mise run gen              # regenerate mocks, OpenAPI types, API Gateway routes, brand/dist, and go.mod/go.sum after changing an interface, api/openapi.yaml or brand/
+mise run gen              # regenerate mocks, OpenAPI types, API Gateway routes, and go.mod/go.sum after changing an interface, api/openapi.yaml or brand/
 mise run check-generated  # run gen and fail if it changed anything (what CI runs)
 ```
 

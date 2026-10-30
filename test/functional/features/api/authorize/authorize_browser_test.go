@@ -40,15 +40,15 @@ var _ = Describe("Using the IdP consent page in a browser", func() {
 				waitForText("Continue with Discord")
 			})
 
-			It("offers sign-in with Discord, loading only from the stack, the IdP and mykeebs.com", func() {
+			It("offers sign-in with Discord, loading only from the stack and the IdP", func() {
 				By("running without script errors")
 				Expect(session.PageErrors()).To(BeEmpty())
 				Expect(session.Page.GetByText("Sign in to continue").IsVisible()).To(BeTrue())
 
-				By("loading the IdP SDK from the stack, intact")
+				By("running the inlined IdP SDK")
 				Expect(session.Page.Evaluate("typeof window.stytch")).To(Equal("object"))
 
-				By("loading the brand fonts")
+				By("rendering the inlined brand fonts")
 				Expect(session.Page.Evaluate(`document.fonts.load('1em Inter').then(f => f.length > 0 && f[0].status)`)).To(Equal("loaded"))
 
 				By("loading nothing from any other origin")
@@ -162,21 +162,6 @@ var _ = Describe("Using the IdP consent page in a browser", func() {
 				starts := session.IDPRequests("/sdk/v1/idp/oauth/authorize/start")
 				Expect(starts).NotTo(BeEmpty())
 				Expect(starts[0].Body).To(HaveKeyWithValue("client_id", "client-test"))
-			})
-		})
-	})
-
-	Context("given mykeebs.com's fonts can't be reached", func() {
-		BeforeEach(func() { newSession(browser.Options{BlockFonts: true}) })
-
-		When("the page is opened", func() {
-			BeforeEach(func() {
-				Expect(session.Open("/authorize")).To(Succeed())
-				waitForText("Continue with Discord")
-			})
-
-			It("still offers sign-in with Discord", func() {
-				Expect(session.PageErrors()).To(BeEmpty())
 			})
 		})
 	})

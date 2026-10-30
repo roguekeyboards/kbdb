@@ -85,7 +85,6 @@ func New(
 	// Not part of api/openapi.yaml, so not wrapped in validate - see
 	// internal/consent.
 	mux.Handle("GET /authorize", consent.Handler(idpConsentPublicToken, issuerURL))
-	mux.Handle("GET "+consent.IDPScriptPath, consent.IDPScriptHandler())
 
 	// These pages moved to mykeebs.com; old links still reach them.
 	for _, path := range []string{"/privacy", "/terms", "/help/mcp"} {

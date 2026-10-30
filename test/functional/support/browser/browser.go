@@ -50,8 +50,6 @@ func (b *Browser) Stop() {
 type Options struct {
 	// SignedIn makes the browser hold an IdP session, as after a sign-in.
 	SignedIn bool
-	// BlockFonts makes mykeebs.com's fonts unreachable.
-	BlockFonts bool
 }
 
 // IDPRequest is one call the page made to the IdP's API.
@@ -79,8 +77,8 @@ type Session struct {
 // NewSession opens a browser profile whose calls to the IdP's API on the
 // host of support.OidcIssuer(), the base URL the page gives the SDK, are
 // answered by the stub (the SDK keeps only that URL's host). Requests
-// anywhere else other than the stack and mykeebs.com's fonts, including the
-// IdP's API on any other host, are refused and recorded.
+// anywhere else other than the stack, including the IdP's API on any other
+// host, are refused and recorded.
 func (b *Browser) NewSession(opts Options) (*Session, error) {
 	base, err := url.Parse(support.BaseURL())
 	if err != nil {
@@ -117,7 +115,7 @@ func (b *Browser) NewSession(opts Options) (*Session, error) {
 		}
 	}
 
-	if err := ctx.Route("**/*", func(r playwright.Route) { s.route(r, opts) }); err != nil {
+	if err := ctx.Route("**/*", func(r playwright.Route) { s.route(r) }); err != nil {
 		return nil, err
 	}
 
@@ -173,7 +171,7 @@ func (s *Session) PageErrors() []string {
 	return append([]string(nil), s.pageErrors...)
 }
 
-func (s *Session) route(r playwright.Route, opts Options) {
+func (s *Session) route(r playwright.Route) {
 	req := r.Request()
 	u, err := url.Parse(req.URL())
 	if err != nil {
@@ -183,12 +181,6 @@ func (s *Session) route(r playwright.Route, opts Options) {
 
 	switch {
 	case u.Scheme+"://"+u.Host == s.origin:
-		_ = r.Continue()
-	case u.Host == "mykeebs.com" && strings.HasPrefix(u.Path, "/fonts/"):
-		if opts.BlockFonts {
-			_ = r.Abort()
-			return
-		}
 		_ = r.Continue()
 	case u.Hostname() == s.idpHost && (strings.HasPrefix(u.Path, "/sdk/v1/") || strings.HasPrefix(u.Path, "/v1/public/oauth/")):
 		s.answer(r, u)

@@ -26,7 +26,7 @@ It exposes two first-class APIs — REST and an MCP server, so you can manage yo
 
 ## Identity provider requirements
 
-kbdb's backend has no IdP-specific code (the one exception is `internal/consent`, whose `GET /authorize` login page uses the deployment's IdP browser SDK, vendored beside it). It's currently deployed against Stytch but doesn't depend on it. Any IdP works as long as it:
+kbdb's backend has no IdP-specific code (the one exception is the `GET /authorize` login page, built in [mykeebs-consent](https://github.com/roguekeyboards/mykeebs-consent), which uses the deployment's IdP browser SDK). It's currently deployed against Stytch but doesn't depend on it. Any IdP works as long as it:
 
 - Publishes standard OIDC discovery (`.well-known/openid-configuration`) and a JWKS endpoint, since both API Gateway's native JWT authorizer and the application's own `go-oidc`-based verifier resolve signing keys that way.
 - Issues RS256-signed JWTs with standard `iss`, `aud`, and `exp` claims.
@@ -41,4 +41,4 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for local setup, running the app agains
 
 ## License
 
-MIT — see [`LICENSE`](LICENSE). The mykeebs name, logo and artwork in [`brand/`](brand/) are not covered; see [`brand/LICENSE`](brand/LICENSE).
+MIT — see [`LICENSE`](LICENSE).
