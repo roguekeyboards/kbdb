@@ -31,7 +31,7 @@ jobs:
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24 # Active LTS; 24 doesn't enter LTS until Oct 2026
+          node-version: 26 # Active LTS; 24 doesn't enter LTS until Oct 2026
           registry-url: https://npm.pkg.github.com
           scope: "@roguekeyboards"
 
