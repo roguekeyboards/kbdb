@@ -13,7 +13,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 OUT_DIR="${CLIENT_GEN_OUT_DIR:-ts-client}"
 GENERATOR_IMAGE="openapitools/openapi-generator-cli:v7.24.0"
-ADDITIONAL_PROPS="npmName=@roguekeyboards/mykeebs-api-api-client,supportsES6=true"
+ADDITIONAL_PROPS="npmName=@roguekeyboards/mykeebs-api-client,supportsES6=true"
 if [ -n "${CLIENT_GEN_VERSION:-}" ]; then
   ADDITIONAL_PROPS="${ADDITIONAL_PROPS},npmVersion=${CLIENT_GEN_VERSION}"
 fi
