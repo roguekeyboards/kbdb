@@ -9,7 +9,7 @@ What to do when something goes wrong in production, and how to do the rare jobs 
 | | |
 |---|---|
 | API | `https://api.mykeebs.info` |
-| AWS account | `kbdb-prod` (`416860882648`), region `us-east-2` |
+| AWS account | `mykeebs-api-prod` (`416860882648`), region `us-east-2` |
 | Stack | `mykeebs-api-prod`, defined by the `[prod]` section of `samconfig.toml` |
 | Identity provider | the Stytch **Live** project, issuer `https://auth.mykeebs.info` |
 | Alarm emails | `kbdb-alerts-prd@mykeebs.com` |
