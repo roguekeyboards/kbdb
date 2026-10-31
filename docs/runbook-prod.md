@@ -22,8 +22,8 @@ Prod is deployed only by `deploy-prod.yml`, for every published release.
 Everything below that touches AWS needs the prod admin profile:
 
 ```sh
-aws sso login --sso-session kbdb
-export AWS_PROFILE=kbdb-prod-admin AWS_REGION=us-east-2
+aws sso login --sso-session mykeebs-api
+export AWS_PROFILE=mykeebs-api-prod-admin AWS_REGION=us-east-2
 ```
 
 ## When an alarm email arrives
