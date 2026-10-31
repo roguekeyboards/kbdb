@@ -143,10 +143,10 @@ Four accounts, one SSO session (`aws configure sso` once, then `aws sso login --
 
 | Profile | Account | Purpose |
 |---|---|---|
-| `mgmt-admin` | `rogueserenity-management` | Administrative only, no workloads |
-| `mykeebs-api-dev-admin` | `kbdb-dev` | Hosts each developer's own stack |
-| `mykeebs-api-ci-admin` | `kbdb-ci` | CI's per-PR stacks |
-| `mykeebs-api-prod-admin` | `kbdb-prod` | Production (`api.mykeebs.info`) |
+| `mgmt-admin` | `roguekeyboards` | Administrative only, no workloads |
+| `mykeebs-api-dev-admin` | `mykeebs-api-dev` | Hosts each developer's own stack |
+| `mykeebs-api-ci-admin` | `mykeebs-api-ci` | CI's per-PR stacks |
+| `mykeebs-api-prod-admin` | `mykeebs-api-prod` | Production (`api.mykeebs.info`) |
 
 There's no default AWS profile — commands will fail with `NoCredentials` unless `AWS_PROFILE` is set.
 
@@ -162,8 +162,8 @@ It checks the credentials belong to that account, then deploys its bootstrap sta
 
 Then the steps a script can't do:
 
-- **`kbdb-ci` account:** set the `mykeebs-api-bootstrap-jwks` stack's `JWKSBucketName` output as the `JWKS_BUCKET_NAME` GitHub Actions repo variable (Settings → Secrets and variables → Actions → Variables). `ci.yml`'s functional-test job fails at "Generate OIDC signing material" until it's set.
-- **`kbdb-prod` account:** set the `mykeebs-api-prod-oidc` stack's `GitHubActionsDeployRoleArn` output as the `PROD_DEPLOY_ROLE_ARN` repo variable. CI's role ARN is in `.github/actions/mykeebs-api-pr-stack/action.yml`.
+- **`mykeebs-api-ci` account:** set the `mykeebs-api-bootstrap-jwks` stack's `JWKSBucketName` output as the `JWKS_BUCKET_NAME` GitHub Actions repo variable (Settings → Secrets and variables → Actions → Variables). `ci.yml`'s functional-test job fails at "Generate OIDC signing material" until it's set.
+- **`mykeebs-api-prod` account:** set the `mykeebs-api-prod-oidc` stack's `GitHubActionsDeployRoleArn` output as the `PROD_DEPLOY_ROLE_ARN` repo variable. CI's role ARN is in `.github/actions/mykeebs-api-pr-stack/action.yml`.
 - **Every account:** confirm the cost budget's email subscription. Its link only works while you're signed in to that account's console.
 
 CI and the prod deploy both run `mise run bootstrap-check`, which stops them when one of the account's bootstrap stacks is behind the repo. After merging a change to a bootstrap template, run `mise run bootstrap` for each account it's in.
