@@ -13,8 +13,8 @@ Your job is to look at each rejection before its file is deleted: **uphold** it 
 ## Before you start
 
 ```sh
-aws sso login --profile kbdb-dev-admin   # or kbdb-prod-admin
-export AWS_PROFILE=kbdb-dev-admin
+aws sso login --profile mykeebs-api-dev-admin   # or mykeebs-api-prod-admin
+export AWS_PROFILE=mykeebs-api-dev-admin
 ```
 
 Every task takes an optional environment first (`dev-jay`, `prod`, …). It defaults to `dev-$(whoami)`. Where a task takes a `<key>`, you can pass either the image's object key or a link to the image (see [Taking down a reported image](#taking-down-a-reported-image)).

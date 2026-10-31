@@ -6,7 +6,7 @@ Description: >
   a publicly-fetchable issuer/JWKS to verify against. Deployed manually,
   once, via `aws cloudformation deploy --template-file
   bootstrap/jwks-bucket.yaml --stack-name mykeebs-api-bootstrap-jwks` by a human
-  operator with the kbdb-ci-admin profile.
+  operator with the mykeebs-api-ci-admin profile.
 
 Resources:
   # Not a per-stack template.yaml resource: ci.yml writes here before sam

@@ -112,7 +112,7 @@ Before changing anything, each task checks that your active AWS credentials belo
 
 **Prod** is deployed only by GitHub Actions, from releases; don't run `deploy prod` by hand. See the [prod runbook](docs/runbook-prod.md).
 
-You just need an active, authenticated AWS session — any profile works, there's no required profile name. This project's own maintainer setup happens to use a profile named `AWS_PROFILE=kbdb-dev-admin` (see [AWS accounts](#aws-accounts) below), but that's just this project's convention, not a requirement. **If you're forking this repo**, use any profile authenticated to your own AWS account with admin access.
+You just need an active, authenticated AWS session — any profile works, there's no required profile name. This project's own maintainer setup happens to use a profile named `AWS_PROFILE=mykeebs-api-dev-admin` (see [AWS accounts](#aws-accounts) below), but that's just this project's convention, not a requirement. **If you're forking this repo**, use any profile authenticated to your own AWS account with admin access.
 
 ### IdP OIDC config (`OidcIssuerBaseUrl`/`OidcAudience`/`IdpConsentPublicToken`)
 
@@ -139,14 +139,14 @@ DNS for `mykeebs.dev` is on Cloudflare, not Route53. The wildcard certificates w
 
 ### AWS accounts
 
-Four accounts, one SSO session (`aws configure sso` once, then `aws sso login --sso-session kbdb` to refresh):
+Four accounts, one SSO session (`aws configure sso` once, then `aws sso login --sso-session mykeebs-api` to refresh):
 
 | Profile | Account | Purpose |
 |---|---|---|
 | `mgmt-admin` | `rogueserenity-management` | Administrative only, no workloads |
-| `kbdb-dev-admin` | `kbdb-dev` | Hosts each developer's own stack |
-| `kbdb-ci-admin` | `kbdb-ci` | CI's per-PR stacks |
-| `kbdb-prod-admin` | `kbdb-prod` | Production (`api.mykeebs.info`) |
+| `mykeebs-api-dev-admin` | `kbdb-dev` | Hosts each developer's own stack |
+| `mykeebs-api-ci-admin` | `kbdb-ci` | CI's per-PR stacks |
+| `mykeebs-api-prod-admin` | `kbdb-prod` | Production (`api.mykeebs.info`) |
 
 There's no default AWS profile — commands will fail with `NoCredentials` unless `AWS_PROFILE` is set.
 
@@ -179,7 +179,7 @@ After `mise run bootstrap prod`:
 1. **Raise the Lambda concurrency quota.** A new account's limit of 10 is below the API's `ApiReservedConcurrency` of 15. Request 1000 in Service Quotas (Lambda → Concurrent executions).
 2. **Certificates for `api.mykeebs.info` (in `us-east-2`) and `images.mykeebs.info` (in `us-east-1`).** Request each in ACM with DNS validation, add its validation CNAME to the `mykeebs.info` Cloudflare zone (DNS only, for example with `cf dns records create`), and wait for it to be issued. Their ARNs go in `CustomDomainCertificateArn` and `ImagesDomainCertificateArn`.
 3. **Fill in the `[prod]` section of `samconfig.toml`.**
-4. **First deploy, by hand:** `AWS_PROFILE=kbdb-prod-admin mise run setup prod`. It also points `api.mykeebs.info` and `images.mykeebs.info` at the stack.
+4. **First deploy, by hand:** `AWS_PROFILE=mykeebs-api-prod-admin mise run setup prod`. It also points `api.mykeebs.info` and `images.mykeebs.info` at the stack.
 5. **Confirm the alarm email subscription.**
 
 #### ECR repos
