@@ -92,7 +92,7 @@ Resources:
                   - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/mykeebs-api-bootstrap/*
                   - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/mykeebs-api-bootstrap-jwks/*
                   - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/mykeebs-api-stack-boundary/*
-                  - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/mykeebs-image-delivery/*
+                  - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/mykeebs-api-image-delivery/*
                   - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/mykeebs-api-cost-budget/*
                   - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/mykeebs-api-ecr-bootstrap/*
                   - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/mykeebs-api-ci-oidc/*
@@ -458,7 +458,7 @@ Resources:
                 - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/mykeebs-api-pr-*
                 - !Sub arn:aws:s3:::mykeebs-images-${AWS::AccountId}-mykeebs-api-pr-*/*
                 - !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:mykeebs-api-pr-*
-                - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mykeebs-api-moderate-mykeebs-api-pr-*:*
+                - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mykeebs-api-pr-*-moderate:*
                 - !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/*
             - !Ref AWS::NoValue
           - !If
