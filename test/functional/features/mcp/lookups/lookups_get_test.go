@@ -9,8 +9,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/roguekeyboards/kbdb/test/functional/support"
-	"github.com/roguekeyboards/kbdb/test/functional/support/api"
+	"github.com/roguekeyboards/mykeebs-api/test/functional/support"
+	"github.com/roguekeyboards/mykeebs-api/test/functional/support/api"
 )
 
 var _ = Describe("Getting a lookup category", func() {

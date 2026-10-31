@@ -5,8 +5,8 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/roguekeyboards/kbdb/internal/mcp/schema"
-	"github.com/roguekeyboards/kbdb/internal/repository"
+	"github.com/roguekeyboards/mykeebs-api/internal/mcp/schema"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
 // ImageModerationSuite covers who sees which images by moderation status:

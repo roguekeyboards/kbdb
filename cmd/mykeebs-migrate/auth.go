@@ -50,14 +50,14 @@ type cachedCreds struct {
 	ClientID string `json:"client_id,omitempty"`
 }
 
-// configDir is ~/.config/kbdb-migrate (or $XDG_CONFIG_HOME/kbdb-migrate),
+// configDir is ~/.config/mykeebs-migrate (or $XDG_CONFIG_HOME/mykeebs-migrate),
 // created if absent.
 func configDir() (string, error) {
 	base, err := os.UserConfigDir()
 	if err != nil {
 		return "", fmt.Errorf("locating user config dir: %w", err)
 	}
-	dir := filepath.Join(base, "kbdb-migrate")
+	dir := filepath.Join(base, "mykeebs-migrate")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", fmt.Errorf("creating %s: %w", dir, err)
 	}
@@ -131,10 +131,10 @@ func resolveToken(explicitToken, issuer string) (string, error) {
 		return "", err
 	}
 	if !found {
-		return "", fmt.Errorf("no cached login for %s; run 'kbdb-migrate login --issuer %s' or pass --token", issuer, issuer)
+		return "", fmt.Errorf("no cached login for %s; run 'mykeebs-migrate login --issuer %s' or pass --token", issuer, issuer)
 	}
 	if !creds.Expiry.IsZero() && time.Now().After(creds.Expiry) {
-		return "", fmt.Errorf("cached login for %s expired at %s; run 'kbdb-migrate login' again", issuer, creds.Expiry.Format(time.RFC3339))
+		return "", fmt.Errorf("cached login for %s expired at %s; run 'mykeebs-migrate login' again", issuer, creds.Expiry.Format(time.RFC3339))
 	}
 	return creds.AccessToken, nil
 }

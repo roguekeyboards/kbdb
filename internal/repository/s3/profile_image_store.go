@@ -7,9 +7,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	"github.com/roguekeyboards/kbdb/internal/log"
-	"github.com/roguekeyboards/kbdb/internal/repository"
-	"github.com/roguekeyboards/kbdb/internal/repository/cloudfront"
+	"github.com/roguekeyboards/mykeebs-api/internal/log"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository/cloudfront"
 )
 
 // ProfileImageStore is the S3-backed repository.ProfileImageStore.

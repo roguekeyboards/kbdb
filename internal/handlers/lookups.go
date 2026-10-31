@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/roguekeyboards/kbdb/internal/lookup"
-	"github.com/roguekeyboards/kbdb/internal/problem"
-	"github.com/roguekeyboards/kbdb/internal/repoapi"
+	"github.com/roguekeyboards/mykeebs-api/internal/lookup"
+	"github.com/roguekeyboards/mykeebs-api/internal/problem"
+	"github.com/roguekeyboards/mykeebs-api/internal/repoapi"
 )
 
 // ListLookups reads no path values and requires no auth. Returns category

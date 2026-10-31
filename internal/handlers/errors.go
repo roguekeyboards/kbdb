@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/roguekeyboards/kbdb/internal/log"
-	"github.com/roguekeyboards/kbdb/internal/problem"
-	"github.com/roguekeyboards/kbdb/internal/repository"
-	"github.com/roguekeyboards/kbdb/internal/uploadlimit"
+	"github.com/roguekeyboards/mykeebs-api/internal/log"
+	"github.com/roguekeyboards/mykeebs-api/internal/problem"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
+	"github.com/roguekeyboards/mykeebs-api/internal/uploadlimit"
 )
 
 // handleMutationError is the standard error tail for a mutating repository

@@ -41,8 +41,8 @@ Resources:
       RoleName: kbdb-github-actions-deploy
       Description: !If
         - IsCI
-        - Assumed by GitHub Actions (roguekeyboards/kbdb pull_request workflows) via OIDC federation, no long-lived keys
-        - Assumed by GitHub Actions (roguekeyboards/kbdb deploy-prod.yml, v* tags only) via OIDC federation, no long-lived keys
+        - Assumed by GitHub Actions (roguekeyboards/mykeebs-api pull_request workflows) via OIDC federation, no long-lived keys
+        - Assumed by GitHub Actions (roguekeyboards/mykeebs-api deploy-prod.yml, v* tags only) via OIDC federation, no long-lived keys
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -66,7 +66,7 @@ Resources:
                     - repo:roguekeyboards@350380721/kbdb@1288529592:ref:refs/tags/v*
                     - repo:roguekeyboards@350380721/mykeebs-api@1288529592:ref:refs/tags/v*
                   token.actions.githubusercontent.com:job_workflow_ref:
-                    - roguekeyboards/kbdb/.github/workflows/deploy-prod.yml@refs/tags/v*
+                    - roguekeyboards/mykeebs-api/.github/workflows/deploy-prod.yml@refs/tags/v*
                     - roguekeyboards/mykeebs-api/.github/workflows/deploy-prod.yml@refs/tags/v*
       Policies:
         - PolicyName: kbdb-deploy-permissions

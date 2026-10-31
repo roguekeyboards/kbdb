@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/roguekeyboards/kbdb/test/functional/support"
+	"github.com/roguekeyboards/mykeebs-api/test/functional/support"
 )
 
 // SeedProfileOptions is the fixture shape for SeedProfile. Only Username is

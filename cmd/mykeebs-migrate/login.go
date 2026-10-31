@@ -51,7 +51,7 @@ func (c *LoginCmd) Run(ctx context.Context) error {
 	}
 	if clientID == "" {
 		if meta.RegistrationEndpoint == "" {
-			return errors.New("no --client-id given and the issuer advertises no registration_endpoint; provision a client and pass --client-id (or set KBDB_OIDC_CLIENT_ID)")
+			return errors.New("no --client-id given and the issuer advertises no registration_endpoint; provision a client and pass --client-id (or set MYKEEBS_OIDC_CLIENT_ID)")
 		}
 		clientID, err = registerClient(ctx, meta.RegistrationEndpoint, redirectURI)
 		if err != nil {
@@ -166,7 +166,7 @@ func fetchMetadata(ctx context.Context, metadataURL string) (oidcMetadata, error
 // (public client, auth-code grant) and returns the issued client_id.
 func registerClient(ctx context.Context, registrationEndpoint, redirectURI string) (string, error) {
 	body := map[string]any{
-		"client_name":                "kbdb-migrate CLI",
+		"client_name":                "mykeebs-migrate CLI",
 		"redirect_uris":              []string{redirectURI},
 		"grant_types":                []string{"authorization_code"},
 		"response_types":             []string{"code"},
@@ -291,7 +291,7 @@ func waitForCode(ctx context.Context, ln net.Listener, wantState string) (string
 // interpolation so it is safe even though it currently only carries our own
 // strings.
 var browserPage = template.Must(template.New("page").Parse(
-	`<!doctype html><meta charset=utf-8><title>kbdb-migrate</title>` +
+	`<!doctype html><meta charset=utf-8><title>mykeebs-migrate</title>` +
 		`<body style="font-family:system-ui;margin:4rem auto;max-width:32rem"><p>{{.}}</p></body>`))
 
 func writeBrowserMessage(w http.ResponseWriter, msg string) {

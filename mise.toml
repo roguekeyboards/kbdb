@@ -89,7 +89,7 @@ file = "scripts/client-gen.sh"
 
 [tasks.migrate-build]
 alias = "mb"
-description = "Build the kbdb-migrate dump/restore CLI into bin/ (not covered by sam build)"
+description = "Build the mykeebs-migrate dump/restore CLI into bin/ (not covered by sam build)"
 file = "scripts/migrate-build.sh"
 
 [tasks.moderation-rejections]

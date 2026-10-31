@@ -1,4 +1,4 @@
-module github.com/roguekeyboards/kbdb
+module github.com/roguekeyboards/mykeebs-api
 
 go 1.26.4
 

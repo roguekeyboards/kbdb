@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/roguekeyboards/kbdb/internal/repository"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
 // ValidateBuild does not check whether b.Keyboard/Switches/KeycapKits
 // reference entities that actually exist - that needs live repository
 // data, not this package's static lookup-category model, so it's handled
 // separately by
-// [github.com/roguekeyboards/kbdb/internal/buildrefs.ValidateReferences].
+// [github.com/roguekeyboards/mykeebs-api/internal/buildrefs.ValidateReferences].
 func ValidateBuild(ctx context.Context, b repository.Build) []FieldError {
 	var checks []fieldCheck
 	add := func(field string, value *string, category Category) {

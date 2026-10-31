@@ -12,8 +12,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	logtypes "github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 
-	"github.com/roguekeyboards/kbdb/internal/imagekey"
-	"github.com/roguekeyboards/kbdb/internal/repository"
+	"github.com/roguekeyboards/mykeebs-api/internal/imagekey"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
 // RejectionsLimit is the most rejections one Rejections call returns,

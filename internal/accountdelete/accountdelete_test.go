@@ -10,12 +10,12 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/roguekeyboards/kbdb/internal/accountdelete"
-	admocks "github.com/roguekeyboards/kbdb/internal/accountdelete/mocks"
-	kbdbctx "github.com/roguekeyboards/kbdb/internal/ctx"
-	"github.com/roguekeyboards/kbdb/internal/log"
-	"github.com/roguekeyboards/kbdb/internal/repository"
-	"github.com/roguekeyboards/kbdb/internal/repository/mocks"
+	"github.com/roguekeyboards/mykeebs-api/internal/accountdelete"
+	admocks "github.com/roguekeyboards/mykeebs-api/internal/accountdelete/mocks"
+	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	"github.com/roguekeyboards/mykeebs-api/internal/log"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository/mocks"
 )
 
 type DeleteSuite struct {

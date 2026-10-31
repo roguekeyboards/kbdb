@@ -13,7 +13,7 @@ type Category string
 const (
 	// CategoryVisibility exists only so GET /v1/lookups[/{category}] can
 	// list it like any other category - Visibility is a closed OpenAPI
-	// enum/Go type (see [github.com/roguekeyboards/kbdb/internal/repository.Visibility.Valid]),
+	// enum/Go type (see [github.com/roguekeyboards/mykeebs-api/internal/repository.Visibility.Valid]),
 	// never runtime-checked via validateFields the way the categories below are.
 	CategoryVisibility                  Category = "visibility"
 	CategoryKeyboardPCBAssemblyType     Category = "keyboard_pcb_assembly_type"

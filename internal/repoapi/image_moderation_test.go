@@ -6,9 +6,9 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/roguekeyboards/kbdb/internal/handlers/api"
-	"github.com/roguekeyboards/kbdb/internal/repository"
-	"github.com/roguekeyboards/kbdb/internal/repository/mocks"
+	"github.com/roguekeyboards/mykeebs-api/internal/handlers/api"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository/mocks"
 )
 
 type ImageModerationSuite struct {

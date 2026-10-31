@@ -6,7 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/expression"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/roguekeyboards/kbdb/internal/repository"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
 type ImageStatusSuite struct {

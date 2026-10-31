@@ -1,8 +1,8 @@
 package repoapi
 
 import (
-	"github.com/roguekeyboards/kbdb/internal/handlers/api"
-	"github.com/roguekeyboards/kbdb/internal/lookup"
+	"github.com/roguekeyboards/mykeebs-api/internal/handlers/api"
+	"github.com/roguekeyboards/mykeebs-api/internal/lookup"
 )
 
 // Lookup maps lookup.Lookup to its wire representation. It has no

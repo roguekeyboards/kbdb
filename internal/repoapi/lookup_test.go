@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/roguekeyboards/kbdb/internal/lookup"
+	"github.com/roguekeyboards/mykeebs-api/internal/lookup"
 )
 
 type LookupToAPISuite struct {

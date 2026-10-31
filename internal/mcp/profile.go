@@ -9,16 +9,16 @@ import (
 	"github.com/google/uuid"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/roguekeyboards/kbdb/internal/accountdelete"
-	"github.com/roguekeyboards/kbdb/internal/authz"
-	"github.com/roguekeyboards/kbdb/internal/log"
-	"github.com/roguekeyboards/kbdb/internal/lookup"
-	"github.com/roguekeyboards/kbdb/internal/mcp/schema"
-	"github.com/roguekeyboards/kbdb/internal/profileread"
-	"github.com/roguekeyboards/kbdb/internal/profilevalidate"
-	"github.com/roguekeyboards/kbdb/internal/repomcp"
-	"github.com/roguekeyboards/kbdb/internal/repository"
-	"github.com/roguekeyboards/kbdb/internal/uploadlimit"
+	"github.com/roguekeyboards/mykeebs-api/internal/accountdelete"
+	"github.com/roguekeyboards/mykeebs-api/internal/authz"
+	"github.com/roguekeyboards/mykeebs-api/internal/log"
+	"github.com/roguekeyboards/mykeebs-api/internal/lookup"
+	"github.com/roguekeyboards/mykeebs-api/internal/mcp/schema"
+	"github.com/roguekeyboards/mykeebs-api/internal/profileread"
+	"github.com/roguekeyboards/mykeebs-api/internal/profilevalidate"
+	"github.com/roguekeyboards/mykeebs-api/internal/repomcp"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
+	"github.com/roguekeyboards/mykeebs-api/internal/uploadlimit"
 )
 
 var errProfileNotFound = errors.New("profile not found")

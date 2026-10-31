@@ -8,7 +8,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/roguekeyboards/kbdb/internal/repository"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
 // Limiter reserves one upload against the day's limit.

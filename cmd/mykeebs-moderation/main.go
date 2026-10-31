@@ -11,7 +11,7 @@ import (
 func main() {
 	var cli CLI
 	kctx := kong.Parse(&cli,
-		kong.Name("kbdb-moderation"),
+		kong.Name("mykeebs-moderation"),
 		kong.Description("Review and override image moderation decisions in one kbdb stack."),
 		kong.UsageOnError(),
 	)

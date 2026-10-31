@@ -3,8 +3,8 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/roguekeyboards/kbdb/internal/lookup"
-	"github.com/roguekeyboards/kbdb/internal/problem"
+	"github.com/roguekeyboards/mykeebs-api/internal/lookup"
+	"github.com/roguekeyboards/mykeebs-api/internal/problem"
 )
 
 // writeLookupErrors writes a 400 listing fieldErrs, if any.

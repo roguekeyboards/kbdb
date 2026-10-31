@@ -221,20 +221,20 @@ jobs:
 
       - name: Run functional tests
         env:
-          KBDB_API_BASE_URL: ${{ steps.stack-outputs.outputs.api-url }}
-          KBDB_OIDC_ISSUER: ${{ steps.oidc.outputs.issuer }}
-          KBDB_OIDC_AUDIENCE: ${{ steps.oidc.outputs.audience }}
-          KBDB_OIDC_SIGNING_KEY_PATH: ${{ steps.oidc.outputs.key-path }}
-          KBDB_SWITCH_TABLE_NAME: ${{ steps.stack-outputs.outputs.switch-table-name }}
-          KBDB_KEYBOARD_TABLE_NAME: ${{ steps.stack-outputs.outputs.keyboard-table-name }}
-          KBDB_KEYCAP_SET_TABLE_NAME: ${{ steps.stack-outputs.outputs.keycap-set-table-name }}
-          KBDB_BUILD_TABLE_NAME: ${{ steps.stack-outputs.outputs.build-table-name }}
-          KBDB_PROFILE_TABLE_NAME: ${{ steps.stack-outputs.outputs.profile-table-name }}
-          KBDB_PROFILE_USERNAME_TABLE_NAME: ${{ steps.stack-outputs.outputs.profile-username-table-name }}
-          KBDB_UPLOAD_COUNTER_TABLE_NAME: ${{ steps.stack-outputs.outputs.upload-counter-table-name }}
-          KBDB_IMAGES_BUCKET_NAME: ${{ steps.stack-outputs.outputs.images-bucket-name }}
-          KBDB_ALARM_TOPIC_ARN: ${{ steps.stack-outputs.outputs.alarm-topic-arn }}
-          KBDB_IMAGES_DOMAIN: ${{ steps.stack-outputs.outputs.images-domain }}
-          KBDB_IMAGES_DISTRIBUTION_ID: ${{ steps.stack-outputs.outputs.images-distribution-id }}
-          KBDB_STACK_NAME: ${{ steps.pr-stack.outputs.stack-name }}
+          MYKEEBS_API_BASE_URL: ${{ steps.stack-outputs.outputs.api-url }}
+          MYKEEBS_OIDC_ISSUER: ${{ steps.oidc.outputs.issuer }}
+          MYKEEBS_OIDC_AUDIENCE: ${{ steps.oidc.outputs.audience }}
+          MYKEEBS_OIDC_SIGNING_KEY_PATH: ${{ steps.oidc.outputs.key-path }}
+          MYKEEBS_SWITCH_TABLE_NAME: ${{ steps.stack-outputs.outputs.switch-table-name }}
+          MYKEEBS_KEYBOARD_TABLE_NAME: ${{ steps.stack-outputs.outputs.keyboard-table-name }}
+          MYKEEBS_KEYCAP_SET_TABLE_NAME: ${{ steps.stack-outputs.outputs.keycap-set-table-name }}
+          MYKEEBS_BUILD_TABLE_NAME: ${{ steps.stack-outputs.outputs.build-table-name }}
+          MYKEEBS_PROFILE_TABLE_NAME: ${{ steps.stack-outputs.outputs.profile-table-name }}
+          MYKEEBS_PROFILE_USERNAME_TABLE_NAME: ${{ steps.stack-outputs.outputs.profile-username-table-name }}
+          MYKEEBS_UPLOAD_COUNTER_TABLE_NAME: ${{ steps.stack-outputs.outputs.upload-counter-table-name }}
+          MYKEEBS_IMAGES_BUCKET_NAME: ${{ steps.stack-outputs.outputs.images-bucket-name }}
+          MYKEEBS_ALARM_TOPIC_ARN: ${{ steps.stack-outputs.outputs.alarm-topic-arn }}
+          MYKEEBS_IMAGES_DOMAIN: ${{ steps.stack-outputs.outputs.images-domain }}
+          MYKEEBS_IMAGES_DISTRIBUTION_ID: ${{ steps.stack-outputs.outputs.images-distribution-id }}
+          MYKEEBS_STACK_NAME: ${{ steps.pr-stack.outputs.stack-name }}
         run: mise run func-test

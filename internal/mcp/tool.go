@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/roguekeyboards/kbdb/internal/authz"
-	ctxpkg "github.com/roguekeyboards/kbdb/internal/ctx"
-	"github.com/roguekeyboards/kbdb/internal/log"
-	"github.com/roguekeyboards/kbdb/internal/repository"
-	"github.com/roguekeyboards/kbdb/internal/uploadlimit"
+	"github.com/roguekeyboards/mykeebs-api/internal/authz"
+	ctxpkg "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	"github.com/roguekeyboards/mykeebs-api/internal/log"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
+	"github.com/roguekeyboards/mykeebs-api/internal/uploadlimit"
 )
 
 // REST gets these bounds from api/openapi.yaml's Limit param, applied by
@@ -64,7 +64,7 @@ func callerPreferences(ctx context.Context, prefs repository.PreferencesReader) 
 // entity genuinely doesn't exist and when the caller can't read it, so a
 // visibility-denied entity isn't distinguishable from a nonexistent one.
 // Mirrors the equivalent per-handler logic in each entity's REST handler
-// (e.g. [github.com/roguekeyboards/kbdb/internal/handlers.GetKeyboard]).
+// (e.g. [github.com/roguekeyboards/mykeebs-api/internal/handlers.GetKeyboard]).
 func ownedReadable[T any](
 	ctx context.Context,
 	get func(ctx context.Context, ownerID, id string) (*T, error),

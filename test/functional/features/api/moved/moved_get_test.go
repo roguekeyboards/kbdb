@@ -6,7 +6,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/roguekeyboards/kbdb/test/functional/support"
+	"github.com/roguekeyboards/mykeebs-api/test/functional/support"
 )
 
 var _ = Describe("Fetching a page that moved to mykeebs.com", func() {

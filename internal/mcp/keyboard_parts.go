@@ -9,12 +9,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/roguekeyboards/kbdb/internal/cascadedelete"
-	"github.com/roguekeyboards/kbdb/internal/log"
-	"github.com/roguekeyboards/kbdb/internal/lookup"
-	"github.com/roguekeyboards/kbdb/internal/mcp/schema"
-	"github.com/roguekeyboards/kbdb/internal/repomcp"
-	"github.com/roguekeyboards/kbdb/internal/repository"
+	"github.com/roguekeyboards/mykeebs-api/internal/cascadedelete"
+	"github.com/roguekeyboards/mykeebs-api/internal/log"
+	"github.com/roguekeyboards/mykeebs-api/internal/lookup"
+	"github.com/roguekeyboards/mykeebs-api/internal/mcp/schema"
+	"github.com/roguekeyboards/mykeebs-api/internal/repomcp"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
 var createKeyboardPlateTool = &mcp.Tool{

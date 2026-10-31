@@ -6,7 +6,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/roguekeyboards/kbdb/test/functional/support"
+	"github.com/roguekeyboards/mykeebs-api/test/functional/support"
 )
 
 // uploadDays is today and tomorrow (UTC), so a request that lands just

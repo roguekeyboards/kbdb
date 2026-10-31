@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/roguekeyboards/kbdb/internal/repository"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
 // ValidateKeyboard returns every field on kb that isn't an approved value

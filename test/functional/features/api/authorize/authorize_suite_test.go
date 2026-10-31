@@ -6,7 +6,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/roguekeyboards/kbdb/test/functional/support/browser"
+	"github.com/roguekeyboards/mykeebs-api/test/functional/support/browser"
 )
 
 var chromium *browser.Browser

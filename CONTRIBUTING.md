@@ -35,37 +35,37 @@ sam validate --lint
 
 ```sh
 mise run func-setup    # deploys template.yaml to floci + generates local OIDC signing material
-# export the KBDB_* vars func-setup prints, then:
+# export the MYKEEBS_* vars func-setup prints, then:
 mise run func-test     # runs the functional test suite against it
 mise run func-teardown # tears it all down
 ```
 
-`func-setup` deploys kbdb's real `template.yaml` to [floci](https://github.com/floci-io/floci) (a local AWS emulator) via a genuine `sam deploy` — not `sam local start-api`, which never emulates API Gateway's native JWT authorizer, so it couldn't exercise any auth-required write route (see `internal/middleware.RequireAuthorizerIdentity`). It also runs [`oidc-testkit-gen`](https://github.com/roguekeyboards/oidc-testkit) to produce the signing key + discovery doc + JWKS. All `KBDB_*` values land in `.env.floci`, which `func-test` sources automatically.
+`func-setup` deploys kbdb's real `template.yaml` to [floci](https://github.com/floci-io/floci) (a local AWS emulator) via a genuine `sam deploy` — not `sam local start-api`, which never emulates API Gateway's native JWT authorizer, so it couldn't exercise any auth-required write route (see `internal/middleware.RequireAuthorizerIdentity`). It also runs [`oidc-testkit-gen`](https://github.com/roguekeyboards/oidc-testkit) to produce the signing key + discovery doc + JWKS. All `MYKEEBS_*` values land in `.env.floci`, which `func-test` sources automatically.
 
 Most iteration just needs `mise run func-test` again — Go code and test changes are picked up automatically. Restart (`mise run func-teardown && mise run func-setup`) after editing `template.yaml` or `docker-compose.floci.yml`.
 
-## Backing up / moving a user's data (`kbdb-migrate`)
+## Backing up / moving a user's data (`mykeebs-migrate`)
 
-`cmd/kbdb-migrate` is a standalone CLI that dumps a user's profile and every entity they own (keyboards, switches, keycap sets, builds) plus every S3 image to a local directory, and restores such a dump into another environment through the same public REST API. Use it to take a verifiable backup before a data-model change, to move a user's data between environments, or to export someone's account for a data request (see [Exporting another user's account](#exporting-another-users-account)). It uses **no AWS credentials** — image bytes move over the URLs the API signs — and never touches lookups (they're a static catalog built into the API; the dump captures `lookups/lookups.json` for diffing only).
+`cmd/mykeebs-migrate` is a standalone CLI that dumps a user's profile and every entity they own (keyboards, switches, keycap sets, builds) plus every S3 image to a local directory, and restores such a dump into another environment through the same public REST API. Use it to take a verifiable backup before a data-model change, to move a user's data between environments, or to export someone's account for a data request (see [Exporting another user's account](#exporting-another-users-account)). It uses **no AWS credentials** — image bytes move over the URLs the API signs — and never touches lookups (they're a static catalog built into the API; the dump captures `lookups/lookups.json` for diffing only).
 
 ```sh
-mise run migrate-build          # -> bin/kbdb-migrate
+mise run migrate-build          # -> bin/mykeebs-migrate
 
 # 1. Get a token for the SOURCE environment (opens a browser to sign in with Discord).
-bin/kbdb-migrate login --issuer https://auth.jay.mykeebs.dev
+bin/mykeebs-migrate login --issuer https://auth.jay.mykeebs.dev
 
 # 2. Dump.
-bin/kbdb-migrate dump --issuer https://auth.jay.mykeebs.dev --base-url https://jay.api.mykeebs.dev --out ./dump
+bin/mykeebs-migrate dump --issuer https://auth.jay.mykeebs.dev --base-url https://jay.api.mykeebs.dev --out ./dump
 
 # 3. Get a token for the TARGET (may be a different account/environment), then restore.
-bin/kbdb-migrate login --issuer <target issuer>
-bin/kbdb-migrate restore --issuer <target issuer> --base-url <target base url> --in ./dump
+bin/mykeebs-migrate login --issuer <target issuer>
+bin/mykeebs-migrate restore --issuer <target issuer> --base-url <target base url> --in ./dump
 
 # 4. Check the restore against the dump.
-bin/kbdb-migrate verify --issuer <target issuer> --base-url <target base url> --in ./dump
+bin/mykeebs-migrate verify --issuer <target issuer> --base-url <target base url> --in ./dump
 ```
 
-`login` runs a standard OAuth 2.0 authorization-code + PKCE flow and binds a **fixed** localhost port (`8765`) for the redirect, because IdP redirect URIs are exact-match. That redirect, `http://localhost:8765/authorize.html`, is registered on the OAuth client `login` creates through dynamic client registration, which both kbdb Stytch projects (dev and Live) allow, so no client ID or project redirect URL is needed. An IdP without dynamic registration needs `--client-id` (or `KBDB_OIDC_CLIENT_ID`). The token is cached under `~/.config/kbdb-migrate/` keyed by issuer host; `dump`/`restore`/`verify` find that cached token only through `--issuer` (or `KBDB_OIDC_ISSUER_BASE_URL`), or take one directly with `--token` / `KBDB_AUTH_TOKEN`.
+`login` runs a standard OAuth 2.0 authorization-code + PKCE flow and binds a **fixed** localhost port (`8765`) for the redirect, because IdP redirect URIs are exact-match. That redirect, `http://localhost:8765/authorize.html`, is registered on the OAuth client `login` creates through dynamic client registration, which both kbdb Stytch projects (dev and Live) allow, so no client ID or project redirect URL is needed. An IdP without dynamic registration needs `--client-id` (or `MYKEEBS_OIDC_CLIENT_ID`). The token is cached under `~/.config/mykeebs-migrate/` keyed by issuer host; `dump`/`restore`/`verify` find that cached token only through `--issuer` (or `MYKEEBS_OIDC_ISSUER_BASE_URL`), or take one directly with `--token` / `MYKEEBS_AUTH_TOKEN`.
 
 **Moving data between two accounts on the same issuer** (step 1 and step 3 are different people): the second `login` opens the browser with the first account's IdP session still live, so it lands on the consent screen already "Signed in" as the wrong account. Click **"Not you? Use a different account"** on that page to drop the session and sign in as the target account.
 
@@ -77,10 +77,10 @@ The **profile** is restored first. If the target account has no profile, restore
 
 ### Exporting another user's account
 
-`dump --impersonate` dumps the account you open with the Stytch dashboard's **Impersonate user**, for a user's request for a copy of their data. It needs no login and no Stytch secret: the dashboard sends a one-time token to `http://localhost:8765/impersonate`, where `kbdb-migrate` serves a page that swaps it for a session using Stytch's browser SDK (loaded from jsDelivr).
+`dump --impersonate` dumps the account you open with the Stytch dashboard's **Impersonate user**, for a user's request for a copy of their data. It needs no login and no Stytch secret: the dashboard sends a one-time token to `http://localhost:8765/impersonate`, where `mykeebs-migrate` serves a page that swaps it for a session using Stytch's browser SDK (loaded from jsDelivr).
 
 ```sh
-bin/kbdb-migrate dump --impersonate --issuer https://auth.mykeebs.info --base-url https://api.mykeebs.info \
+bin/mykeebs-migrate dump --impersonate --issuer https://auth.mykeebs.info --base-url https://api.mykeebs.info \
   --public-token <IdpConsentPublicToken from samconfig.toml> --out ./export-<user>
 ```
 
@@ -90,9 +90,9 @@ Each Stytch project needs, once: `http://localhost:8765/impersonate` as the **de
 
 A data-request export also needs what Stytch holds for the user (their Discord name, avatar and email), from the user's page in the dashboard.
 
-## Reviewing moderation decisions (`kbdb-moderation`)
+## Reviewing moderation decisions (`mykeebs-moderation`)
 
-There's no admin UI for image moderation. `cmd/kbdb-moderation`, run through the `mise run moderation-*` tasks with an admin AWS profile, works the review queue, takes down reported images and undoes either decision. See [`docs/moderation.md`](docs/moderation.md) for how to use it.
+There's no admin UI for image moderation. `cmd/mykeebs-moderation`, run through the `mise run moderation-*` tasks with an admin AWS profile, works the review queue, takes down reported images and undoes either decision. See [`docs/moderation.md`](docs/moderation.md) for how to use it.
 
 ## Deploying to AWS
 
@@ -191,7 +191,7 @@ After `mise run bootstrap prod`:
 Two test layers, kept separate — don't mix them:
 
 - **Unit tests** (`*_test.go` next to the code they test): `testify/suite` + `mockery`-generated mocks. No real infra, no network calls.
-- **Functional tests** (`test/functional/features/`): Ginkgo + Gomega, driving real HTTP/MCP calls against a running stack (local via `func-setup`, or a real deployed stack via `KBDB_API_BASE_URL`).
+- **Functional tests** (`test/functional/features/`): Ginkgo + Gomega, driving real HTTP/MCP calls against a running stack (local via `func-setup`, or a real deployed stack via `MYKEEBS_API_BASE_URL`).
   - The `authorize` suite also opens the sign-in page in headless Chromium ([`playwright-go`](https://github.com/mxschmitt/playwright-go), installed by `func-test`). The stacks under test aren't connected to a real IdP, so `test/functional/support/browser` answers the IdP SDK's API calls with a stub and refuses requests to any origin other than the stack, the IdP and mykeebs.com's fonts. These specs are what check an IdP SDK bump.
 
 Functional specs follow a consistent BDD shape: `Describe` the subject (and, for multi-action resources, a nested `Describe` per action) → `Context("given <precondition>")` → `When("<action>")` → one `It` with a `By(...)` per assertion. Build the actual request inside the innermost `BeforeEach`, not an outer one — Ginkgo's context is scoped to the node that received it.

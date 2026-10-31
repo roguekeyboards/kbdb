@@ -12,9 +12,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 
-	kbdbctx "github.com/roguekeyboards/kbdb/internal/ctx"
-	"github.com/roguekeyboards/kbdb/internal/log"
-	"github.com/roguekeyboards/kbdb/internal/repository"
+	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	"github.com/roguekeyboards/mykeebs-api/internal/log"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
 // errEmptyImageID guards AddImage against persisting an image with no

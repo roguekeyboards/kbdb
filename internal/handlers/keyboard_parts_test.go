@@ -11,13 +11,13 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	kbdbctx "github.com/roguekeyboards/kbdb/internal/ctx"
-	"github.com/roguekeyboards/kbdb/internal/handlers/api"
-	"github.com/roguekeyboards/kbdb/internal/ownerprefs"
-	"github.com/roguekeyboards/kbdb/internal/problem"
-	"github.com/roguekeyboards/kbdb/internal/repoapi"
-	"github.com/roguekeyboards/kbdb/internal/repository"
-	"github.com/roguekeyboards/kbdb/internal/repository/mocks"
+	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	"github.com/roguekeyboards/mykeebs-api/internal/handlers/api"
+	"github.com/roguekeyboards/mykeebs-api/internal/ownerprefs"
+	"github.com/roguekeyboards/mykeebs-api/internal/problem"
+	"github.com/roguekeyboards/mykeebs-api/internal/repoapi"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository/mocks"
 )
 
 // partRequest builds a request against keyboard kb1 owned by alice, with

@@ -6,9 +6,9 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/roguekeyboards/kbdb/internal/authz"
-	kbdbctx "github.com/roguekeyboards/kbdb/internal/ctx"
-	"github.com/roguekeyboards/kbdb/internal/repository"
+	"github.com/roguekeyboards/mykeebs-api/internal/authz"
+	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
 func ctxFor(caller string) context.Context {

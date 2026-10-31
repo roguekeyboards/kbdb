@@ -2,7 +2,7 @@ package repository
 
 // Visibility is who may read an item via its GET routes. Create/update/
 // delete always require the caller to be the item's owner, regardless of
-// visibility — see [github.com/roguekeyboards/kbdb/internal/authz].
+// visibility — see [github.com/roguekeyboards/mykeebs-api/internal/authz].
 type Visibility string
 
 const (

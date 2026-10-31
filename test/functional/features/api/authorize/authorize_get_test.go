@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/roguekeyboards/kbdb/test/functional/support/api"
+	"github.com/roguekeyboards/mykeebs-api/test/functional/support/api"
 )
 
 // Not part of api/openapi.yaml, so tested here directly rather than via a

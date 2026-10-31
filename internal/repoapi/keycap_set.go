@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/roguekeyboards/kbdb/internal/handlers/api"
-	"github.com/roguekeyboards/kbdb/internal/repository"
+	"github.com/roguekeyboards/mykeebs-api/internal/handlers/api"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
 // KeycapSet maps repository.KeycapSet to and from its wire representations.

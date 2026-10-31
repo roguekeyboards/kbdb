@@ -25,7 +25,7 @@ const sessionPath = "/impersonate/session"
 // has the JWT: kbdb checks the JWT itself, which still works until it
 // expires.
 var impersonationPage = template.Must(template.New("impersonate").Parse(`<!doctype html>
-<meta charset=utf-8><title>kbdb-migrate</title>
+<meta charset=utf-8><title>mykeebs-migrate</title>
 <body style="font-family:system-ui;margin:4rem auto;max-width:32rem"><p id=msg>Exchanging the impersonation token...</p>
 <script type=module>
 const msg = document.getElementById('msg');

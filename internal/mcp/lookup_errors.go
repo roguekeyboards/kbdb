@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/roguekeyboards/kbdb/internal/lookup"
+	"github.com/roguekeyboards/mykeebs-api/internal/lookup"
 )
 
 // lookupErrors joins fieldErrs into one tool error, or returns nil.

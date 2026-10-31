@@ -10,7 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 
-	"github.com/roguekeyboards/kbdb/test/functional/support"
+	"github.com/roguekeyboards/mykeebs-api/test/functional/support"
 )
 
 // DynamoTable seeds and deletes items directly in one DynamoDB table,

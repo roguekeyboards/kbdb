@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"reflect"
 
-	"github.com/roguekeyboards/kbdb/internal/handlers/api"
+	"github.com/roguekeyboards/mykeebs-api/internal/handlers/api"
 )
 
 // verifyStatus is the per-item outcome.

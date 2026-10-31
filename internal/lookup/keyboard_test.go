@@ -5,8 +5,8 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/roguekeyboards/kbdb/internal/lookup"
-	"github.com/roguekeyboards/kbdb/internal/repository"
+	"github.com/roguekeyboards/mykeebs-api/internal/lookup"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
 type ValidateKeyboardSuite struct {

@@ -3,7 +3,7 @@ package lookup
 import (
 	"context"
 
-	"github.com/roguekeyboards/kbdb/internal/repository"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
 // ValidateKeycapSet returns every field on ks that isn't an approved value
