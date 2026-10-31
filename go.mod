@@ -34,7 +34,7 @@ require (
 	github.com/oapi-codegen/runtime v1.8.0
 	github.com/onsi/ginkgo/v2 v2.33.1
 	github.com/onsi/gomega v1.44.0
-	github.com/roguekeyboards/mykeebs-consent v1.0.0
+	github.com/roguekeyboards/mykeebs-consent v1.0.1
 	github.com/roguekeyboards/oidc-testkit v1.0.4
 	github.com/stretchr/testify v1.12.1
 	go.yaml.in/yaml/v3 v3.0.5
