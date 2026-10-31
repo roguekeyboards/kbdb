@@ -3,7 +3,7 @@ Description: >
   Per-environment bootstrap: the ECR repo ApiFunction's image is pushed to.
   It lives in its own permanent stack rather than template.yaml because sam
   deploy pushes the image before creating/updating the app stack, so the
-  repo has to exist first. kbdb-ci's shared per-PR repo is deployed by hand
+  repo has to exist first. mykeebs-api-ci's shared per-PR repo is deployed by hand
   (CONTRIBUTING.md); every other environment's is deployed by mise run setup.
 
   DeletionPolicy: Retain keeps the repo if this stack is deleted. mise run
@@ -13,16 +13,16 @@ Description: >
 Parameters:
   RepositoryName:
     Type: String
-    Default: kbdb-api
+    Default: mykeebs-api
     Description: >
-      kbdb-api for kbdb-ci's shared repo; mise run setup passes
-      kbdb-api-<stack name>.
+      mykeebs-api for mykeebs-api-ci's shared repo; mise run setup passes
+      <stack name>.
   ExpireBy:
     Type: String
     Default: age
     AllowedValues: [age, count]
     Description: >
-      age expires every image 2 days after push - for kbdb-ci, which only
+      age expires every image 2 days after push - for mykeebs-api-ci, which only
       holds transient per-PR images. count keeps the 5 newest - for any
       environment with a live image a Lambda function is running.
 
@@ -45,8 +45,8 @@ Resources:
   # itself at CreateFunction. Left undeclared, CloudFormation deletes that
   # grant on any update to this resource, and the function fails with
   # ImageAccessDenied the next time it is reactivated from Inactive. Function
-  # names are kbdb-api-<stack name>: exactly RepositoryName for a per-env
-  # repo, RepositoryName-kbdb-pr-<N> for kbdb-ci's shared one.
+  # names are <stack name>: exactly RepositoryName for a per-env
+  # repo, mykeebs-api-pr-<N> for mykeebs-api-ci's shared one.
   ApiRepository:
     Type: AWS::ECR::Repository
     DeletionPolicy: Retain

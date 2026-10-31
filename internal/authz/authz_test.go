@@ -7,14 +7,14 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/roguekeyboards/mykeebs-api/internal/authz"
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
 func ctxFor(caller string) context.Context {
 	ctx := context.Background()
 	if caller != "" {
-		ctx = kbdbctx.WithUserID(ctx, caller)
+		ctx = apictx.WithUserID(ctx, caller)
 	}
 	return ctx
 }

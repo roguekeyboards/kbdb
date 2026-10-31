@@ -12,7 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 	"github.com/roguekeyboards/mykeebs-api/internal/log"
 	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
@@ -87,7 +87,7 @@ func (r *ProfileRepository) GetPreferences(ctx context.Context, ownerID string) 
 // username is never half-claimed; conflicts are classified by
 // mapProfileCreateConflict.
 func (r *ProfileRepository) Create(ctx context.Context, p repository.Profile) (*repository.Profile, error) {
-	ownerID, ok := kbdbctx.UserID(ctx)
+	ownerID, ok := apictx.UserID(ctx)
 	if !ok {
 		return nil, fmt.Errorf("creating profile: %w", repository.ErrNoUserID)
 	}
@@ -188,7 +188,7 @@ func mapProfileCreateConflict(err error) error {
 // then rewrites the body-settable fields and the directory-GSI keys in
 // place. avatar_path is never named, so it carries forward.
 func (r *ProfileRepository) Update(ctx context.Context, p repository.Profile) (*repository.Profile, error) {
-	ownerID, ok := kbdbctx.UserID(ctx)
+	ownerID, ok := apictx.UserID(ctx)
 	if !ok {
 		return nil, fmt.Errorf("updating profile: %w", repository.ErrNoUserID)
 	}
@@ -415,7 +415,7 @@ func profileUpdateExpression(p *repository.Profile) expression.UpdateBuilder {
 
 // SetAvatarPath implements repository.ProfileRepository.
 func (r *ProfileRepository) SetAvatarPath(ctx context.Context, key repository.ProfileImageKey) error {
-	ownerID, ok := kbdbctx.UserID(ctx)
+	ownerID, ok := apictx.UserID(ctx)
 	if !ok {
 		return fmt.Errorf("setting avatar path: %w", repository.ErrNoUserID)
 	}
@@ -452,7 +452,7 @@ func (r *ProfileRepository) SetAvatarPath(ctx context.Context, key repository.Pr
 // ClearAvatarPath implements repository.ProfileRepository. ALL_OLD reports
 // the key that was cleared, or nil when nothing was set.
 func (r *ProfileRepository) ClearAvatarPath(ctx context.Context) (*repository.ProfileImageKey, error) {
-	ownerID, ok := kbdbctx.UserID(ctx)
+	ownerID, ok := apictx.UserID(ctx)
 	if !ok {
 		return nil, fmt.Errorf("clearing avatar path: %w", repository.ErrNoUserID)
 	}
@@ -548,7 +548,7 @@ func (r *ProfileRepository) SetAvatarStatus(ctx context.Context, ownerID string,
 // profile is genuinely gone now - idempotent success) or the current
 // username to try again against.
 func (r *ProfileRepository) Delete(ctx context.Context) error {
-	ownerID, ok := kbdbctx.UserID(ctx)
+	ownerID, ok := apictx.UserID(ctx)
 	if !ok {
 		return fmt.Errorf("deleting profile: %w", repository.ErrNoUserID)
 	}

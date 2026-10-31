@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 )
 
 // ProfileLink is one entry in a profile's links list. Both fields are
@@ -15,7 +15,7 @@ type ProfileLink struct {
 }
 
 // ProfilePreferences holds a user's display preferences. Currency is
-// display-only: kbdb does no conversion. ShowPriceToMe applies to lists
+// display-only: mykeebs-api does no conversion. ShowPriceToMe applies to lists
 // only, since editing an item needs its current price.
 type ProfilePreferences struct {
 	Currency          string `dynamodbav:"currency"             json:"currency"`
@@ -166,7 +166,7 @@ type ProfileImageKey string
 // prefix. Each upload gets its own key because upload URLs are single-use:
 // a replacement can't be written over the previous object.
 func NewProfileImageKey(ctx context.Context, uploadID string) (ProfileImageKey, error) {
-	ownerID, ok := kbdbctx.UserID(ctx)
+	ownerID, ok := apictx.UserID(ctx)
 	if !ok {
 		return "", ErrNoUserID
 	}

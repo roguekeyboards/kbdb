@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 	"github.com/roguekeyboards/mykeebs-api/internal/repository/dynamo/mocks"
 )
@@ -210,7 +210,7 @@ func (s *KeyboardRepositorySuite) TestCreate_Succeeds() {
 		PutItem(mock.Anything, mock.Anything).
 		Return(&dynamodb.PutItemOutput{}, nil)
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	kb, err := s.repo.Create(ctx, repository.Keyboard{ID: "kb1", Brand: "Keychron"})
 
 	s.Require().NoError(err)
@@ -230,7 +230,7 @@ func (s *KeyboardRepositorySuite) TestCreate_SeedsEmptyPartAndImageMaps() {
 		})).
 		Return(&dynamodb.PutItemOutput{}, nil)
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	_, err := s.repo.Create(ctx, repository.Keyboard{ID: "kb1", Brand: "Keychron"})
 
 	s.Require().NoError(err)
@@ -241,7 +241,7 @@ func (s *KeyboardRepositorySuite) TestCreate_AlreadyExists_ReturnsErrAlreadyExis
 		PutItem(mock.Anything, mock.Anything).
 		Return(nil, &types.ConditionalCheckFailedException{})
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	kb, err := s.repo.Create(ctx, repository.Keyboard{ID: "kb1"})
 
 	s.Require().ErrorIs(err, repository.ErrAlreadyExists)
@@ -253,7 +253,7 @@ func (s *KeyboardRepositorySuite) TestCreate_PutItemError_Propagates() {
 		PutItem(mock.Anything, mock.Anything).
 		Return(nil, errors.New("dynamodb: throttled"))
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	kb, err := s.repo.Create(ctx, repository.Keyboard{ID: "kb1"})
 
 	s.Require().Error(err)
@@ -281,7 +281,7 @@ func (s *KeyboardRepositorySuite) TestUpdate_Succeeds() {
 		})).
 		Return(&dynamodb.UpdateItemOutput{Attributes: s.updatedItem()}, nil)
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	kb, err := s.repo.Update(ctx, repository.Keyboard{ID: "kb1", Brand: "Keychron"})
 
 	s.Require().NoError(err)
@@ -299,14 +299,14 @@ func (s *KeyboardRepositorySuite) TestDeleteImage_DottedImageID_IsOneKeyNotANest
 		})).
 		Return(&dynamodb.UpdateItemOutput{}, nil)
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	_, err := s.repo.DeleteImage(ctx, "kb1", "img1.path")
 
 	s.Require().NoError(err)
 }
 
 func (s *KeyboardRepositorySuite) TestBracketedImageID_NeverReachesDynamo() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 
 	key, err := s.repo.DeleteImage(ctx, "kb1", "img1[0]")
 	s.Require().NoError(err)
@@ -325,7 +325,7 @@ func (s *KeyboardRepositorySuite) TestUpdate_LeavesPartsUntouched() {
 		})).
 		Return(&dynamodb.UpdateItemOutput{Attributes: s.updatedItem()}, nil)
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	_, err := s.repo.Update(ctx, repository.Keyboard{ID: "kb1", Brand: "Keychron"})
 
 	s.Require().NoError(err)
@@ -339,7 +339,7 @@ func (s *KeyboardRepositorySuite) TestUpdate_OmittedOptionalFields_AreRemoved() 
 		})).
 		Return(&dynamodb.UpdateItemOutput{Attributes: s.updatedItem()}, nil)
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	_, err := s.repo.Update(ctx, repository.Keyboard{ID: "kb1", Brand: "Keychron"})
 
 	s.Require().NoError(err)
@@ -357,7 +357,7 @@ func (s *KeyboardRepositorySuite) TestUpdate_ReturnsPersistedImages() {
 		UpdateItem(mock.Anything, mock.Anything).
 		Return(&dynamodb.UpdateItemOutput{Attributes: after}, nil)
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	kb, err := s.repo.Update(ctx, repository.Keyboard{ID: "kb1", Brand: "Keychron"})
 
 	s.Require().NoError(err)
@@ -372,7 +372,7 @@ func (s *KeyboardRepositorySuite) TestUpdate_ConditionFails_ReturnsErrNotFound()
 		UpdateItem(mock.Anything, mock.Anything).
 		Return(nil, &types.ConditionalCheckFailedException{})
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	kb, err := s.repo.Update(ctx, repository.Keyboard{ID: "kb1", Brand: "Keychron"})
 
 	s.Require().ErrorIs(err, repository.ErrNotFound)
@@ -384,7 +384,7 @@ func (s *KeyboardRepositorySuite) TestUpdate_UpdateItemError_Propagates() {
 		UpdateItem(mock.Anything, mock.Anything).
 		Return(nil, errors.New("dynamodb: throttled"))
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	kb, err := s.repo.Update(ctx, repository.Keyboard{ID: "kb1"})
 
 	s.Require().Error(err)
@@ -405,7 +405,7 @@ func (s *KeyboardRepositorySuite) TestDelete_Succeeds() {
 		DeleteItem(mock.Anything, mock.Anything).
 		Return(&dynamodb.DeleteItemOutput{}, nil)
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	err := s.repo.Delete(ctx, "kb1")
 
 	s.Require().NoError(err)
@@ -423,7 +423,7 @@ func (s *KeyboardRepositorySuite) TestDelete_DeleteItemError_Propagates() {
 		DeleteItem(mock.Anything, mock.Anything).
 		Return(nil, errors.New("dynamodb: throttled"))
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	err := s.repo.Delete(ctx, "kb1")
 
 	s.Require().Error(err)
@@ -453,7 +453,7 @@ func (s *KeyboardRepositorySuite) TestAddImage_Succeeds_SetsMonotonicSeq() {
 		})).
 		Return(&dynamodb.UpdateItemOutput{}, nil)
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	err := s.repo.AddImage(ctx, "kb1", repository.KeyboardImage{ImageID: "img2", Path: "keyboards/alice/kb1/images/img2"})
 	s.Require().NoError(err)
 
@@ -477,7 +477,7 @@ func (s *KeyboardRepositorySuite) TestAddImage_ParentKeyboardNotFound_ReturnsErr
 		UpdateItem(mock.Anything, mock.Anything).
 		Return(nil, &types.ConditionalCheckFailedException{})
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	err := s.repo.AddImage(ctx, "kb1", repository.KeyboardImage{ImageID: "img1", Path: "p"})
 
 	s.Require().ErrorIs(err, repository.ErrNotFound)
@@ -490,7 +490,7 @@ func (s *KeyboardRepositorySuite) TestAddImage_DuplicateImageID_ReturnsError() {
 		UpdateItem(mock.Anything, mock.Anything).
 		Return(nil, &types.ConditionalCheckFailedException{Item: s.storedKeyboard().Item})
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	err := s.repo.AddImage(ctx, "kb1", repository.KeyboardImage{ImageID: "img1", Path: "p2"})
 
 	s.Require().ErrorIs(err, errDuplicateKeyboardImageID)
@@ -508,7 +508,7 @@ func (s *KeyboardRepositorySuite) TestAddImage_AtImageLimit_ReturnsErrImageLimit
 		UpdateItem(mock.Anything, mock.Anything).
 		Return(nil, &types.ConditionalCheckFailedException{Item: item})
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	err := s.repo.AddImage(ctx, "kb1", repository.KeyboardImage{ImageID: "new", Path: "p"})
 
 	s.Require().ErrorIs(err, repository.ErrImageLimitReached)
@@ -519,7 +519,7 @@ func (s *KeyboardRepositorySuite) TestAddImage_UpdateItemError_Propagates() {
 		UpdateItem(mock.Anything, mock.Anything).
 		Return(nil, errors.New("dynamodb: throttled"))
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	err := s.repo.AddImage(ctx, "kb1", repository.KeyboardImage{ImageID: "img1", Path: "p"})
 
 	s.Require().Error(err)
@@ -527,7 +527,7 @@ func (s *KeyboardRepositorySuite) TestAddImage_UpdateItemError_Propagates() {
 
 func (s *KeyboardRepositorySuite) TestAddImage_EmptyImageID_ReturnsError() {
 	// No EXPECT() - caught before any client call.
-	err := s.repo.AddImage(kbdbctx.WithUserID(s.T().Context(), "alice"), "kb1", repository.KeyboardImage{Path: "p"})
+	err := s.repo.AddImage(apictx.WithUserID(s.T().Context(), "alice"), "kb1", repository.KeyboardImage{Path: "p"})
 
 	s.Require().Error(err)
 }
@@ -556,7 +556,7 @@ func (s *KeyboardRepositorySuite) TestDeleteImage_Succeeds() {
 			}},
 		}}, nil)
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	removed, err := s.repo.DeleteImage(ctx, "kb1", "img1")
 
 	s.Require().NoError(err)
@@ -574,7 +574,7 @@ func (s *KeyboardRepositorySuite) TestDeleteImage_ImageAlreadyAbsent_ReturnsNilW
 		GetItem(mock.Anything, mock.Anything).
 		Return(s.storedKeyboard(), nil)
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	removed, err := s.repo.DeleteImage(ctx, "kb1", "missing")
 
 	s.Require().NoError(err)
@@ -589,7 +589,7 @@ func (s *KeyboardRepositorySuite) TestDeleteImage_ParentKeyboardNotFound_Returns
 		GetItem(mock.Anything, mock.Anything).
 		Return(&dynamodb.GetItemOutput{Item: map[string]types.AttributeValue{}}, nil)
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	removed, err := s.repo.DeleteImage(ctx, "kb1", "img1")
 
 	s.Require().ErrorIs(err, repository.ErrNotFound)

@@ -8,7 +8,7 @@ import (
 	"errors"
 	"strings"
 
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
@@ -26,7 +26,7 @@ func Resolve(ctx context.Context, repo repository.ProfileRepository, identifier 
 	if p.Discoverable {
 		return p, true, nil
 	}
-	if caller, ok := kbdbctx.UserID(ctx); ok && caller == p.OwnerID {
+	if caller, ok := apictx.UserID(ctx); ok && caller == p.OwnerID {
 		return p, true, nil
 	}
 

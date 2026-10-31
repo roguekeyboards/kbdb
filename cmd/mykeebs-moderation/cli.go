@@ -26,7 +26,7 @@ const viewURLLifetime = 5 * time.Minute
 
 // CLI is the mykeebs-moderation command tree, parsed by Kong.
 type CLI struct {
-	Stack  string `required:"" help:"CloudFormation stack name, e.g. kbdb-dev-jay."`
+	Stack  string `required:"" help:"CloudFormation stack name, e.g. mykeebs-api-dev-jay."`
 	Region string `env:"AWS_REGION" help:"AWS region of the stack."`
 
 	Rejections RejectionsCmd `cmd:"" help:"List the moderation function's rejections still awaiting review, or with --all every rejection and takedown and how it was reviewed."`

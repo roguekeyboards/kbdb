@@ -12,7 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 	"github.com/roguekeyboards/mykeebs-api/internal/log"
 	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
@@ -148,7 +148,7 @@ func (r *BuildRepository) get(ctx context.Context, ownerID, id string, consisten
 
 // Create implements repository.BuildRepository.
 func (r *BuildRepository) Create(ctx context.Context, b repository.Build) (*repository.Build, error) {
-	ownerID, ok := kbdbctx.UserID(ctx)
+	ownerID, ok := apictx.UserID(ctx)
 	if !ok {
 		return nil, fmt.Errorf("creating build %q: %w", b.ID, repository.ErrNoUserID)
 	}
@@ -239,7 +239,7 @@ func buildKey(ownerID, buildID string) map[string]types.AttributeValue {
 // A cancellation is classified: build-item ConditionalCheckFailed means the
 // build is gone (ErrNotFound); TransactionConflict retries from a fresh Get.
 func (r *BuildRepository) Update(ctx context.Context, b repository.Build) (*repository.Build, error) {
-	ownerID, ok := kbdbctx.UserID(ctx)
+	ownerID, ok := apictx.UserID(ctx)
 	if !ok {
 		return nil, fmt.Errorf("updating build %q: %w", b.ID, repository.ErrNoUserID)
 	}
@@ -353,7 +353,7 @@ func classifyBuildTxConflict(err error) buildTxConflict {
 // the Get and the transaction surfaces as a TransactionConflict, which
 // retries from a fresh Get (re-deriving the current marker set).
 func (r *BuildRepository) Delete(ctx context.Context, id string) error {
-	ownerID, ok := kbdbctx.UserID(ctx)
+	ownerID, ok := apictx.UserID(ctx)
 	if !ok {
 		return fmt.Errorf("deleting build %q: %w", id, repository.ErrNoUserID)
 	}
@@ -407,7 +407,7 @@ func (r *BuildRepository) AddImage(ctx context.Context, buildID string, image re
 		return fmt.Errorf("adding image to build %q: %w", buildID, errEmptyImageID)
 	}
 
-	ownerID, ok := kbdbctx.UserID(ctx)
+	ownerID, ok := apictx.UserID(ctx)
 	if !ok {
 		return fmt.Errorf("adding image to build %q: %w", buildID, repository.ErrNoUserID)
 	}
@@ -474,7 +474,7 @@ func (r *BuildRepository) buildExists(ctx context.Context, ownerID, id string) (
 // build exists) is a nil-nil success. No transaction - images aren't
 // ref-markers.
 func (r *BuildRepository) DeleteImage(ctx context.Context, buildID, imageID string) (*repository.BuildImageKey, error) {
-	ownerID, ok := kbdbctx.UserID(ctx)
+	ownerID, ok := apictx.UserID(ctx)
 	if !ok {
 		return nil, fmt.Errorf("deleting image from build %q: %w", buildID, repository.ErrNoUserID)
 	}

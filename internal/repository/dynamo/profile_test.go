@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 	"github.com/roguekeyboards/mykeebs-api/internal/repository/dynamo/mocks"
 )
@@ -190,7 +190,7 @@ func (s *ProfileRepositorySuite) TestCreate_WritesProfileAndClaimAtomically() {
 		})).
 		Return(&dynamodb.TransactWriteItemsOutput{}, nil)
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "user-alice")
+	ctx := apictx.WithUserID(s.T().Context(), "user-alice")
 	got, err := s.repo.Create(ctx, repository.Profile{Username: "alice"})
 
 	s.Require().NoError(err)
@@ -216,7 +216,7 @@ func (s *ProfileRepositorySuite) TestCreate_NonDiscoverable_OmitsAllGSIKeys() {
 		})).
 		Return(&dynamodb.TransactWriteItemsOutput{}, nil)
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "user-alice")
+	ctx := apictx.WithUserID(s.T().Context(), "user-alice")
 	discord := "alice_kb"
 	_, err := s.repo.Create(ctx, repository.Profile{
 		Username: "alice", Discoverable: false, DiscordUsername: &discord,
@@ -237,7 +237,7 @@ func (s *ProfileRepositorySuite) TestCreate_DiscoverableNoDiscord_SetsOnlyDiscov
 		})).
 		Return(&dynamodb.TransactWriteItemsOutput{}, nil)
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "user-alice")
+	ctx := apictx.WithUserID(s.T().Context(), "user-alice")
 	_, err := s.repo.Create(ctx, repository.Profile{Username: "alice", Discoverable: true})
 	s.Require().NoError(err)
 
@@ -256,7 +256,7 @@ func (s *ProfileRepositorySuite) TestCreate_DiscoverableWithDiscord_SetsAllGSIKe
 		})).
 		Return(&dynamodb.TransactWriteItemsOutput{}, nil)
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "user-alice")
+	ctx := apictx.WithUserID(s.T().Context(), "user-alice")
 	discord := "alice_kb"
 	_, err := s.repo.Create(ctx, repository.Profile{
 		Username: "alice", Discoverable: true, DiscordUsername: &discord,
@@ -282,7 +282,7 @@ func (s *ProfileRepositorySuite) TestCreate_ProfilePutConditionFails_ReturnsErrA
 			},
 		})
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "user-alice")
+	ctx := apictx.WithUserID(s.T().Context(), "user-alice")
 	_, err := s.repo.Create(ctx, repository.Profile{Username: "alice"})
 
 	s.Require().ErrorIs(err, repository.ErrAlreadyExists)
@@ -299,7 +299,7 @@ func (s *ProfileRepositorySuite) TestCreate_ClaimPutConditionFails_ReturnsErrUse
 			},
 		})
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "user-alice")
+	ctx := apictx.WithUserID(s.T().Context(), "user-alice")
 	_, err := s.repo.Create(ctx, repository.Profile{Username: "alice"})
 
 	s.Require().ErrorIs(err, repository.ErrUsernameTaken)
@@ -316,7 +316,7 @@ func (s *ProfileRepositorySuite) TestCreate_TransactionConflict_ReturnsErrMutati
 			},
 		})
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "user-alice")
+	ctx := apictx.WithUserID(s.T().Context(), "user-alice")
 	_, err := s.repo.Create(ctx, repository.Profile{Username: "alice"})
 
 	s.Require().ErrorIs(err, repository.ErrMutationConflict)
@@ -327,7 +327,7 @@ func (s *ProfileRepositorySuite) TestCreate_TransactWriteItemsError_Propagates()
 		TransactWriteItems(mock.Anything, mock.Anything).
 		Return(nil, errors.New("dynamodb: throttled"))
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "user-alice")
+	ctx := apictx.WithUserID(s.T().Context(), "user-alice")
 	_, err := s.repo.Create(ctx, repository.Profile{Username: "alice"})
 
 	s.Require().Error(err)
@@ -349,7 +349,7 @@ func storedProfile(extra map[string]types.AttributeValue) *dynamodb.GetItemOutpu
 }
 
 func (s *ProfileRepositorySuite) updateCtx() context.Context {
-	return kbdbctx.WithUserID(s.T().Context(), "user-alice")
+	return apictx.WithUserID(s.T().Context(), "user-alice")
 }
 
 // updatedProfileAttrs is a stand-in for an UpdateItem ALL_NEW response.
@@ -1292,7 +1292,7 @@ func (s *ProfileRepositorySuite) TestSetAvatarPath_MarksPending() {
 		})).
 		Return(&dynamodb.UpdateItemOutput{}, nil)
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	s.Require().NoError(s.repo.SetAvatarPath(ctx, "profiles/alice/avatar/up1"))
 
 	s.True(setsAttr(captured, "avatar_status"))
@@ -1309,7 +1309,7 @@ func (s *ProfileRepositorySuite) TestClearAvatarPath_ClearsStatus() {
 		})).
 		Return(&dynamodb.UpdateItemOutput{}, nil)
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	_, err := s.repo.ClearAvatarPath(ctx)
 	s.Require().NoError(err)
 

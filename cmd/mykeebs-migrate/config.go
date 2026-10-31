@@ -17,7 +17,7 @@ type CLI struct {
 type LoginCmd struct {
 	Issuer   string `env:"MYKEEBS_OIDC_ISSUER_BASE_URL" required:"" help:"OIDC issuer base URL, e.g. https://auth.jay.mykeebs.dev."`
 	ClientID string `env:"MYKEEBS_OIDC_CLIENT_ID" help:"OAuth client ID. If unset and the issuer supports RFC 7591, one is registered dynamically and cached."`
-	Port     int    `default:"8765" help:"Localhost port for the redirect listener. Must match a registered redirect URI; 8765 is the one kbdb provisions."`
+	Port     int    `default:"8765" help:"Localhost port for the redirect listener. Must match a registered redirect URI; 8765 is the one mykeebs-api provisions."`
 }
 
 // DumpCmd walks the profile and every collection the token's subject owns and

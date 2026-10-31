@@ -16,7 +16,7 @@ import (
 	repomocks "github.com/roguekeyboards/mykeebs-api/internal/repository/mocks"
 )
 
-const testLogGroup = "/aws/lambda/kbdb-moderate-test"
+const testLogGroup = "/aws/lambda/mykeebs-api-moderate-test"
 
 type RejectionsSuite struct {
 	suite.Suite

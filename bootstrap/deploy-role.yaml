@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >-
-  Bootstrap (kbdb-ci, kbdb-prod) - GitHub Actions OIDC provider and the role
+  Bootstrap (CI and prod accounts) - GitHub Actions OIDC provider and the role
   its workflows deploy with. CI's PR stacks and prod deploy with the same
   permissions, scoped to their own stack names; only what CI's functional
   tests and teardown need on top is CI-only.
@@ -15,13 +15,13 @@ Mappings:
     ci:
       # Stack is a stack name pattern; Items prefixes the resources a
       # stack names after itself.
-      Stack: kbdb-pr-*
-      Items: kbdb-pr-*
-      Repo: kbdb-api
+      Stack: mykeebs-api-pr-*
+      Items: mykeebs-api-pr-*
+      Repo: mykeebs-api
     prod:
-      Stack: kbdb-prod
-      Items: kbdb-prod-*
-      Repo: kbdb-api-kbdb-prod
+      Stack: mykeebs-api-prod
+      Items: mykeebs-api-prod-*
+      Repo: mykeebs-api-prod
 
 Conditions:
   IsCI: !Equals [!Ref Environment, ci]
@@ -38,11 +38,11 @@ Resources:
   GitHubActionsDeployRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: kbdb-github-actions-deploy
+      RoleName: mykeebs-api-github-actions-deploy
       Description: !If
         - IsCI
-        - Assumed by GitHub Actions (roguekeyboards/kbdb pull_request workflows) via OIDC federation, no long-lived keys
-        - Assumed by GitHub Actions (roguekeyboards/kbdb deploy-prod.yml, v* tags only) via OIDC federation, no long-lived keys
+        - Assumed by GitHub Actions (roguekeyboards/mykeebs-api pull_request workflows) via OIDC federation, no long-lived keys
+        - Assumed by GitHub Actions (roguekeyboards/mykeebs-api deploy-prod.yml, v* tags only) via OIDC federation, no long-lived keys
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -56,20 +56,14 @@ Resources:
               - IsCI
               - StringEquals:
                   token.actions.githubusercontent.com:aud: sts.amazonaws.com
-                  token.actions.githubusercontent.com:sub:
-                    - repo:roguekeyboards@350380721/kbdb@1288529592:pull_request
-                    - repo:roguekeyboards@350380721/mykeebs-api@1288529592:pull_request
+                  token.actions.githubusercontent.com:sub: repo:roguekeyboards@350380721/mykeebs-api@1288529592:pull_request
               - StringEquals:
                   token.actions.githubusercontent.com:aud: sts.amazonaws.com
                 StringLike:
-                  token.actions.githubusercontent.com:sub:
-                    - repo:roguekeyboards@350380721/kbdb@1288529592:ref:refs/tags/v*
-                    - repo:roguekeyboards@350380721/mykeebs-api@1288529592:ref:refs/tags/v*
-                  token.actions.githubusercontent.com:job_workflow_ref:
-                    - roguekeyboards/kbdb/.github/workflows/deploy-prod.yml@refs/tags/v*
-                    - roguekeyboards/mykeebs-api/.github/workflows/deploy-prod.yml@refs/tags/v*
+                  token.actions.githubusercontent.com:sub: repo:roguekeyboards@350380721/mykeebs-api@1288529592:ref:refs/tags/v*
+                  token.actions.githubusercontent.com:job_workflow_ref: roguekeyboards/mykeebs-api/.github/workflows/deploy-prod.yml@refs/tags/v*
       Policies:
-        - PolicyName: kbdb-deploy-permissions
+        - PolicyName: mykeebs-api-deploy-permissions
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
@@ -95,14 +89,14 @@ Resources:
                 Effect: Allow
                 Action: cloudformation:GetTemplate
                 Resource:
-                  - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/kbdb-bootstrap/*
-                  - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/kbdb-bootstrap-jwks/*
-                  - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/kbdb-stack-boundary/*
-                  - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/kbdb-image-delivery/*
-                  - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/kbdb-cost-budget/*
-                  - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/kbdb-ecr-bootstrap/*
-                  - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/kbdb-ci-oidc/*
-                  - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/kbdb-prod-oidc/*
+                  - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/mykeebs-api-bootstrap/*
+                  - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/mykeebs-api-bootstrap-jwks/*
+                  - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/mykeebs-api-stack-boundary/*
+                  - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/mykeebs-image-delivery/*
+                  - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/mykeebs-api-cost-budget/*
+                  - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/mykeebs-api-ecr-bootstrap/*
+                  - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/mykeebs-api-ci-oidc/*
+                  - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/mykeebs-api-prod-oidc/*
               - Sid: CloudFormationServerlessTransform
                 Effect: Allow
                 Action: cloudformation:CreateChangeSet
@@ -116,8 +110,8 @@ Resources:
                   - s3:PutObject
                   - s3:ListBucket
                 Resource:
-                  - !Sub arn:aws:s3:::kbdb-sam-artifacts-${AWS::AccountId}
-                  - !Sub arn:aws:s3:::kbdb-sam-artifacts-${AWS::AccountId}/*
+                  - !Sub arn:aws:s3:::mykeebs-sam-artifacts-${AWS::AccountId}
+                  - !Sub arn:aws:s3:::mykeebs-sam-artifacts-${AWS::AccountId}/*
               - Sid: EcrAuth
                 Effect: Allow
                 Action:
@@ -148,16 +142,16 @@ Resources:
                 Action: lambda:*
                 Resource:
                   - !Sub
-                    - arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:kbdb-api-${Stack}
+                    - arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Stack}
                     - Stack: !FindInMap [Env, !Ref Environment, Stack]
                   - !Sub
-                    - arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:kbdb-api-${Stack}:*
+                    - arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Stack}:*
                     - Stack: !FindInMap [Env, !Ref Environment, Stack]
                   - !Sub
-                    - arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:kbdb-moderate-${Stack}
+                    - arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Stack}-moderate
                     - Stack: !FindInMap [Env, !Ref Environment, Stack]
                   - !Sub
-                    - arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:kbdb-moderate-${Stack}:*
+                    - arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Stack}-moderate:*
                     - Stack: !FindInMap [Env, !Ref Environment, Stack]
               - Sid: ApiGateway
                 Effect: Allow
@@ -197,7 +191,7 @@ Resources:
                   - Items: !FindInMap [Env, !Ref Environment, Items]
                 Condition:
                   StringEquals:
-                    iam:PermissionsBoundary: !Sub arn:aws:iam::${AWS::AccountId}:policy/kbdb-stack-boundary
+                    iam:PermissionsBoundary: !Sub arn:aws:iam::${AWS::AccountId}:policy/mykeebs-api-stack-boundary
               - Sid: AttachBasicExecutionRole
                 Effect: Allow
                 Action: iam:AttachRolePolicy
@@ -206,7 +200,7 @@ Resources:
                   - Items: !FindInMap [Env, !Ref Environment, Items]
                 Condition:
                   StringEquals:
-                    iam:PermissionsBoundary: !Sub arn:aws:iam::${AWS::AccountId}:policy/kbdb-stack-boundary
+                    iam:PermissionsBoundary: !Sub arn:aws:iam::${AWS::AccountId}:policy/mykeebs-api-stack-boundary
                   ArnEquals:
                     iam:PolicyARN: arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
               - Sid: PassStackRolesToLambda
@@ -256,9 +250,9 @@ Resources:
                 Effect: Allow
                 Action: ssm:GetParameters
                 Resource:
-                  - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/kbdb/image-delivery/key-group-id
-                  - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/kbdb/image-delivery/public-key-id
-                  - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/kbdb/image-delivery/response-headers-policy-id
+                  - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/mykeebs-api/image-delivery/key-group-id
+                  - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/mykeebs-api/image-delivery/public-key-id
+                  - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/mykeebs-api/image-delivery/response-headers-policy-id
               - Sid: AccountReads
                 Effect: Allow
                 Action:
@@ -329,7 +323,7 @@ Resources:
               - s3:PutBucketPolicy
               - s3:DeleteBucketPolicy
             Resource: !Sub
-              - arn:aws:s3:::kbdb-images-${AWS::AccountId}-${Stack}
+              - arn:aws:s3:::mykeebs-images-${AWS::AccountId}-${Stack}
               - Stack: !FindInMap [Env, !Ref Environment, Stack]
           - Sid: LogGroups
             Effect: Allow
@@ -347,22 +341,22 @@ Resources:
               - logs:DescribeMetricFilters
             Resource:
               - !Sub
-                - arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-api-${Stack}
+                - arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${Stack}
                 - Stack: !FindInMap [Env, !Ref Environment, Stack]
               - !Sub
-                - arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-api-${Stack}:*
+                - arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${Stack}:*
                 - Stack: !FindInMap [Env, !Ref Environment, Stack]
               - !Sub
-                - arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-moderate-${Stack}
+                - arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${Stack}-moderate
                 - Stack: !FindInMap [Env, !Ref Environment, Stack]
               - !Sub
-                - arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-moderate-${Stack}:*
+                - arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${Stack}-moderate:*
                 - Stack: !FindInMap [Env, !Ref Environment, Stack]
               - !Sub
-                - arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/apigateway/kbdb-api-${Stack}
+                - arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/apigateway/${Stack}
                 - Stack: !FindInMap [Env, !Ref Environment, Stack]
               - !Sub
-                - arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/apigateway/kbdb-api-${Stack}:*
+                - arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/apigateway/${Stack}:*
                 - Stack: !FindInMap [Env, !Ref Environment, Stack]
           - Sid: LogsUnscoped
             Effect: Allow
@@ -434,10 +428,10 @@ Resources:
                 - s3:DeleteBucket
                 - ecr:BatchDeleteImage
               Resource:
-                - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/kbdb-pr-*/*
-                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/kbdb-pr-*
-                - !Sub arn:aws:s3:::kbdb-images-${AWS::AccountId}-kbdb-pr-*
-                - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/kbdb-api
+                - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/mykeebs-api-pr-*/*
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/mykeebs-api-pr-*
+                - !Sub arn:aws:s3:::mykeebs-images-${AWS::AccountId}-mykeebs-api-pr-*
+                - !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/mykeebs-api
             - !Ref AWS::NoValue
           - !If
             - IsCI
@@ -461,10 +455,10 @@ Resources:
                 - cloudfront:ListInvalidations
                 - cloudfront:GetInvalidation
               Resource:
-                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/kbdb-pr-*
-                - !Sub arn:aws:s3:::kbdb-images-${AWS::AccountId}-kbdb-pr-*/*
-                - !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:kbdb-pr-*
-                - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-moderate-kbdb-pr-*:*
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/mykeebs-api-pr-*
+                - !Sub arn:aws:s3:::mykeebs-images-${AWS::AccountId}-mykeebs-api-pr-*/*
+                - !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:mykeebs-api-pr-*
+                - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mykeebs-api-moderate-mykeebs-api-pr-*:*
                 - !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/*
             - !Ref AWS::NoValue
           - !If
@@ -477,11 +471,11 @@ Resources:
                 - s3:DeleteObject
                 - s3:ListBucket
               Resource:
-                - !Sub arn:aws:s3:::kbdb-jwks-${AWS::AccountId}
-                - !Sub arn:aws:s3:::kbdb-jwks-${AWS::AccountId}/*
+                - !Sub arn:aws:s3:::mykeebs-jwks-${AWS::AccountId}
+                - !Sub arn:aws:s3:::mykeebs-jwks-${AWS::AccountId}/*
             - !Ref AWS::NoValue
 
 Outputs:
   GitHubActionsDeployRoleArn:
-    Description: CI's is in .github/actions/kbdb-pr-stack/action.yml; prod's is the PROD_DEPLOY_ROLE_ARN repo variable
+    Description: CI's is in .github/actions/mykeebs-api-pr-stack/action.yml; prod's is the PROD_DEPLOY_ROLE_ARN repo variable
     Value: !GetAtt GitHubActionsDeployRole.Arn

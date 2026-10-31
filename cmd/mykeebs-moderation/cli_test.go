@@ -38,7 +38,7 @@ func (s *CLISuite) TestParseSince_Invalid() {
 }
 
 func (s *CLISuite) TestKeyArg() {
-	const bucket = "kbdb-images-1-kbdb-dev"
+	const bucket = "mykeebs-images-1-mykeebs-api-dev"
 	const key = "builds/user-1/b1/images/img1"
 	cases := map[string]string{
 		key: key,

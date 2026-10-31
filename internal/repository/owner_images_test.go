@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
@@ -21,7 +21,7 @@ func TestOwnerImagePrefixesSuite(t *testing.T) {
 // Every key format must sit under one of the owner's prefixes, or an
 // account delete would leave that kind of image behind.
 func (s *OwnerImagePrefixesSuite) TestCoversEveryImageKeyFormat() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	build, err := repository.NewBuildImageKey(ctx, "b1", "i1")
 	s.Require().NoError(err)
 	keyboard, err := repository.NewKeyboardImageKey(ctx, "k1", "i1")

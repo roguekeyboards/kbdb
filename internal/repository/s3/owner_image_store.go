@@ -10,7 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 	"github.com/roguekeyboards/mykeebs-api/internal/log"
 	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 	"github.com/roguekeyboards/mykeebs-api/internal/repository/cloudfront"
@@ -34,7 +34,7 @@ func NewOwnerImageStore(client *s3.Client, bucket string, cdn *cloudfront.Invali
 // most 1,000 keys, DeleteObjects' cap, so each page is one delete request.
 // Each prefix that had objects is then invalidated as a wildcard.
 func (s *OwnerImageStore) DeleteAll(ctx context.Context) error {
-	ownerID, ok := kbdbctx.UserID(ctx)
+	ownerID, ok := apictx.UserID(ctx)
 	if !ok {
 		return fmt.Errorf("deleting all images: %w", repository.ErrNoUserID)
 	}

@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 	"github.com/roguekeyboards/mykeebs-api/internal/handlers/api"
 	"github.com/roguekeyboards/mykeebs-api/internal/ownerprefs"
 	"github.com/roguekeyboards/mykeebs-api/internal/problem"
@@ -51,7 +51,7 @@ func (s *ListKeyboardsSuite) newRequest(ctx context.Context, query string) *http
 }
 
 func (s *ListKeyboardsSuite) TestListKeyboards_Owner_RequestsAllVisibilities() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 
 	s.mockRepo.EXPECT().
 		List(mock.Anything, "alice", mock.MatchedBy(func(vis []repository.Visibility) bool {
@@ -88,7 +88,7 @@ func (s *ListKeyboardsSuite) TestListKeyboards_Anonymous_RequestsPublicOnly() {
 }
 
 func (s *ListKeyboardsSuite) TestListKeyboards_OtherUser_RequestsPublicAndAuthenticated() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	s.mockRepo.EXPECT().
 		List(mock.Anything, "alice", mock.MatchedBy(func(vis []repository.Visibility) bool {
@@ -104,7 +104,7 @@ func (s *ListKeyboardsSuite) TestListKeyboards_OtherUser_RequestsPublicAndAuthen
 }
 
 func (s *ListKeyboardsSuite) TestListKeyboards_OwnerShowPriceToMeTrue_IncludesPrice() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	price := 199.99
 
 	s.mockRepo.EXPECT().
@@ -128,7 +128,7 @@ func (s *ListKeyboardsSuite) TestListKeyboards_OwnerShowPriceToMeTrue_IncludesPr
 }
 
 func (s *ListKeyboardsSuite) TestListKeyboards_OwnerShowPriceToMeFalse_OmitsPrice() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	price := 199.99
 
 	s.mockRepo.EXPECT().
@@ -147,7 +147,7 @@ func (s *ListKeyboardsSuite) TestListKeyboards_OwnerShowPriceToMeFalse_OmitsPric
 }
 
 func (s *ListKeyboardsSuite) TestListKeyboards_OwnerShowPriceToMeFalse_KeepsRestOfPurchase() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	price := 199.99
 	vendor := "Amazon"
 
@@ -172,7 +172,7 @@ func (s *ListKeyboardsSuite) TestListKeyboards_OwnerShowPriceToMeFalse_KeepsRest
 }
 
 func (s *ListKeyboardsSuite) TestListKeyboards_NonOwnerShowPriceToOthersFalse_OmitsPrice() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 	price := 199.99
 
 	s.mockRepo.EXPECT().
@@ -191,7 +191,7 @@ func (s *ListKeyboardsSuite) TestListKeyboards_NonOwnerShowPriceToOthersFalse_Om
 }
 
 func (s *ListKeyboardsSuite) TestListKeyboards_NonOwnerShowPriceToOthersTrue_IncludesPrice() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 	price := 199.99
 
 	s.mockRepo.EXPECT().
@@ -215,7 +215,7 @@ func (s *ListKeyboardsSuite) TestListKeyboards_NonOwnerShowPriceToOthersTrue_Inc
 }
 
 func (s *ListKeyboardsSuite) TestListKeyboards_ReturnsEveryImage() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 
 	s.mockRepo.EXPECT().
 		List(mock.Anything, "alice", mock.Anything, 20, "").
@@ -318,7 +318,7 @@ func (s *GetKeyboardSuite) newRequest(ctx context.Context) *http.Request {
 }
 
 func (s *GetKeyboardSuite) TestGetKeyboard_Owner_Succeeds() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	s.prefs = repository.DefaultProfilePreferences()
 
 	s.mockRepo.EXPECT().
@@ -363,7 +363,7 @@ func (s *GetKeyboardSuite) TestGetKeyboard_AnonymousReadingPrivateKeyboard_Retur
 }
 
 func (s *GetKeyboardSuite) TestGetKeyboard_OtherUserReadingAuthenticatedKeyboard_Succeeds() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	s.mockRepo.EXPECT().
 		Get(mock.Anything, "alice", "kb1").
@@ -381,7 +381,7 @@ func (s *GetKeyboardSuite) TestGetKeyboard_OtherUserReadingAuthenticatedKeyboard
 }
 
 func (s *GetKeyboardSuite) TestGetKeyboard_NonOwnerShowPriceToOthersTrue_IncludesPrice() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 	price := 199.99
 
 	s.mockRepo.EXPECT().
@@ -403,7 +403,7 @@ func (s *GetKeyboardSuite) TestGetKeyboard_NonOwnerShowPriceToOthersTrue_Include
 }
 
 func (s *GetKeyboardSuite) TestGetKeyboard_NonOwnerShowPriceToOthersFalse_OmitsPrice() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 	price := 199.99
 
 	s.mockRepo.EXPECT().
@@ -424,7 +424,7 @@ func (s *GetKeyboardSuite) TestGetKeyboard_NonOwnerShowPriceToOthersFalse_OmitsP
 }
 
 func (s *GetKeyboardSuite) TestGetKeyboard_Owner_AlwaysIncludesPriceAndCurrency() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	price := 199.99
 
 	s.mockRepo.EXPECT().
@@ -448,7 +448,7 @@ func (s *GetKeyboardSuite) TestGetKeyboard_Owner_AlwaysIncludesPriceAndCurrency(
 }
 
 func (s *GetKeyboardSuite) TestGetKeyboard_OtherUserReadingPrivateKeyboard_Returns404() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	s.mockRepo.EXPECT().
 		Get(mock.Anything, "alice", "kb1").
@@ -531,7 +531,7 @@ func (s *CreateKeyboardSuite) newRequest(ctx context.Context, body string) *http
 }
 
 func (s *CreateKeyboardSuite) ownerCtx() context.Context {
-	return kbdbctx.WithUserID(s.T().Context(), "alice")
+	return apictx.WithUserID(s.T().Context(), "alice")
 }
 
 func (s *CreateKeyboardSuite) TestCreateKeyboard_Succeeds() {
@@ -688,7 +688,7 @@ func (s *CreateKeyboardSuite) TestCreateKeyboard_InvalidSize_DoesNotCascadeIntoL
 }
 
 func (s *CreateKeyboardSuite) TestCreateKeyboard_NotOwner_Returns404() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	req := s.newRequest(ctx, `{"brand":"Keychron","name":"Q1","visibility":"private"}`)
 	rec := httptest.NewRecorder()
@@ -789,7 +789,7 @@ func (s *UpdateKeyboardSuite) newRequest(ctx context.Context, body string) *http
 }
 
 func (s *UpdateKeyboardSuite) ownerCtx() context.Context {
-	return kbdbctx.WithUserID(s.T().Context(), "alice")
+	return apictx.WithUserID(s.T().Context(), "alice")
 }
 
 func (s *UpdateKeyboardSuite) TestUpdateKeyboard_Succeeds() {
@@ -946,7 +946,7 @@ func (s *UpdateKeyboardSuite) TestUpdateKeyboard_InvalidSize_DoesNotCascadeIntoL
 }
 
 func (s *UpdateKeyboardSuite) TestUpdateKeyboard_NotOwner_Returns404() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	req := s.newRequest(ctx, `{"brand":"Keychron","name":"Q1","visibility":"private"}`)
 	rec := httptest.NewRecorder()
@@ -1052,7 +1052,7 @@ func (s *DeleteKeyboardSuite) newRequest(ctx context.Context, onDelete string) *
 }
 
 func (s *DeleteKeyboardSuite) ownerCtx() context.Context {
-	return kbdbctx.WithUserID(s.T().Context(), "alice")
+	return apictx.WithUserID(s.T().Context(), "alice")
 }
 
 func (s *DeleteKeyboardSuite) TestDeleteKeyboard_Owner_DefaultOnDelete_NoReferences_Returns204() {
@@ -1127,7 +1127,7 @@ func (s *DeleteKeyboardSuite) TestDeleteKeyboard_Owner_InvalidOnDelete_Returns40
 }
 
 func (s *DeleteKeyboardSuite) TestDeleteKeyboard_NotOwner_Returns404() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	rec := httptest.NewRecorder()
 	s.handler(rec, s.newRequest(ctx, ""))
@@ -1210,7 +1210,7 @@ func (s *AddKeyboardImageSuite) newRequest(ctx context.Context, body string) *ht
 }
 
 func (s *AddKeyboardImageSuite) ownerCtx() context.Context {
-	return kbdbctx.WithUserID(s.T().Context(), "alice")
+	return apictx.WithUserID(s.T().Context(), "alice")
 }
 
 func (s *AddKeyboardImageSuite) TestAddKeyboardImage_Succeeds() {
@@ -1242,7 +1242,7 @@ func (s *AddKeyboardImageSuite) TestAddKeyboardImage_Succeeds() {
 }
 
 func (s *AddKeyboardImageSuite) TestAddKeyboardImage_NotOwner_Returns404() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	req := s.newRequest(ctx, `{"content_type":"image/webp","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
@@ -1378,7 +1378,7 @@ func (s *DeleteKeyboardImageSuite) newRequest(ctx context.Context) *http.Request
 }
 
 func (s *DeleteKeyboardImageSuite) ownerCtx() context.Context {
-	return kbdbctx.WithUserID(s.T().Context(), "alice")
+	return apictx.WithUserID(s.T().Context(), "alice")
 }
 
 var deleteKeyboardImageTestKey = repository.KeyboardImageKey("keyboards/alice/kb1/images/img1")
@@ -1433,7 +1433,7 @@ func (s *DeleteKeyboardImageSuite) TestDeleteKeyboardImage_AlreadyAbsent_Succeed
 }
 
 func (s *DeleteKeyboardImageSuite) TestDeleteKeyboardImage_NotOwner_Returns404() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	rec := httptest.NewRecorder()
 	s.handler(rec, s.newRequest(ctx))

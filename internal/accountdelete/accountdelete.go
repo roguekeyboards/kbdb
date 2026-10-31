@@ -1,6 +1,6 @@
 // Package accountdelete deletes a user's whole account: every image they
 // own, every build, keyboard, switch and keycap set, then their profile.
-// kbdb has no account apart from the profile, so the REST profile delete
+// mykeebs-api has no account apart from the profile, so the REST profile delete
 // and MCP's delete_profile both call [Account.Delete].
 package accountdelete
 
@@ -8,7 +8,7 @@ import (
 	"context"
 	"fmt"
 
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 	"github.com/roguekeyboards/mykeebs-api/internal/log"
 	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
@@ -71,7 +71,7 @@ func (a Account) Delete(ctx context.Context) error {
 		return fmt.Errorf("deleting profile: %w", err)
 	}
 	if a.Notices != nil {
-		userID, _ := kbdbctx.UserID(ctx)
+		userID, _ := apictx.UserID(ctx)
 		// The data is already gone; a caller hanging up now mustn't cancel
 		// the notice.
 		if err := a.Notices.Notify(context.WithoutCancel(ctx), userID); err != nil {

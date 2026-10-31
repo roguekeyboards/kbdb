@@ -3,7 +3,7 @@ Description: >
   One-time-per-account bootstrap: the S3 bucket sam build/deploy stages
   CloudFormation templates/artifacts through. Deployed manually, once, via
   `aws cloudformation deploy --template-file bootstrap/artifact-bucket.yaml
-  --stack-name kbdb-bootstrap` before any `sam deploy` in a fresh account -
+  --stack-name mykeebs-api-bootstrap` before any `sam deploy` in a fresh account -
   not something sam deploy can create for itself, since it needs this bucket
   to exist before it can stage the very template that would declare it.
   Exists as an explicit, version-controlled alternative to SAM's own
@@ -14,7 +14,7 @@ Resources:
   ArtifactBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub kbdb-sam-artifacts-${AWS::AccountId}
+      BucketName: !Sub mykeebs-sam-artifacts-${AWS::AccountId}
       VersioningConfiguration:
         Status: Enabled
       LifecycleConfiguration:

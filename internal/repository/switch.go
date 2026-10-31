@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 )
 
 // SwitchMaterial is the housing/stem material makeup of a switch.
@@ -136,7 +136,7 @@ type SwitchImageKey string
 // upload URLs are single-use: a replacement can't be written over the
 // previous object.
 func NewSwitchImageKey(ctx context.Context, switchID, uploadID string) (SwitchImageKey, error) {
-	ownerID, ok := kbdbctx.UserID(ctx)
+	ownerID, ok := apictx.UserID(ctx)
 	if !ok {
 		return "", ErrNoUserID
 	}

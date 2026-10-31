@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 	"github.com/roguekeyboards/mykeebs-api/internal/handlers/api"
 	"github.com/roguekeyboards/mykeebs-api/internal/ownerprefs"
 	"github.com/roguekeyboards/mykeebs-api/internal/problem"
@@ -62,7 +62,7 @@ func (s *KeyboardPlateHandlersSuite) SetupTest() {
 }
 
 func (s *KeyboardPlateHandlersSuite) ownerCtx() context.Context {
-	return kbdbctx.WithUserID(s.T().Context(), "alice")
+	return apictx.WithUserID(s.T().Context(), "alice")
 }
 
 func (s *KeyboardPlateHandlersSuite) TestCreate_AssignsIDAndReturns201() {
@@ -109,7 +109,7 @@ func (s *KeyboardPlateHandlersSuite) TestCreate_KeyboardMissing_Returns404() {
 
 func (s *KeyboardPlateHandlersSuite) TestCreate_NotOwner_Returns404() {
 	rec := httptest.NewRecorder()
-	CreateKeyboardPlate(s.mockRepo, s.kr)(rec, partRequest(kbdbctx.WithUserID(s.T().Context(), "bob"), http.MethodPost,
+	CreateKeyboardPlate(s.mockRepo, s.kr)(rec, partRequest(apictx.WithUserID(s.T().Context(), "bob"), http.MethodPost,
 		"/users/alice/keyboards/kb1/plates", `{"material":"PC"}`, "", ""))
 
 	s.Equal(http.StatusNotFound, rec.Code)
@@ -163,7 +163,7 @@ func (s *DeleteKeyboardPartSuite) SetupTest() {
 }
 
 func (s *DeleteKeyboardPartSuite) ownerCtx() context.Context {
-	return kbdbctx.WithUserID(s.T().Context(), "alice")
+	return apictx.WithUserID(s.T().Context(), "alice")
 }
 
 func (s *DeleteKeyboardPartSuite) deletePlate(onDelete string) *httptest.ResponseRecorder {
@@ -253,7 +253,7 @@ func (s *KeyboardPCBHandlersSuite) SetupTest() {
 }
 
 func (s *KeyboardPCBHandlersSuite) ownerCtx() context.Context {
-	return kbdbctx.WithUserID(s.T().Context(), "alice")
+	return apictx.WithUserID(s.T().Context(), "alice")
 }
 
 func (s *KeyboardPCBHandlersSuite) TestCreate_AssignsIDAndReturns201() {

@@ -7,7 +7,7 @@ import (
 )
 
 // BaseURL returns the API's base URL under test, e.g. "http://127.0.0.1:3000"
-// for a local sam local start-api instance or the real deployed kbdb-dev API
+// for a local sam local start-api instance or the real deployed mykeebs-api-dev API
 // Gateway URL. Configurable via MYKEEBS_API_BASE_URL.
 func BaseURL() string {
 	if v := os.Getenv("MYKEEBS_API_BASE_URL"); v != "" {
@@ -141,7 +141,7 @@ func ImagesInvalidation() bool {
 	return os.Getenv("MYKEEBS_IMAGES_INVALIDATION") == "true"
 }
 
-// RepoRoot returns the kbdb repository's root directory.
+// RepoRoot returns the mykeebs-api repository's root directory.
 func RepoRoot() string {
 	_, file, _, _ := runtime.Caller(0)
 	return filepath.Join(filepath.Dir(file), "..", "..", "..")

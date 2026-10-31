@@ -13,7 +13,7 @@ type GetProfileInput struct {
 
 // ProfilePreferences holds a user's display/visibility preferences.
 type ProfilePreferences struct {
-	Currency          string `json:"currency" jsonschema:"an ISO 4217 currency code; display-only hint for which currency a client should label or convert prices in - kbdb stores no per-item currency and does no conversion"`
+	Currency          string `json:"currency" jsonschema:"an ISO 4217 currency code; display-only hint for which currency a client should label or convert prices in - mykeebs-api stores no per-item currency and does no conversion"`
 	ShowPriceToMe     bool   `json:"show_price_to_me" jsonschema:"whether the owner is shown price fields on their own items in list_* tool results; does not affect get_* tools, which always show the owner their own item's price"`
 	ShowPriceToOthers bool   `json:"show_price_to_others" jsonschema:"whether other callers (subject to the item's own visibility rules) are shown this owner's item prices, in both get_* and list_* tool results"`
 }

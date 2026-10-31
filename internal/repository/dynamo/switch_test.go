@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 	"github.com/roguekeyboards/mykeebs-api/internal/repository/dynamo/mocks"
 )
@@ -207,7 +207,7 @@ func (s *SwitchRepositorySuite) TestCreate_Succeeds() {
 		PutItem(mock.Anything, mock.Anything).
 		Return(&dynamodb.PutItemOutput{}, nil)
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	sw, err := s.repo.Create(ctx, repository.Switch{ID: "sw1", Brand: "Gateron"})
 
 	s.Require().NoError(err)
@@ -219,7 +219,7 @@ func (s *SwitchRepositorySuite) TestCreate_AlreadyExists_ReturnsErrAlreadyExists
 		PutItem(mock.Anything, mock.Anything).
 		Return(nil, &types.ConditionalCheckFailedException{})
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	sw, err := s.repo.Create(ctx, repository.Switch{ID: "sw1"})
 
 	s.Require().ErrorIs(err, repository.ErrAlreadyExists)
@@ -231,7 +231,7 @@ func (s *SwitchRepositorySuite) TestCreate_PutItemError_Propagates() {
 		PutItem(mock.Anything, mock.Anything).
 		Return(nil, errors.New("dynamodb: throttled"))
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	sw, err := s.repo.Create(ctx, repository.Switch{ID: "sw1"})
 
 	s.Require().Error(err)
@@ -267,7 +267,7 @@ func (s *SwitchRepositorySuite) TestUpdate_Succeeds() {
 		})).
 		Return(&dynamodb.UpdateItemOutput{Attributes: s.updatedItem()}, nil)
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	sw, err := s.repo.Update(ctx, repository.Switch{ID: "sw1", Brand: "Gateron"})
 
 	s.Require().NoError(err)
@@ -282,7 +282,7 @@ func (s *SwitchRepositorySuite) TestUpdate_OmittedOptionalFields_AreRemoved() {
 		})).
 		Return(&dynamodb.UpdateItemOutput{Attributes: s.updatedItem()}, nil)
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	_, err := s.repo.Update(ctx, repository.Switch{ID: "sw1", Brand: "Gateron"})
 
 	s.Require().NoError(err)
@@ -295,7 +295,7 @@ func (s *SwitchRepositorySuite) TestUpdate_ReturnsPersistedImagePath() {
 		UpdateItem(mock.Anything, mock.Anything).
 		Return(&dynamodb.UpdateItemOutput{Attributes: after}, nil)
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	sw, err := s.repo.Update(ctx, repository.Switch{ID: "sw1", Brand: "Gateron"})
 
 	s.Require().NoError(err)
@@ -310,7 +310,7 @@ func (s *SwitchRepositorySuite) TestUpdate_ConditionFails_ReturnsErrNotFound() {
 		UpdateItem(mock.Anything, mock.Anything).
 		Return(nil, &types.ConditionalCheckFailedException{})
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	sw, err := s.repo.Update(ctx, repository.Switch{ID: "sw1", Brand: "Gateron"})
 
 	s.Require().ErrorIs(err, repository.ErrNotFound)
@@ -322,7 +322,7 @@ func (s *SwitchRepositorySuite) TestUpdate_UpdateItemError_Propagates() {
 		UpdateItem(mock.Anything, mock.Anything).
 		Return(nil, errors.New("dynamodb: throttled"))
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	sw, err := s.repo.Update(ctx, repository.Switch{ID: "sw1"})
 
 	s.Require().Error(err)
@@ -343,7 +343,7 @@ func (s *SwitchRepositorySuite) TestDelete_Succeeds() {
 		DeleteItem(mock.Anything, mock.Anything).
 		Return(&dynamodb.DeleteItemOutput{}, nil)
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	err := s.repo.Delete(ctx, "sw1")
 
 	s.Require().NoError(err)
@@ -361,7 +361,7 @@ func (s *SwitchRepositorySuite) TestDelete_DeleteItemError_Propagates() {
 		DeleteItem(mock.Anything, mock.Anything).
 		Return(nil, errors.New("dynamodb: throttled"))
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	err := s.repo.Delete(ctx, "sw1")
 
 	s.Require().Error(err)
@@ -375,7 +375,7 @@ func (s *SwitchRepositorySuite) TestSetImagePath_Succeeds() {
 		})).
 		Return(&dynamodb.UpdateItemOutput{}, nil)
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	err := s.repo.SetImagePath(ctx, "sw1", "switches/alice/sw1/image/up1")
 
 	s.Require().NoError(err)
@@ -386,7 +386,7 @@ func (s *SwitchRepositorySuite) TestSetImagePath_NotFound_ReturnsErrNotFound() {
 		UpdateItem(mock.Anything, mock.Anything).
 		Return(nil, &types.ConditionalCheckFailedException{})
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	err := s.repo.SetImagePath(ctx, "sw1", "p")
 
 	s.Require().ErrorIs(err, repository.ErrNotFound)
@@ -397,7 +397,7 @@ func (s *SwitchRepositorySuite) TestSetImagePath_UpdateItemError_Propagates() {
 		UpdateItem(mock.Anything, mock.Anything).
 		Return(nil, errors.New("dynamodb: throttled"))
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	err := s.repo.SetImagePath(ctx, "sw1", "p")
 
 	s.Require().Error(err)
@@ -421,7 +421,7 @@ func (s *SwitchRepositorySuite) TestClearImagePath_Succeeds() {
 			"image_path": &types.AttributeValueMemberS{Value: "switches/alice/sw1/image/up1"},
 		}}, nil)
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	cleared, err := s.repo.ClearImagePath(ctx, "sw1")
 
 	s.Require().NoError(err)
@@ -437,7 +437,7 @@ func (s *SwitchRepositorySuite) TestClearImagePath_ImageAlreadyAbsent_ReturnsNil
 			"id": &types.AttributeValueMemberS{Value: "sw1"},
 		}}, nil)
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	cleared, err := s.repo.ClearImagePath(ctx, "sw1")
 
 	s.Require().NoError(err)
@@ -449,7 +449,7 @@ func (s *SwitchRepositorySuite) TestClearImagePath_NotFound_ReturnsErrNotFound()
 		UpdateItem(mock.Anything, mock.Anything).
 		Return(nil, &types.ConditionalCheckFailedException{})
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	cleared, err := s.repo.ClearImagePath(ctx, "sw1")
 
 	s.Require().ErrorIs(err, repository.ErrNotFound)
@@ -473,7 +473,7 @@ func (s *SwitchRepositorySuite) TestSetImagePath_MarksPending() {
 		})).
 		Return(&dynamodb.UpdateItemOutput{}, nil)
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	s.Require().NoError(s.repo.SetImagePath(ctx, "sw1", "switches/alice/sw1/image/up1"))
 
 	s.True(setsAttr(captured, "image_status"))
@@ -490,7 +490,7 @@ func (s *SwitchRepositorySuite) TestClearImagePath_ClearsStatus() {
 		})).
 		Return(&dynamodb.UpdateItemOutput{}, nil)
 
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	_, err := s.repo.ClearImagePath(ctx, "sw1")
 	s.Require().NoError(err)
 

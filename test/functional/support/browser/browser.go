@@ -17,7 +17,7 @@ import (
 
 // PublicToken is the IdpConsentPublicToken scripts/func-setup.sh and ci.yml
 // deploy the stack under test with.
-const PublicToken = "public-token-test-local-kbdb" //nolint:gosec // a deploy parameter for test stacks, not a credential.
+const PublicToken = "public-token-test-local-mykeebs-api" //nolint:gosec // a deploy parameter for test stacks, not a credential.
 
 // Browser is one headless Chromium for a suite process.
 type Browser struct {

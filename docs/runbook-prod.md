@@ -10,7 +10,7 @@ What to do when something goes wrong in production, and how to do the rare jobs 
 |---|---|
 | API | `https://api.mykeebs.info` |
 | AWS account | `kbdb-prod` (`416860882648`), region `us-east-2` |
-| Stack | `kbdb-prod`, defined by the `[prod]` section of `samconfig.toml` |
+| Stack | `mykeebs-api-prod`, defined by the `[prod]` section of `samconfig.toml` |
 | Identity provider | the Stytch **Live** project, issuer `https://auth.mykeebs.info` |
 | Alarm emails | `kbdb-alerts-prd@mykeebs.com` |
 | Budget emails | `kbdb-budget-prd@mykeebs.com` |
@@ -35,12 +35,12 @@ To see what the API function logged around a time (change the start and end to b
 ```sh
 START=$(date -j -u -f %Y-%m-%dT%H:%M:%S 2026-10-19T18:10:00 +%s)000
 END=$(date -j -u -f %Y-%m-%dT%H:%M:%S 2026-10-19T18:20:00 +%s)000
-aws logs filter-log-events --log-group-name /aws/lambda/kbdb-api-kbdb-prod \
+aws logs filter-log-events --log-group-name /aws/lambda/mykeebs-api-prod \
   --start-time $START --end-time $END --output json |
   jq -r '.events[] | "\(.timestamp/1000 | strftime("%H:%M:%S")) \(.message)"'
 ```
 
-Use `/aws/lambda/kbdb-moderate-kbdb-prod` for the moderation function.
+Use `/aws/lambda/mykeebs-api-prod-moderate` for the moderation function.
 
 | Alarm | What it means | Where to start |
 |---|---|---|
@@ -52,7 +52,7 @@ Use `/aws/lambda/kbdb-moderate-kbdb-prod` for the moderation function.
 
 ## When an account is deleted
 
-Deleting a profile deletes the whole account in kbdb, but not the user's sign-in record at Stytch (Discord ID, username, email): kbdb holds no Stytch secret. Each delete emails the alarm address a notice, "kbdb: account deleted, remove the user from the identity provider", naming the user ID (`user-live-…`). The privacy policy promises removal within 30 days.
+Deleting a profile deletes the whole account in mykeebs-api, but not the user's sign-in record at Stytch (Discord ID, username, email): mykeebs-api holds no Stytch secret. Each delete emails the alarm address a notice, "mykeebs-api: account deleted, remove the user from the identity provider", naming the user ID (`user-live-…`). The privacy policy promises removal within 30 days.
 
 1. In the Stytch dashboard for the Live project, open **Users** and search for the user ID.
 2. Delete the user.
@@ -82,7 +82,7 @@ The privacy policy promises an answer within 30 days. Check the request comes fr
 
 The budget is $10 a month, emailing at 80% and 100%. Prod normally costs pennies.
 
-1. **Find what's costing money:** Cost Explorer in the `kbdb-prod` console, grouped by service, daily.
+1. **Find what's costing money:** Cost Explorer in the `mykeebs-api-prod` console, grouped by service, daily.
 2. **If it's Rekognition**: pause moderation (`mise run moderation-pause prod`; see the [moderation guide](moderation.md#pausing-moderation)).
 3. **If it's CloudFront data transfer**: use the image switch below.
 4. **If you need to stop spending right now**, use one of the emergency switches below. Both are made outside the template: undo them by hand, and check they're still in place after any deploy.
@@ -91,17 +91,17 @@ Emergency switches:
 
 ```sh
 # Stop all API traffic: every request fails until you undo it.
-aws lambda put-function-concurrency --function-name kbdb-api-kbdb-prod \
+aws lambda put-function-concurrency --function-name mykeebs-api-prod \
   --reserved-concurrent-executions 0
 # Undo (15 is ApiReservedConcurrency in samconfig.toml's [prod] section):
-aws lambda put-function-concurrency --function-name kbdb-api-kbdb-prod \
+aws lambda put-function-concurrency --function-name mykeebs-api-prod \
   --reserved-concurrent-executions 15
 ```
 
 That stops new image links being issued too, but links already handed out keep working until they expire (up to 24 hours). To stop those immediately, disable the images distribution:
 
 ```sh
-DIST=$(aws cloudformation describe-stacks --stack-name kbdb-prod \
+DIST=$(aws cloudformation describe-stacks --stack-name mykeebs-api-prod \
   --query "Stacks[0].Outputs[?OutputKey=='ImagesDistributionId'].OutputValue" --output text)
 aws cloudfront get-distribution-config --id "$DIST" > dist.json
 jq '.DistributionConfig.Enabled = false | .DistributionConfig' dist.json > disabled.json
@@ -136,15 +136,15 @@ A failed release that added something the deploy role can't delete (a table, say
 
 1. Find the resource that couldn't be rolled back:
    ```sh
-   aws cloudformation describe-stack-events --stack-name kbdb-prod \
+   aws cloudformation describe-stack-events --stack-name mykeebs-api-prod \
      --query "StackEvents[?ResourceStatus=='DELETE_FAILED'].[LogicalResourceId,PhysicalResourceId,ResourceStatusReason]" \
      --output table
    ```
 2. Tell CloudFormation to skip it and finish the rollback:
    ```sh
-   aws cloudformation continue-update-rollback --stack-name kbdb-prod \
+   aws cloudformation continue-update-rollback --stack-name mykeebs-api-prod \
      --resources-to-skip <LogicalResourceId>
-   aws cloudformation wait stack-rollback-complete --stack-name kbdb-prod
+   aws cloudformation wait stack-rollback-complete --stack-name mykeebs-api-prod
    ```
 3. Delete the leftover resource by hand (its name is the `PhysicalResourceId` from step 1). It isn't part of the stack anymore.
 4. Re-run the failed deploy, or merge a fix.
@@ -167,7 +167,7 @@ PITR restores a table as it was at any second in the last 35 days, but only into
 
 1. Find the live table's name (`SwitchTableName`, `KeyboardTableName`, `KeycapSetTableName`, `BuildTableName`, `ProfileTableName` or `ProfileUsernameTableName`):
    ```sh
-   LIVE=$(aws cloudformation describe-stacks --stack-name kbdb-prod \
+   LIVE=$(aws cloudformation describe-stacks --stack-name mykeebs-api-prod \
      --query "Stacks[0].Outputs[?OutputKey=='KeyboardTableName'].OutputValue" --output text)
    ```
 2. Restore it as a new table, at a time in UTC, then wait:
@@ -219,22 +219,22 @@ Use `dump --impersonate` to dump their account; see [Exporting another user's ac
 1. Take a `mykeebs-migrate dump` of every account whose data you want to keep. Don't keep those dumps once they've been restored somewhere else.
 2. Turn off deletion protection on every table:
    ```sh
-   for t in $(aws dynamodb list-tables --query 'TableNames[?starts_with(@, `kbdb-prod-`)]' --output text); do
+   for t in $(aws dynamodb list-tables --query 'TableNames[?starts_with(@, `mykeebs-api-prod-`)]' --output text); do
      aws dynamodb update-table --table-name "$t" --no-deletion-protection-enabled >/dev/null
    done
    ```
 3. Empty the images bucket, then delete the stack:
    ```sh
-   aws s3 rm s3://kbdb-images-416860882648-kbdb-prod --recursive
-   aws cloudformation delete-stack --stack-name kbdb-prod
-   aws cloudformation wait stack-delete-complete --stack-name kbdb-prod
+   aws s3 rm s3://mykeebs-images-416860882648-mykeebs-api-prod --recursive
+   aws cloudformation delete-stack --stack-name mykeebs-api-prod
+   aws cloudformation wait stack-delete-complete --stack-name mykeebs-api-prod
    ```
 4. Delete the image repository and its stack (the repository is kept when its stack is deleted):
    ```sh
-   aws cloudformation delete-stack --stack-name kbdb-ecr-bootstrap-kbdb-prod
-   aws ecr delete-repository --repository-name kbdb-api-kbdb-prod --force
+   aws cloudformation delete-stack --stack-name mykeebs-api-ecr-bootstrap-mykeebs-api-prod
+   aws ecr delete-repository --repository-name mykeebs-api-prod --force
    ```
-5. Stop the GitHub deploys by deleting the `kbdb-prod-oidc` stack, and delete the `api.mykeebs.info` CNAME in Cloudflare.
+5. Stop the GitHub deploys by deleting the `mykeebs-api-prod-oidc` stack, and delete the `api.mykeebs.info` CNAME in Cloudflare.
 6. Delete the Stytch Live project, which holds everyone's Discord ID, name, avatar and email. Then delete the prod application in the Discord developer portal.
-7. The remaining bootstrap stacks (`kbdb-bootstrap`, the artifact bucket, and `kbdb-stack-boundary`) cost nothing to keep. Delete them only if the account itself is going away.
+7. The remaining bootstrap stacks (`mykeebs-api-bootstrap`, the artifact bucket, and `mykeebs-api-stack-boundary`) cost nothing to keep. Delete them only if the account itself is going away.
 

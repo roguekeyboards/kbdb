@@ -10,7 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
@@ -27,7 +27,7 @@ const unprocessedRetries = 5
 // partition's keys a page at a time, reading consistently so an item
 // written just before isn't missed, and batch-deletes each page.
 func deleteOwnerItems(ctx context.Context, client dynamoAPI, tableName string) error {
-	ownerID, ok := kbdbctx.UserID(ctx)
+	ownerID, ok := apictx.UserID(ctx)
 	if !ok {
 		return fmt.Errorf("deleting all items in %s: %w", tableName, repository.ErrNoUserID)
 	}

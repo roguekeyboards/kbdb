@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math"
 
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 )
 
 // KeycapKitPurchase tracks a kit's own purchase lifecycle, independent of
@@ -236,7 +236,7 @@ type KeycapKitImageKey string
 // own key because upload URLs are single-use: a replacement can't be
 // written over the previous object.
 func NewKeycapKitImageKey(ctx context.Context, setID, kitID, uploadID string) (KeycapKitImageKey, error) {
-	ownerID, ok := kbdbctx.UserID(ctx)
+	ownerID, ok := apictx.UserID(ctx)
 	if !ok {
 		return "", ErrNoUserID
 	}

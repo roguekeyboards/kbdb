@@ -5,8 +5,8 @@
 set -euo pipefail
 
 REGION="${AWS_REGION:-${AWS_DEFAULT_REGION:-us-east-2}}"
-PRIVATE_KEY_PARAM=/kbdb/image-delivery/private-key
-PUBLIC_KEY_PARAM=/kbdb/image-delivery/public-key
+PRIVATE_KEY_PARAM=/mykeebs-api/image-delivery/private-key
+PUBLIC_KEY_PARAM=/mykeebs-api/image-delivery/public-key
 
 param_exists() {
   local err
@@ -52,5 +52,5 @@ fi
 
 aws cloudformation deploy --region "$REGION" \
   --template-file bootstrap/image-delivery.yaml \
-  --stack-name kbdb-image-delivery \
+  --stack-name mykeebs-api-image-delivery \
   --no-fail-on-empty-changeset

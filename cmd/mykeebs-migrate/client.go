@@ -17,7 +17,7 @@ import (
 // listPageLimit is the max the API accepts (api/openapi.yaml: Limit max 100).
 const listPageLimit = 100
 
-// apiClient is a thin wrapper over net/http for the kbdb REST API: it attaches
+// apiClient is a thin wrapper over net/http for the mykeebs-api REST API: it attaches
 // the bearer token, handles JSON encode/decode, and reports non-2xx responses
 // with their body.
 type apiClient struct {

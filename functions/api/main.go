@@ -1,4 +1,4 @@
-// Command api is the kbdb API server. It is a plain net/http server with no
+// Command api is the mykeebs-api API server. It is a plain net/http server with no
 // Lambda-specific code — in production it runs behind the aws-lambda-web-adapter
 // extension, which translates API Gateway events into real HTTP requests
 // against this process.

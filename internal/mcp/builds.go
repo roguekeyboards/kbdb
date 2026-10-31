@@ -13,7 +13,7 @@ import (
 
 	"github.com/roguekeyboards/mykeebs-api/internal/authz"
 	"github.com/roguekeyboards/mykeebs-api/internal/buildrefs"
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 	"github.com/roguekeyboards/mykeebs-api/internal/log"
 	"github.com/roguekeyboards/mykeebs-api/internal/lookup"
 	"github.com/roguekeyboards/mykeebs-api/internal/mcp/schema"
@@ -188,7 +188,7 @@ func handleCreateBuild(
 			return nil, schema.CreateBuildOutput{}, err
 		}
 
-		ownerID, ok := kbdbctx.UserID(ctx)
+		ownerID, ok := apictx.UserID(ctx)
 		if !ok {
 			return nil, schema.CreateBuildOutput{}, errNoCaller
 		}
@@ -248,7 +248,7 @@ func handleUpdateBuild(
 			return nil, schema.UpdateBuildOutput{}, err
 		}
 
-		ownerID, ok := kbdbctx.UserID(ctx)
+		ownerID, ok := apictx.UserID(ctx)
 		if !ok {
 			return nil, schema.UpdateBuildOutput{}, errNoCaller
 		}

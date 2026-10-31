@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 	"github.com/roguekeyboards/mykeebs-api/internal/handlers/api"
 	"github.com/roguekeyboards/mykeebs-api/internal/ownerprefs"
 	"github.com/roguekeyboards/mykeebs-api/internal/problem"
@@ -50,7 +50,7 @@ func (s *ListKeycapSetsSuite) newRequest(ctx context.Context, query string) *htt
 }
 
 func (s *ListKeycapSetsSuite) TestListKeycapSets_Owner_RequestsAllVisibilities() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 
 	s.mockRepo.EXPECT().
 		List(mock.Anything, "alice", mock.MatchedBy(func(vis []repository.Visibility) bool {
@@ -85,7 +85,7 @@ func (s *ListKeycapSetsSuite) TestListKeycapSets_Anonymous_RequestsPublicOnly() 
 }
 
 func (s *ListKeycapSetsSuite) TestListKeycapSets_OtherUser_RequestsPublicAndAuthenticated() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	s.mockRepo.EXPECT().
 		List(mock.Anything, "alice", mock.MatchedBy(func(vis []repository.Visibility) bool {
@@ -101,7 +101,7 @@ func (s *ListKeycapSetsSuite) TestListKeycapSets_OtherUser_RequestsPublicAndAuth
 }
 
 func (s *ListKeycapSetsSuite) TestListKeycapSets_OwnerShowPriceToMeTrue_IncludesTotalCost() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	price := 120.00
 
 	s.mockRepo.EXPECT().
@@ -131,7 +131,7 @@ func (s *ListKeycapSetsSuite) TestListKeycapSets_OwnerShowPriceToMeTrue_Includes
 }
 
 func (s *ListKeycapSetsSuite) TestListKeycapSets_OwnerShowPriceToMeFalse_OmitsTotalCost() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	price := 120.00
 
 	s.mockRepo.EXPECT().
@@ -157,7 +157,7 @@ func (s *ListKeycapSetsSuite) TestListKeycapSets_OwnerShowPriceToMeFalse_OmitsTo
 }
 
 func (s *ListKeycapSetsSuite) TestListKeycapSets_NonOwnerShowPriceToOthersFalse_OmitsTotalCost() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 	price := 120.00
 
 	s.mockRepo.EXPECT().
@@ -183,7 +183,7 @@ func (s *ListKeycapSetsSuite) TestListKeycapSets_NonOwnerShowPriceToOthersFalse_
 }
 
 func (s *ListKeycapSetsSuite) TestListKeycapSets_NonOwnerShowPriceToOthersTrue_IncludesTotalCost() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 	price := 120.00
 
 	s.mockRepo.EXPECT().
@@ -325,7 +325,7 @@ func (s *GetKeycapSetSuite) newRequest(ctx context.Context) *http.Request {
 }
 
 func (s *GetKeycapSetSuite) TestGetKeycapSet_Owner_Succeeds() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	s.prefs = repository.DefaultProfilePreferences()
 
 	s.mockRepo.EXPECT().
@@ -346,7 +346,7 @@ func (s *GetKeycapSetSuite) TestGetKeycapSet_Owner_Succeeds() {
 }
 
 func (s *GetKeycapSetSuite) TestGetKeycapSet_KitWithImagePath_IncludesSignedURL() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	s.prefs = repository.DefaultProfilePreferences()
 	imagePath := repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit1/image/up1")
 
@@ -398,7 +398,7 @@ func (s *GetKeycapSetSuite) TestGetKeycapSet_AnonymousReadingPrivateKeycapSet_Re
 }
 
 func (s *GetKeycapSetSuite) TestGetKeycapSet_OtherUserReadingAuthenticatedKeycapSet_Succeeds() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	s.mockRepo.EXPECT().
 		Get(mock.Anything, "alice", "ks1").
@@ -416,7 +416,7 @@ func (s *GetKeycapSetSuite) TestGetKeycapSet_OtherUserReadingAuthenticatedKeycap
 }
 
 func (s *GetKeycapSetSuite) TestGetKeycapSet_NonOwnerShowPriceToOthersTrue_IncludesKitPrice() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 	price := 120.00
 
 	s.mockRepo.EXPECT().
@@ -440,7 +440,7 @@ func (s *GetKeycapSetSuite) TestGetKeycapSet_NonOwnerShowPriceToOthersTrue_Inclu
 }
 
 func (s *GetKeycapSetSuite) TestGetKeycapSet_NonOwnerShowPriceToOthersFalse_OmitsKitPrice() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 	price := 120.00
 
 	s.mockRepo.EXPECT().
@@ -463,7 +463,7 @@ func (s *GetKeycapSetSuite) TestGetKeycapSet_NonOwnerShowPriceToOthersFalse_Omit
 }
 
 func (s *GetKeycapSetSuite) TestGetKeycapSet_Owner_AlwaysIncludesKitPriceAndCurrency() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	price := 120.00
 
 	s.mockRepo.EXPECT().
@@ -489,7 +489,7 @@ func (s *GetKeycapSetSuite) TestGetKeycapSet_Owner_AlwaysIncludesKitPriceAndCurr
 }
 
 func (s *GetKeycapSetSuite) TestGetKeycapSet_OtherUserReadingPrivateKeycapSet_Returns404() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	s.mockRepo.EXPECT().
 		Get(mock.Anything, "alice", "ks1").
@@ -527,7 +527,7 @@ func (s *GetKeycapSetSuite) TestGetKeycapSet_RepositoryError_Returns500() {
 }
 
 func (s *GetKeycapSetSuite) TestGetKeycapSet_MalformedKitPurchaseDate_Returns500NotPanic() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	s.prefs = repository.DefaultProfilePreferences()
 	malformedDate := "not-a-date"
 	s.mockRepo.EXPECT().
@@ -573,7 +573,7 @@ func (s *CreateKeycapSetSuite) newRequest(ctx context.Context, body string) *htt
 }
 
 func (s *CreateKeycapSetSuite) ownerCtx() context.Context {
-	return kbdbctx.WithUserID(s.T().Context(), "alice")
+	return apictx.WithUserID(s.T().Context(), "alice")
 }
 
 func (s *CreateKeycapSetSuite) TestCreateKeycapSet_Succeeds() {
@@ -661,7 +661,7 @@ func (s *CreateKeycapSetSuite) TestCreateKeycapSet_MultipleInvalidFields_NamesAl
 }
 
 func (s *CreateKeycapSetSuite) TestCreateKeycapSet_NotOwner_Returns404() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	req := s.newRequest(ctx, `{"brand":"GMK","name":"Laser","visibility":"private"}`)
 	rec := httptest.NewRecorder()
@@ -744,7 +744,7 @@ func (s *UpdateKeycapSetSuite) newRequest(ctx context.Context, body string) *htt
 }
 
 func (s *UpdateKeycapSetSuite) ownerCtx() context.Context {
-	return kbdbctx.WithUserID(s.T().Context(), "alice")
+	return apictx.WithUserID(s.T().Context(), "alice")
 }
 
 func (s *UpdateKeycapSetSuite) TestUpdateKeycapSet_Succeeds() {
@@ -832,7 +832,7 @@ func (s *UpdateKeycapSetSuite) TestUpdateKeycapSet_MultipleInvalidFields_NamesAl
 }
 
 func (s *UpdateKeycapSetSuite) TestUpdateKeycapSet_NotOwner_Returns404() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	req := s.newRequest(ctx, `{"brand":"GMK","name":"Laser","visibility":"private"}`)
 	rec := httptest.NewRecorder()
@@ -920,7 +920,7 @@ func (s *DeleteKeycapSetSuite) newRequest(ctx context.Context, onDelete string) 
 }
 
 func (s *DeleteKeycapSetSuite) ownerCtx() context.Context {
-	return kbdbctx.WithUserID(s.T().Context(), "alice")
+	return apictx.WithUserID(s.T().Context(), "alice")
 }
 
 func (s *DeleteKeycapSetSuite) TestDeleteKeycapSet_Owner_Succeeds() {
@@ -1000,7 +1000,7 @@ func (s *DeleteKeycapSetSuite) TestDeleteKeycapSet_RepositoryNotFound_StillRetur
 }
 
 func (s *DeleteKeycapSetSuite) TestDeleteKeycapSet_NotOwner_Returns404() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	rec := httptest.NewRecorder()
 	s.handler(rec, s.newRequest(ctx, ""))
@@ -1121,7 +1121,7 @@ func (s *CreateKeycapKitSuite) newRequest(ctx context.Context, body string) *htt
 }
 
 func (s *CreateKeycapKitSuite) ownerCtx() context.Context {
-	return kbdbctx.WithUserID(s.T().Context(), "alice")
+	return apictx.WithUserID(s.T().Context(), "alice")
 }
 
 func (s *CreateKeycapKitSuite) TestCreateKeycapKit_Succeeds() {
@@ -1203,7 +1203,7 @@ func (s *CreateKeycapKitSuite) TestCreateKeycapKit_ValidatesOpenVocabularyFields
 }
 
 func (s *CreateKeycapKitSuite) TestCreateKeycapKit_NotOwner_Returns404() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	req := s.newRequest(ctx, `{"name":"Base"}`)
 	rec := httptest.NewRecorder()
@@ -1287,7 +1287,7 @@ func (s *UpdateKeycapKitSuite) newRequest(ctx context.Context, body string) *htt
 }
 
 func (s *UpdateKeycapKitSuite) ownerCtx() context.Context {
-	return kbdbctx.WithUserID(s.T().Context(), "alice")
+	return apictx.WithUserID(s.T().Context(), "alice")
 }
 
 func (s *UpdateKeycapKitSuite) TestUpdateKeycapKit_Succeeds() {
@@ -1369,7 +1369,7 @@ func (s *UpdateKeycapKitSuite) TestUpdateKeycapKit_ValidatesOpenVocabularyFields
 }
 
 func (s *UpdateKeycapKitSuite) TestUpdateKeycapKit_NotOwner_Returns404() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	req := s.newRequest(ctx, `{"name":"Extension"}`)
 	rec := httptest.NewRecorder()
@@ -1458,7 +1458,7 @@ func (s *DeleteKeycapKitSuite) newRequest(ctx context.Context, onDelete string) 
 }
 
 func (s *DeleteKeycapKitSuite) ownerCtx() context.Context {
-	return kbdbctx.WithUserID(s.T().Context(), "alice")
+	return apictx.WithUserID(s.T().Context(), "alice")
 }
 
 func (s *DeleteKeycapKitSuite) TestDeleteKeycapKit_Succeeds() {
@@ -1522,7 +1522,7 @@ func (s *DeleteKeycapKitSuite) TestDeleteKeycapKit_ImageDeleteFails_Returns500_D
 }
 
 func (s *DeleteKeycapKitSuite) TestDeleteKeycapKit_NotOwner_Returns404() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	req := s.newRequest(ctx, "")
 	rec := httptest.NewRecorder()
@@ -1662,7 +1662,7 @@ func (s *SetKeycapKitImageSuite) newRequest(ctx context.Context, body string) *h
 }
 
 func (s *SetKeycapKitImageSuite) ownerCtx() context.Context {
-	return kbdbctx.WithUserID(s.T().Context(), "alice")
+	return apictx.WithUserID(s.T().Context(), "alice")
 }
 
 const previousKeycapKitImageTestKey = repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit1/image/old-upload")
@@ -1733,7 +1733,7 @@ func (s *SetKeycapKitImageSuite) TestSetKeycapKitImage_ReplacingImage_DeletesPre
 }
 
 func (s *SetKeycapKitImageSuite) TestSetKeycapKitImage_NotOwner_Returns404() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	req := s.newRequest(ctx, `{"content_type":"image/webp","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
@@ -1889,7 +1889,7 @@ func (s *DeleteKeycapKitImageSuite) newRequest(ctx context.Context) *http.Reques
 }
 
 func (s *DeleteKeycapKitImageSuite) ownerCtx() context.Context {
-	return kbdbctx.WithUserID(s.T().Context(), "alice")
+	return apictx.WithUserID(s.T().Context(), "alice")
 }
 
 var deleteKeycapKitImageTestKey = repository.KeycapKitImageKey("keycap-sets/alice/ks1/kits/kit1/image/up1")
@@ -1956,7 +1956,7 @@ func (s *DeleteKeycapKitImageSuite) TestDeleteKeycapKitImage_KitNotInSet_Returns
 }
 
 func (s *DeleteKeycapKitImageSuite) TestDeleteKeycapKitImage_NotOwner_Returns404() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	req := s.newRequest(ctx)
 	rec := httptest.NewRecorder()

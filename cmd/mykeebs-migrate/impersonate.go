@@ -22,7 +22,7 @@ const sessionPath = "/impersonate/session"
 // Stytch's browser SDK can do that without the project secret, and only from
 // a page on one of the project's authorized SDK domains. It loads the SDK
 // from jsDelivr rather than a copy kept here, and revokes the session once it
-// has the JWT: kbdb checks the JWT itself, which still works until it
+// has the JWT: mykeebs-api checks the JWT itself, which still works until it
 // expires.
 var impersonationPage = template.Must(template.New("impersonate").Parse(`<!doctype html>
 <meta charset=utf-8><title>mykeebs-migrate</title>

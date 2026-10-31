@@ -11,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
@@ -114,7 +114,7 @@ func (r *SwitchRepository) Get(ctx context.Context, ownerID, id string) (*reposi
 
 // Create implements repository.SwitchRepository.
 func (r *SwitchRepository) Create(ctx context.Context, sw repository.Switch) (*repository.Switch, error) {
-	ownerID, ok := kbdbctx.UserID(ctx)
+	ownerID, ok := apictx.UserID(ctx)
 	if !ok {
 		return nil, fmt.Errorf("creating switch %q: %w", sw.ID, repository.ErrNoUserID)
 	}
@@ -148,7 +148,7 @@ func (r *SwitchRepository) Create(ctx context.Context, sw repository.Switch) (*r
 // removed. id is the sort key, so the condition can only fail when no item
 // exists at (user_id, id) - that's ErrNotFound.
 func (r *SwitchRepository) Update(ctx context.Context, sw repository.Switch) (*repository.Switch, error) {
-	ownerID, ok := kbdbctx.UserID(ctx)
+	ownerID, ok := apictx.UserID(ctx)
 	if !ok {
 		return nil, fmt.Errorf("updating switch %q: %w", sw.ID, repository.ErrNoUserID)
 	}
@@ -202,7 +202,7 @@ func (r *SwitchRepository) Update(ctx context.Context, sw repository.Switch) (*r
 // Delete implements repository.SwitchRepository. Idempotent: a nonexistent
 // id is not an error.
 func (r *SwitchRepository) Delete(ctx context.Context, id string) error {
-	ownerID, ok := kbdbctx.UserID(ctx)
+	ownerID, ok := apictx.UserID(ctx)
 	if !ok {
 		return fmt.Errorf("deleting switch %q: %w", id, repository.ErrNoUserID)
 	}
@@ -241,7 +241,7 @@ func setOrRemovePtr[T any](update expression.UpdateBuilder, name string, v *T) e
 
 // SetImagePath implements repository.SwitchRepository.
 func (r *SwitchRepository) SetImagePath(ctx context.Context, id string, key repository.SwitchImageKey) error {
-	ownerID, ok := kbdbctx.UserID(ctx)
+	ownerID, ok := apictx.UserID(ctx)
 	if !ok {
 		return fmt.Errorf("setting image path for switch %q: %w", id, repository.ErrNoUserID)
 	}
@@ -278,7 +278,7 @@ func (r *SwitchRepository) SetImagePath(ctx context.Context, id string, key repo
 // ClearImagePath implements repository.SwitchRepository. ALL_OLD reports the
 // key that was cleared, or nil when nothing was set.
 func (r *SwitchRepository) ClearImagePath(ctx context.Context, id string) (*repository.SwitchImageKey, error) {
-	ownerID, ok := kbdbctx.UserID(ctx)
+	ownerID, ok := apictx.UserID(ctx)
 	if !ok {
 		return nil, fmt.Errorf("clearing image path for switch %q: %w", id, repository.ErrNoUserID)
 	}

@@ -18,7 +18,7 @@ import (
 
 const (
 	testQueue    = "https://sqs.us-east-2.amazonaws.com/1/dlq"
-	testFunction = "kbdb-moderate-test"
+	testFunction = "mykeebs-api-moderate-test"
 )
 
 // A RetriesExhausted record as Lambda writes it, for an object key S3

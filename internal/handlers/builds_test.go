@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 	"github.com/roguekeyboards/mykeebs-api/internal/handlers/api"
 	"github.com/roguekeyboards/mykeebs-api/internal/ownerprefs"
 	"github.com/roguekeyboards/mykeebs-api/internal/problem"
@@ -86,7 +86,7 @@ func (s *CreateBuildSuite) newRequest(ctx context.Context, body string) *http.Re
 }
 
 func (s *CreateBuildSuite) ownerCtx() context.Context {
-	return kbdbctx.WithUserID(s.T().Context(), "alice")
+	return apictx.WithUserID(s.T().Context(), "alice")
 }
 
 func (s *CreateBuildSuite) TestCreateBuild_Succeeds() {
@@ -198,7 +198,7 @@ func (s *CreateBuildSuite) TestCreateBuild_DurometerWithoutDurometerSupport_Retu
 }
 
 func (s *CreateBuildSuite) TestCreateBuild_NotOwner_Returns404() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	req := s.newRequest(ctx, `{"keyboard":"kb1","visibility":"private"}`)
 	rec := httptest.NewRecorder()
@@ -449,7 +449,7 @@ func (s *UpdateBuildSuite) newRequest(ctx context.Context, body string) *http.Re
 }
 
 func (s *UpdateBuildSuite) ownerCtx() context.Context {
-	return kbdbctx.WithUserID(s.T().Context(), "alice")
+	return apictx.WithUserID(s.T().Context(), "alice")
 }
 
 func (s *UpdateBuildSuite) TestUpdateBuild_Succeeds() {
@@ -518,7 +518,7 @@ func (s *UpdateBuildSuite) TestUpdateBuild_ValidatesOpenVocabularyFields() {
 }
 
 func (s *UpdateBuildSuite) TestUpdateBuild_NotOwner_Returns404() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	req := s.newRequest(ctx, `{"keyboard":"kb1","visibility":"private"}`)
 	rec := httptest.NewRecorder()
@@ -652,7 +652,7 @@ func (s *ListBuildsSuite) TestListBuilds_Empty_ReturnsEmptyItems() {
 		Return([]repository.Build{}, "", nil)
 	s.prefs = repository.ProfilePreferences{}
 
-	req := s.newRequest(kbdbctx.WithUserID(s.T().Context(), "alice"), "limit=20")
+	req := s.newRequest(apictx.WithUserID(s.T().Context(), "alice"), "limit=20")
 	rec := httptest.NewRecorder()
 	s.handler(rec, req)
 
@@ -721,7 +721,7 @@ func (s *ListBuildsSuite) TestListBuilds_OwnerShowPriceToMeTrue_IncludesTotalCos
 		}, nil)
 	s.prefs = repository.ProfilePreferences{Currency: "EUR", ShowPriceToMe: true}
 
-	req := s.newRequest(kbdbctx.WithUserID(s.T().Context(), "alice"), "limit=20")
+	req := s.newRequest(apictx.WithUserID(s.T().Context(), "alice"), "limit=20")
 	rec := httptest.NewRecorder()
 	s.handler(rec, req)
 
@@ -753,7 +753,7 @@ func (s *ListBuildsSuite) TestListBuilds_OwnerShowPriceToMeFalse_OmitsTotalCost(
 		}, nil)
 	s.prefs = repository.ProfilePreferences{ShowPriceToMe: false}
 
-	req := s.newRequest(kbdbctx.WithUserID(s.T().Context(), "alice"), "limit=20")
+	req := s.newRequest(apictx.WithUserID(s.T().Context(), "alice"), "limit=20")
 	rec := httptest.NewRecorder()
 	s.handler(rec, req)
 
@@ -801,7 +801,7 @@ func (s *ListBuildsSuite) TestListBuilds_NonOwnerShowPriceToOthersFalse_OmitsTot
 		}, nil)
 	s.prefs = repository.ProfilePreferences{ShowPriceToOthers: false}
 
-	req := s.newRequest(kbdbctx.WithUserID(s.T().Context(), "bob"), "limit=20")
+	req := s.newRequest(apictx.WithUserID(s.T().Context(), "bob"), "limit=20")
 	rec := httptest.NewRecorder()
 	s.handler(rec, req)
 
@@ -849,7 +849,7 @@ func (s *ListBuildsSuite) TestListBuilds_NonOwnerShowPriceToOthersTrue_IncludesT
 		}, nil)
 	s.prefs = repository.ProfilePreferences{Currency: "EUR", ShowPriceToOthers: true}
 
-	req := s.newRequest(kbdbctx.WithUserID(s.T().Context(), "bob"), "limit=20")
+	req := s.newRequest(apictx.WithUserID(s.T().Context(), "bob"), "limit=20")
 	rec := httptest.NewRecorder()
 	s.handler(rec, req)
 
@@ -928,7 +928,7 @@ func (s *ListBuildsSuite) TestListBuilds_Anonymous_RequestsPublicOnly() {
 }
 
 func (s *ListBuildsSuite) TestListBuilds_OtherUser_RequestsPublicAndAuthenticated() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	s.mockBuildRepo.EXPECT().
 		List(mock.Anything, "alice", mock.MatchedBy(func(vis []repository.Visibility) bool {
@@ -1076,7 +1076,7 @@ func (s *GetBuildSuite) TestGetBuild_NotOwnedAndNotShared_Returns404() {
 }
 
 func (s *GetBuildSuite) TestGetBuild_SharedVisibility_ReturnsBuild() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 	s.stubOwnedKeyboard()
 	s.mockBuildRepo.EXPECT().
 		Get(mock.Anything, "alice", "build1").
@@ -1096,7 +1096,7 @@ func (s *GetBuildSuite) TestGetBuild_SharedVisibility_ReturnsBuild() {
 }
 
 func (s *GetBuildSuite) TestGetBuild_NonOwnerShowPriceToOthersTrue_IncludesStabsPrice() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 	s.stubOwnedKeyboard()
 	s.mockBuildRepo.EXPECT().
 		Get(mock.Anything, "alice", "build1").
@@ -1118,7 +1118,7 @@ func (s *GetBuildSuite) TestGetBuild_NonOwnerShowPriceToOthersTrue_IncludesStabs
 }
 
 func (s *GetBuildSuite) TestGetBuild_NonOwnerShowPriceToOthersFalse_OmitsStabsPrice() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 	s.stubOwnedKeyboard()
 	s.mockBuildRepo.EXPECT().
 		Get(mock.Anything, "alice", "build1").
@@ -1138,7 +1138,7 @@ func (s *GetBuildSuite) TestGetBuild_NonOwnerShowPriceToOthersFalse_OmitsStabsPr
 }
 
 func (s *GetBuildSuite) TestGetBuild_Owner_AlwaysIncludesStabsPriceAndCurrency() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	s.stubOwnedKeyboard()
 	s.mockBuildRepo.EXPECT().
 		Get(mock.Anything, "alice", "build1").
@@ -1202,7 +1202,7 @@ func (s *DeleteBuildSuite) newRequest(ctx context.Context) *http.Request {
 }
 
 func (s *DeleteBuildSuite) ownerCtx() context.Context {
-	return kbdbctx.WithUserID(s.T().Context(), "alice")
+	return apictx.WithUserID(s.T().Context(), "alice")
 }
 
 func (s *DeleteBuildSuite) TestDeleteBuild_Owner_Succeeds() {
@@ -1276,7 +1276,7 @@ func (s *DeleteBuildSuite) TestDeleteBuild_RepositoryNotFound_StillReturns204() 
 }
 
 func (s *DeleteBuildSuite) TestDeleteBuild_NotOwner_Returns404() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	rec := httptest.NewRecorder()
 	s.handler(rec, s.newRequest(ctx))
@@ -1351,7 +1351,7 @@ func (s *AddBuildImageSuite) newRequest(ctx context.Context, body string) *http.
 }
 
 func (s *AddBuildImageSuite) ownerCtx() context.Context {
-	return kbdbctx.WithUserID(s.T().Context(), "alice")
+	return apictx.WithUserID(s.T().Context(), "alice")
 }
 
 func (s *AddBuildImageSuite) TestAddBuildImage_Succeeds() {
@@ -1383,7 +1383,7 @@ func (s *AddBuildImageSuite) TestAddBuildImage_Succeeds() {
 }
 
 func (s *AddBuildImageSuite) TestAddBuildImage_NotOwner_Returns404() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	req := s.newRequest(ctx, `{"content_type":"image/webp","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
@@ -1521,7 +1521,7 @@ func (s *DeleteBuildImageSuite) newRequest(ctx context.Context) *http.Request {
 }
 
 func (s *DeleteBuildImageSuite) ownerCtx() context.Context {
-	return kbdbctx.WithUserID(s.T().Context(), "alice")
+	return apictx.WithUserID(s.T().Context(), "alice")
 }
 
 var deleteBuildImageTestKey = repository.BuildImageKey("builds/alice/build1/images/img1")
@@ -1576,7 +1576,7 @@ func (s *DeleteBuildImageSuite) TestDeleteBuildImage_AlreadyAbsent_SucceedsWitho
 }
 
 func (s *DeleteBuildImageSuite) TestDeleteBuildImage_NotOwner_Returns404() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	rec := httptest.NewRecorder()
 	s.handler(rec, s.newRequest(ctx))
