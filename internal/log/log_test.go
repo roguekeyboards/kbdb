@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/roguekeyboards/kbdb/internal/log"
+	"github.com/roguekeyboards/mykeebs-api/internal/log"
 )
 
 type DeniedReadSuite struct {

@@ -13,7 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	"github.com/roguekeyboards/kbdb/test/functional/support"
+	"github.com/roguekeyboards/mykeebs-api/test/functional/support"
 )
 
 // awsConfig is the SDK configuration for talking to floci.
@@ -65,7 +65,7 @@ func Reject(ctx context.Context, key, reason string) error {
 	if region == "" {
 		region = os.Getenv("AWS_DEFAULT_REGION")
 	}
-	args := []string{"run", "./cmd/kbdb-moderation", "--stack", support.StackName()}
+	args := []string{"run", "./cmd/mykeebs-moderation", "--stack", support.StackName()}
 	if region != "" {
 		args = append(args, "--region", region)
 	}
@@ -77,7 +77,7 @@ func Reject(ctx context.Context, key, reason string) error {
 		cmd.Env = append(cmd.Env, "AWS_ENDPOINT_URL="+endpoint)
 	}
 	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("kbdb-moderation reject: %w: %s", err, out)
+		return fmt.Errorf("mykeebs-moderation reject: %w: %s", err, out)
 	}
 	return nil
 }

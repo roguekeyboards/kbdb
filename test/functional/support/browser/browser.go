@@ -12,7 +12,7 @@ import (
 
 	"github.com/mxschmitt/playwright-go"
 
-	"github.com/roguekeyboards/kbdb/test/functional/support"
+	"github.com/roguekeyboards/mykeebs-api/test/functional/support"
 )
 
 // PublicToken is the IdpConsentPublicToken scripts/func-setup.sh and ci.yml

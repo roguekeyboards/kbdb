@@ -10,10 +10,10 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/coreos/go-oidc/v3/oidc"
-	"github.com/roguekeyboards/kbdb/internal/auth"
-	"github.com/roguekeyboards/kbdb/internal/auth/mocks"
-	ctxpkg "github.com/roguekeyboards/kbdb/internal/ctx"
-	"github.com/roguekeyboards/kbdb/internal/middleware"
+	"github.com/roguekeyboards/mykeebs-api/internal/auth"
+	"github.com/roguekeyboards/mykeebs-api/internal/auth/mocks"
+	ctxpkg "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	"github.com/roguekeyboards/mykeebs-api/internal/middleware"
 )
 
 type OptionalAuthSuite struct {

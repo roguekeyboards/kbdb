@@ -1,6 +1,6 @@
 template: testify
 packages:
-  github.com/roguekeyboards/kbdb/internal/auth:
+  github.com/roguekeyboards/mykeebs-api/internal/auth:
     config:
       dir: '{{.InterfaceDir}}/mocks'
       filename: 'mock_{{.InterfaceName}}.go'
@@ -8,7 +8,7 @@ packages:
       structname: 'MockTokenVerifier'
     interfaces:
       tokenVerifier:
-  github.com/roguekeyboards/kbdb/internal/repository:
+  github.com/roguekeyboards/mykeebs-api/internal/repository:
     config:
       dir: '{{.InterfaceDir}}/mocks'
       filename: 'mock_{{.InterfaceName}}.go'
@@ -53,7 +53,7 @@ packages:
       OwnerImageStore:
         config:
           structname: 'MockOwnerImageStore'
-  github.com/roguekeyboards/kbdb/internal/repository/dynamo:
+  github.com/roguekeyboards/mykeebs-api/internal/repository/dynamo:
     config:
       dir: '{{.InterfaceDir}}/mocks'
       filename: 'mock_{{.InterfaceName}}.go'
@@ -61,7 +61,7 @@ packages:
       structname: 'MockDynamoAPI'
     interfaces:
       dynamoAPI:
-  github.com/roguekeyboards/kbdb/internal/repository/s3:
+  github.com/roguekeyboards/mykeebs-api/internal/repository/s3:
     config:
       dir: '{{.InterfaceDir}}/mocks'
       filename: 'mock_{{.InterfaceName}}.go'
@@ -79,7 +79,7 @@ packages:
       invalidator:
         config:
           structname: 'MockInvalidator'
-  github.com/roguekeyboards/kbdb/internal/repository/cloudfront:
+  github.com/roguekeyboards/mykeebs-api/internal/repository/cloudfront:
     config:
       dir: '{{.InterfaceDir}}/mocks'
       filename: 'mock_{{.InterfaceName}}.go'
@@ -91,7 +91,7 @@ packages:
       cloudfrontAPI:
         config:
           structname: 'MockCloudFrontAPI'
-  github.com/roguekeyboards/kbdb/internal/deletenotice:
+  github.com/roguekeyboards/mykeebs-api/internal/deletenotice:
     config:
       dir: '{{.InterfaceDir}}/mocks'
       filename: 'mock_{{.InterfaceName}}.go'
@@ -99,7 +99,7 @@ packages:
       structname: 'MockSNSAPI'
     interfaces:
       snsAPI:
-  github.com/roguekeyboards/kbdb/internal/accountdelete:
+  github.com/roguekeyboards/mykeebs-api/internal/accountdelete:
     config:
       dir: '{{.InterfaceDir}}/mocks'
       filename: 'mock_{{.InterfaceName}}.go'
@@ -108,7 +108,7 @@ packages:
       Notifier:
         config:
           structname: 'MockNotifier'
-  github.com/roguekeyboards/kbdb/internal/moderation:
+  github.com/roguekeyboards/mykeebs-api/internal/moderation:
     config:
       dir: '{{.InterfaceDir}}/mocks'
       filename: 'mock_{{.InterfaceName}}.go'

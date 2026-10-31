@@ -8,7 +8,7 @@ import (
 
 	"github.com/roguekeyboards/oidc-testkit/pkg/oidctest"
 
-	"github.com/roguekeyboards/kbdb/test/functional/support"
+	"github.com/roguekeyboards/mykeebs-api/test/functional/support"
 )
 
 var (
@@ -21,7 +21,7 @@ func sharedSigner() (*oidctest.Signer, error) {
 	signerOnce.Do(func() {
 		path := support.OidcSigningKeyPath()
 		if path == "" {
-			signerErr = fmt.Errorf("KBDB_OIDC_SIGNING_KEY_PATH is not set - run scripts/func-setup.sh first")
+			signerErr = fmt.Errorf("MYKEEBS_OIDC_SIGNING_KEY_PATH is not set - run scripts/func-setup.sh first")
 			return
 		}
 		pemBytes, err := os.ReadFile(path) //nolint:gosec // path is a deploy-controlled env var

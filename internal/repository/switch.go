@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	kbdbctx "github.com/roguekeyboards/kbdb/internal/ctx"
+	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 )
 
 // SwitchMaterial is the housing/stem material makeup of a switch.
@@ -87,7 +87,7 @@ type SwitchRepository interface {
 	// argument: unlike List, it fetches by exact key regardless of
 	// visibility - the caller (a handler) checks the returned item's
 	// Visibility via
-	// [github.com/roguekeyboards/kbdb/internal/authz.CanReadVisibility].
+	// [github.com/roguekeyboards/mykeebs-api/internal/authz.CanReadVisibility].
 	Get(ctx context.Context, ownerID, id string) (*Switch, error)
 
 	// Create stores sw (UserID is set from ctx, sw.ID must already be set).

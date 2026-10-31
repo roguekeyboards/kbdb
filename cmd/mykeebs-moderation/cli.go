@@ -17,14 +17,14 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	"github.com/roguekeyboards/kbdb/internal/imagekey"
-	"github.com/roguekeyboards/kbdb/internal/moderation"
+	"github.com/roguekeyboards/mykeebs-api/internal/imagekey"
+	"github.com/roguekeyboards/mykeebs-api/internal/moderation"
 )
 
 // viewURLLifetime is how long a view URL works.
 const viewURLLifetime = 5 * time.Minute
 
-// CLI is the kbdb-moderation command tree, parsed by Kong.
+// CLI is the mykeebs-moderation command tree, parsed by Kong.
 type CLI struct {
 	Stack  string `required:"" help:"CloudFormation stack name, e.g. kbdb-dev-jay."`
 	Region string `env:"AWS_REGION" help:"AWS region of the stack."`

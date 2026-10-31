@@ -11,17 +11,17 @@ import (
 	"github.com/getkin/kin-openapi/openapi3filter"
 	nethttpmiddleware "github.com/oapi-codegen/nethttp-middleware"
 
-	"github.com/roguekeyboards/kbdb/internal/accountdelete"
-	"github.com/roguekeyboards/kbdb/internal/auth"
-	"github.com/roguekeyboards/kbdb/internal/consent"
-	"github.com/roguekeyboards/kbdb/internal/handlers"
-	"github.com/roguekeyboards/kbdb/internal/handlers/api"
-	"github.com/roguekeyboards/kbdb/internal/mcp"
-	"github.com/roguekeyboards/kbdb/internal/middleware"
-	"github.com/roguekeyboards/kbdb/internal/problem"
-	"github.com/roguekeyboards/kbdb/internal/repoapi"
-	"github.com/roguekeyboards/kbdb/internal/repository"
-	"github.com/roguekeyboards/kbdb/internal/uploadlimit"
+	"github.com/roguekeyboards/mykeebs-api/internal/accountdelete"
+	"github.com/roguekeyboards/mykeebs-api/internal/auth"
+	"github.com/roguekeyboards/mykeebs-api/internal/consent"
+	"github.com/roguekeyboards/mykeebs-api/internal/handlers"
+	"github.com/roguekeyboards/mykeebs-api/internal/handlers/api"
+	"github.com/roguekeyboards/mykeebs-api/internal/mcp"
+	"github.com/roguekeyboards/mykeebs-api/internal/middleware"
+	"github.com/roguekeyboards/mykeebs-api/internal/problem"
+	"github.com/roguekeyboards/mykeebs-api/internal/repoapi"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
+	"github.com/roguekeyboards/mykeebs-api/internal/uploadlimit"
 )
 
 // New builds the application's http.Handler. verifier authenticates every
@@ -31,7 +31,7 @@ import (
 // issuerURL configures the MCP endpoint's RFC 9728 Protected Resource
 // Metadata (the OIDC issuer MCP clients should authenticate against); the
 // metadata's "resource" field is derived per-request rather than passed in
-// statically — see [github.com/roguekeyboards/kbdb/internal/mcp.Handlers]
+// statically — see [github.com/roguekeyboards/mykeebs-api/internal/mcp.Handlers]
 // for why. idpConsentPublicToken configures the GET /authorize consent
 // page (see internal/consent). version is advertised to MCP clients in the
 // server's initialize handshake.
@@ -98,7 +98,7 @@ func New(
 	mux.Handle("GET /v1/lookups/{category}", validate(http.HandlerFunc(handlers.GetLookup)))
 
 	// security: [{}, BearerAuth] in api/openapi.yaml - anonymous callers see
-	// only public switches (see [github.com/roguekeyboards/kbdb/internal/authz.ReadableVisibilities]).
+	// only public switches (see [github.com/roguekeyboards/mykeebs-api/internal/authz.ReadableVisibilities]).
 	mux.Handle("GET /v1/users/{userId}/switches",
 		middleware.OptionalAuth(verifier)(ownerPrefs(validate(handlers.ListSwitches(switchRepo, sr)))))
 	mux.Handle("GET /v1/users/{userId}/switches/{switchId}",
@@ -115,7 +115,7 @@ func New(
 		middleware.RequireAuthorizerIdentity(validate(handlers.DeleteSwitchImage(switchRepo, switchImageStore))))
 
 	// security: [{}, BearerAuth] in api/openapi.yaml - anonymous callers see
-	// only public keyboards (see [github.com/roguekeyboards/kbdb/internal/authz.ReadableVisibilities]).
+	// only public keyboards (see [github.com/roguekeyboards/mykeebs-api/internal/authz.ReadableVisibilities]).
 	mux.Handle("GET /v1/users/{userId}/keyboards",
 		middleware.OptionalAuth(verifier)(ownerPrefs(validate(handlers.ListKeyboards(keyboardRepo, kr)))))
 	mux.Handle("GET /v1/users/{userId}/keyboards/{keyboardId}",
@@ -144,7 +144,7 @@ func New(
 		middleware.RequireAuthorizerIdentity(validate(handlers.DeleteKeyboardImage(keyboardRepo, keyboardImageStore))))
 
 	// security: [{}, BearerAuth] in api/openapi.yaml - anonymous callers see
-	// only public keycap sets (see [github.com/roguekeyboards/kbdb/internal/authz.ReadableVisibilities]).
+	// only public keycap sets (see [github.com/roguekeyboards/mykeebs-api/internal/authz.ReadableVisibilities]).
 	mux.Handle("GET /v1/users/{userId}/keycap-sets",
 		middleware.OptionalAuth(verifier)(ownerPrefs(validate(handlers.ListKeycapSets(keycapSetRepo, kcr)))))
 	mux.Handle("GET /v1/users/{userId}/keycap-sets/{keycapSetId}",
@@ -167,7 +167,7 @@ func New(
 		middleware.RequireAuthorizerIdentity(validate(handlers.DeleteKeycapKitImage(keycapSetRepo, imageStore))))
 
 	// security: [{}, BearerAuth] in api/openapi.yaml - anonymous callers see
-	// only public builds (see [github.com/roguekeyboards/kbdb/internal/authz.ReadableVisibilities]).
+	// only public builds (see [github.com/roguekeyboards/mykeebs-api/internal/authz.ReadableVisibilities]).
 	mux.Handle("GET /v1/users/{userId}/builds",
 		middleware.OptionalAuth(verifier)(ownerPrefs(validate(handlers.ListBuilds(buildRepo, br)))))
 	mux.Handle("POST /v1/users/{userId}/builds",
@@ -233,10 +233,10 @@ func New(
 
 // restOpenAPIValidator validates incoming REST requests' shape against
 // api/openapi.yaml. Auth stays enforced by
-// [github.com/roguekeyboards/kbdb/internal/middleware], not here (see
+// [github.com/roguekeyboards/mykeebs-api/internal/middleware], not here (see
 // [openapi3filter.NoopAuthenticationFunc]); open-vocabulary lookup values
 // stay hand-validated per handler (e.g.
-// [github.com/roguekeyboards/kbdb/internal/lookup.ValidateSwitch]),
+// [github.com/roguekeyboards/mykeebs-api/internal/lookup.ValidateSwitch]),
 // since that isn't expressible as a static schema.
 func restOpenAPIValidator() func(http.Handler) http.Handler {
 	spec, err := api.GetSpec()
@@ -261,7 +261,7 @@ func restOpenAPIValidator() func(http.Handler) http.Handler {
 // validationErrorHandler translates nethttp-middleware's OpenAPI validation
 // failures into the same RFC 9457 application/problem+json shape used
 // everywhere else in the API (see
-// [github.com/roguekeyboards/kbdb/internal/problem]), rather than the
+// [github.com/roguekeyboards/mykeebs-api/internal/problem]), rather than the
 // middleware's default plain-text body. Requests to paths/methods absent
 // from api/openapi.yaml entirely (opts.MatchedRoute == nil) are reported as
 // a plain 404, since there is no schema to name invalid_params against.

@@ -18,8 +18,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 
-	"github.com/roguekeyboards/kbdb/internal/imagekey"
-	"github.com/roguekeyboards/kbdb/internal/repository"
+	"github.com/roguekeyboards/mykeebs-api/internal/imagekey"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
 // The rejection reasons for an image that can never be moderated, as

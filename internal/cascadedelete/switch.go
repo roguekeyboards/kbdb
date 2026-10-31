@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/roguekeyboards/kbdb/internal/repository"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
 // SwitchResult is a DeleteSwitch call's success return value.

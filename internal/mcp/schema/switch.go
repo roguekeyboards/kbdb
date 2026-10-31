@@ -145,7 +145,7 @@ type SwitchSpring struct {
 
 // SwitchPurchase is a switch's purchase and order lifecycle, plus how many
 // were bought. Dates are strings, not a date type - see
-// [github.com/roguekeyboards/kbdb/internal/repomcp.SwitchToMCP].
+// [github.com/roguekeyboards/mykeebs-api/internal/repomcp.SwitchToMCP].
 type SwitchPurchase struct {
 	Vendor       *string  `json:"vendor,omitempty" jsonschema:"where the switches were bought"`
 	Price        *float64 `json:"price,omitempty" jsonschema:"price paid"`

@@ -12,9 +12,9 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 
-	"github.com/roguekeyboards/kbdb/test/functional/support/api"
-	"github.com/roguekeyboards/kbdb/test/functional/support/db"
-	"github.com/roguekeyboards/kbdb/test/functional/support/moderation"
+	"github.com/roguekeyboards/mykeebs-api/test/functional/support/api"
+	"github.com/roguekeyboards/mykeebs-api/test/functional/support/db"
+	"github.com/roguekeyboards/mykeebs-api/test/functional/support/moderation"
 )
 
 type switchImage struct {

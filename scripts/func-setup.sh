@@ -11,13 +11,13 @@ export AWS_SECRET_ACCESS_KEY=test
 export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-us-east-2}"
 # sam deploy honors this (botocore reads it); there is no --endpoint-url
 # flag, which is all samlocal wraps.
-export AWS_ENDPOINT_URL="${KBDB_FLOCI_ENDPOINT:-http://localhost.floci.io:4566}"
+export AWS_ENDPOINT_URL="${MYKEEBS_FLOCI_ENDPOINT:-http://localhost.floci.io:4566}"
 
-STACK="${KBDB_FLOCI_STACK:-kbdb-floci}"
-ENDPOINT="${KBDB_FLOCI_ENDPOINT:-http://localhost.floci.io:4566}"
+STACK="${MYKEEBS_FLOCI_STACK:-kbdb-floci}"
+ENDPOINT="${MYKEEBS_FLOCI_ENDPOINT:-http://localhost.floci.io:4566}"
 OIDC_BUCKET="kbdb-floci-oidc"
 # The issuer is just where the discovery doc + JWKS are published; the same
-# string is threaded to --issuer, OidcIssuerBaseUrl, and KBDB_OIDC_ISSUER.
+# string is threaded to --issuer, OidcIssuerBaseUrl, and MYKEEBS_OIDC_ISSUER.
 # It must be https: floci's JWT authorizer refuses a plain-http issuer
 # unless its host is a literal private IP. floci serves http and https on
 # the same port, so only the issuer changes scheme.
@@ -160,28 +160,28 @@ IMAGES_BUCKET=$(out ImagesBucketName)
 # fresh deploy's stack-derived values without any manual export step.
 ENV_FILE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/.env.floci"
 cat <<ENVEOF > "$ENV_FILE"
-export KBDB_API_BASE_URL='$ENDPOINT/execute-api/$API_ID/\$default'
-export KBDB_DYNAMODB_ENDPOINT_URL=$ENDPOINT
-export KBDB_S3_ENDPOINT_URL=$ENDPOINT
-export KBDB_SWITCH_TABLE_NAME=$(out SwitchTableName)
-export KBDB_KEYBOARD_TABLE_NAME=$(out KeyboardTableName)
-export KBDB_KEYCAP_SET_TABLE_NAME=$(out KeycapSetTableName)
-export KBDB_BUILD_TABLE_NAME=$(out BuildTableName)
-export KBDB_PROFILE_TABLE_NAME=$(out ProfileTableName)
-export KBDB_PROFILE_USERNAME_TABLE_NAME=$(out ProfileUsernameTableName)
-export KBDB_UPLOAD_COUNTER_TABLE_NAME=$(out UploadCounterTableName)
-export KBDB_IMAGES_BUCKET_NAME=$IMAGES_BUCKET
-export KBDB_IMAGES_DOMAIN=$(out ImagesDomain)
-export KBDB_IMAGES_DISTRIBUTION_ID=$(out ImagesDistributionId)
-export KBDB_IMAGES_INVALIDATION=true
-export KBDB_ALARM_TOPIC_ARN=$(out AlarmTopicArn)
-export KBDB_STACK_NAME=$STACK
-export KBDB_AWS_ENDPOINT_URL=$ENDPOINT
-export KBDB_CA_CERT_PATH='$CERT_DIR/ca.crt'
-export KBDB_OIDC_ISSUER='$ISSUER'
-export KBDB_OIDC_AUDIENCE='$AUDIENCE'
-export KBDB_OIDC_SIGNING_KEY_PATH='$KEY_PATH'
-export KBDB_OIDC_GEN_DIR='$OIDC_DIR'
+export MYKEEBS_API_BASE_URL='$ENDPOINT/execute-api/$API_ID/\$default'
+export MYKEEBS_DYNAMODB_ENDPOINT_URL=$ENDPOINT
+export MYKEEBS_S3_ENDPOINT_URL=$ENDPOINT
+export MYKEEBS_SWITCH_TABLE_NAME=$(out SwitchTableName)
+export MYKEEBS_KEYBOARD_TABLE_NAME=$(out KeyboardTableName)
+export MYKEEBS_KEYCAP_SET_TABLE_NAME=$(out KeycapSetTableName)
+export MYKEEBS_BUILD_TABLE_NAME=$(out BuildTableName)
+export MYKEEBS_PROFILE_TABLE_NAME=$(out ProfileTableName)
+export MYKEEBS_PROFILE_USERNAME_TABLE_NAME=$(out ProfileUsernameTableName)
+export MYKEEBS_UPLOAD_COUNTER_TABLE_NAME=$(out UploadCounterTableName)
+export MYKEEBS_IMAGES_BUCKET_NAME=$IMAGES_BUCKET
+export MYKEEBS_IMAGES_DOMAIN=$(out ImagesDomain)
+export MYKEEBS_IMAGES_DISTRIBUTION_ID=$(out ImagesDistributionId)
+export MYKEEBS_IMAGES_INVALIDATION=true
+export MYKEEBS_ALARM_TOPIC_ARN=$(out AlarmTopicArn)
+export MYKEEBS_STACK_NAME=$STACK
+export MYKEEBS_AWS_ENDPOINT_URL=$ENDPOINT
+export MYKEEBS_CA_CERT_PATH='$CERT_DIR/ca.crt'
+export MYKEEBS_OIDC_ISSUER='$ISSUER'
+export MYKEEBS_OIDC_AUDIENCE='$AUDIENCE'
+export MYKEEBS_OIDC_SIGNING_KEY_PATH='$KEY_PATH'
+export MYKEEBS_OIDC_GEN_DIR='$OIDC_DIR'
 ENVEOF
 
 echo "Deployed. Wrote $ENV_FILE - mise run func-test sources it automatically."

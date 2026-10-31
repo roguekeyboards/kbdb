@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/roguekeyboards/kbdb/internal/moderation/mocks"
+	"github.com/roguekeyboards/mykeebs-api/internal/moderation/mocks"
 )
 
 type ReviewLogSuite struct {

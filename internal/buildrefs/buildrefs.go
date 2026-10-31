@@ -5,12 +5,12 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/roguekeyboards/kbdb/internal/repository"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
 // FieldError reports that Field's Value doesn't match a real resource
 // owned by the caller. Shaped like
-// [github.com/roguekeyboards/kbdb/internal/lookup.FieldError] (Field/Value,
+// [github.com/roguekeyboards/mykeebs-api/internal/lookup.FieldError] (Field/Value,
 // no Category) so REST/MCP callers can render it the same way they
 // already render lookup validation failures.
 type FieldError struct {

@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/roguekeyboards/kbdb/internal/handlers/api"
-	"github.com/roguekeyboards/kbdb/internal/repository"
+	"github.com/roguekeyboards/mykeebs-api/internal/handlers/api"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
 // Profile maps repository.Profile to and from its wire representations.

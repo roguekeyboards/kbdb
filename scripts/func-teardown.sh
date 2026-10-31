@@ -6,7 +6,7 @@ ENV_FILE="$ROOT/.env.floci"
 if [[ -f "$ENV_FILE" ]]; then
   # shellcheck disable=SC1090
   source "$ENV_FILE"
-  [[ -n "${KBDB_OIDC_GEN_DIR:-}" ]] && rm -rf "$KBDB_OIDC_GEN_DIR"
+  [[ -n "${MYKEEBS_OIDC_GEN_DIR:-}" ]] && rm -rf "$MYKEEBS_OIDC_GEN_DIR"
 fi
 
 # floci starts its own ECR registry container and volume through the mounted

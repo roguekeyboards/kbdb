@@ -5,38 +5,38 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/roguekeyboards/kbdb/test/functional/support"
+	"github.com/roguekeyboards/mykeebs-api/test/functional/support"
 )
 
 // keyboardRefMarkerSortKey mirrors the marker item sort key format
-// [github.com/roguekeyboards/kbdb/internal/repository/dynamo] writes for a
+// [github.com/roguekeyboards/mykeebs-api/internal/repository/dynamo] writes for a
 // keyboard reference, so seeded builds are discoverable via
-// [github.com/roguekeyboards/kbdb/internal/repository.BuildRepository.FindBuildsReferencingKeyboard]
+// [github.com/roguekeyboards/mykeebs-api/internal/repository.BuildRepository.FindBuildsReferencingKeyboard]
 // without needing a real Create call.
 func keyboardRefMarkerSortKey(keyboardID, buildID string) string {
 	return fmt.Sprintf("zREF#keyboard#%s#%s", keyboardID, buildID)
 }
 
 // switchRefMarkerSortKey mirrors the marker item sort key format
-// [github.com/roguekeyboards/kbdb/internal/repository/dynamo] writes for a
+// [github.com/roguekeyboards/mykeebs-api/internal/repository/dynamo] writes for a
 // switch reference, so seeded builds are discoverable via
-// [github.com/roguekeyboards/kbdb/internal/repository.BuildRepository.FindBuildsReferencingSwitch]
+// [github.com/roguekeyboards/mykeebs-api/internal/repository.BuildRepository.FindBuildsReferencingSwitch]
 // without needing a real Create call.
 func switchRefMarkerSortKey(switchID, buildID string) string {
 	return fmt.Sprintf("zREF#switch#%s#%s", switchID, buildID)
 }
 
 // keycapKitRefID mirrors the composite ref_id
-// [github.com/roguekeyboards/kbdb/internal/repository/dynamo] derives for a
+// [github.com/roguekeyboards/mykeebs-api/internal/repository/dynamo] derives for a
 // keycap kit reference (KeycapSetID#KitID).
 func keycapKitRefID(keycapSetID, kitID string) string {
 	return fmt.Sprintf("%s#%s", keycapSetID, kitID)
 }
 
 // keycapKitRefMarkerSortKey mirrors the marker item sort key format
-// [github.com/roguekeyboards/kbdb/internal/repository/dynamo] writes for a
+// [github.com/roguekeyboards/mykeebs-api/internal/repository/dynamo] writes for a
 // keycap kit reference, so seeded builds are discoverable via
-// [github.com/roguekeyboards/kbdb/internal/repository.BuildRepository.FindBuildsReferencingKeycapKit]
+// [github.com/roguekeyboards/mykeebs-api/internal/repository.BuildRepository.FindBuildsReferencingKeycapKit]
 // without needing a real Create call.
 func keycapKitRefMarkerSortKey(keycapSetID, kitID, buildID string) string {
 	return fmt.Sprintf("zREF#keycap_kit#%s#%s", keycapKitRefID(keycapSetID, kitID), buildID)

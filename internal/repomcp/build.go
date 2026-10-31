@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/roguekeyboards/kbdb/internal/mcp/schema"
-	"github.com/roguekeyboards/kbdb/internal/repository"
+	"github.com/roguekeyboards/mykeebs-api/internal/mcp/schema"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
 // Build maps repository.Build to and from its MCP tool shape.
@@ -16,7 +16,7 @@ type Build struct {
 }
 
 // ToMCP never signs an image URL, unlike
-// [github.com/roguekeyboards/kbdb/internal/repoapi.Build.ToAPI] - it reports
+// [github.com/roguekeyboards/mykeebs-api/internal/repoapi.Build.ToAPI] - it reports
 // only HasImages, so this can't fail on a signing error. The owner always
 // sees their own Stabs.Price; a non-owner sees it only if
 // ownerPrefs.ShowPriceToOthers.
@@ -56,7 +56,7 @@ func (b Build) ImagesToMCP(build repository.Build, isOwner bool) []schema.BuildI
 
 // ToMCPResolved is [Build.ToMCP] for a build read back from storage: a plate
 // or PCB its keyboard no longer has is left out, as
-// [github.com/roguekeyboards/kbdb/internal/repoapi.Build.ToAPI] does, so the
+// [github.com/roguekeyboards/mykeebs-api/internal/repoapi.Build.ToAPI] does, so the
 // result can be sent back to update_build as is.
 func (b Build) ToMCPResolved(
 	ctx context.Context, build repository.Build, isOwner bool, ownerPrefs repository.ProfilePreferences,
@@ -144,9 +144,9 @@ func (b Build) ToMCPSummary(
 }
 
 // switchesCost mirrors
-// [github.com/roguekeyboards/kbdb/internal/repoapi.Build.switchEntriesResolvedToAPI]'s
+// [github.com/roguekeyboards/mykeebs-api/internal/repoapi.Build.switchEntriesResolvedToAPI]'s
 // calculation: switches are bought in bulk, so
-// [github.com/roguekeyboards/kbdb/internal/repository.SwitchPurchase.Price]
+// [github.com/roguekeyboards/mykeebs-api/internal/repository.SwitchPurchase.Price]
 // is the total for Quantity units, not a per-unit price. An entry without
 // a Quantity is excluded rather than guessed at.
 func (b Build) switchesCost(ctx context.Context, ownerID string, entries []repository.BuildSwitchEntry) (*float64, error) {
@@ -168,7 +168,7 @@ func (b Build) switchesCost(ctx context.Context, ownerID string, entries []repos
 }
 
 // keycapKitsCost mirrors
-// [github.com/roguekeyboards/kbdb/internal/repoapi.Build.keycapSetRefsToAPI]'s
+// [github.com/roguekeyboards/mykeebs-api/internal/repoapi.Build.keycapSetRefsToAPI]'s
 // calculation: a kit listed more than once is priced once.
 func (b Build) keycapKitsCost(
 	ctx context.Context, ownerID string, entries []repository.BuildKeycapKitEntry,

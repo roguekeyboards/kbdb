@@ -3,7 +3,7 @@ package handlers
 import (
 	"github.com/stretchr/testify/mock"
 
-	"github.com/roguekeyboards/kbdb/internal/repository/mocks"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository/mocks"
 )
 
 // expectUploadReserved expects one upload counted against the suites'

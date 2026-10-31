@@ -8,8 +8,8 @@ import (
 	"errors"
 	"strings"
 
-	kbdbctx "github.com/roguekeyboards/kbdb/internal/ctx"
-	"github.com/roguekeyboards/kbdb/internal/repository"
+	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
 // Resolve looks up the profile named by identifier (subject first, username

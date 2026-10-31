@@ -3,16 +3,16 @@ package middleware
 import (
 	"net/http"
 
-	"github.com/roguekeyboards/kbdb/internal/auth"
-	ctxpkg "github.com/roguekeyboards/kbdb/internal/ctx"
-	logpkg "github.com/roguekeyboards/kbdb/internal/log"
-	"github.com/roguekeyboards/kbdb/internal/problem"
+	"github.com/roguekeyboards/mykeebs-api/internal/auth"
+	ctxpkg "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	logpkg "github.com/roguekeyboards/mykeebs-api/internal/log"
+	"github.com/roguekeyboards/mykeebs-api/internal/problem"
 )
 
 // OptionalAuth verifies the bearer token if one is present, for routes that
 // allow anonymous callers (e.g. reads on items whose visibility may permit
 // public or authenticated-but-not-owner access — see
-// [github.com/roguekeyboards/kbdb/internal/authz]). A missing token is not
+// [github.com/roguekeyboards/mykeebs-api/internal/authz]). A missing token is not
 // an error and the request proceeds with no user ID on its context; a
 // present-but-invalid token is still rejected with 401, since silently
 // treating it as anonymous would hide a real client error.

@@ -15,8 +15,8 @@ import (
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/google/uuid"
 
-	"github.com/roguekeyboards/kbdb/test/functional/support"
-	"github.com/roguekeyboards/kbdb/test/functional/support/db"
+	"github.com/roguekeyboards/mykeebs-api/test/functional/support"
+	"github.com/roguekeyboards/mykeebs-api/test/functional/support/db"
 )
 
 // Items is what Seed created.

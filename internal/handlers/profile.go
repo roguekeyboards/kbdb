@@ -9,17 +9,17 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/roguekeyboards/kbdb/internal/accountdelete"
-	"github.com/roguekeyboards/kbdb/internal/authz"
-	"github.com/roguekeyboards/kbdb/internal/handlers/api"
-	"github.com/roguekeyboards/kbdb/internal/log"
-	"github.com/roguekeyboards/kbdb/internal/lookup"
-	"github.com/roguekeyboards/kbdb/internal/problem"
-	"github.com/roguekeyboards/kbdb/internal/profileread"
-	"github.com/roguekeyboards/kbdb/internal/profilevalidate"
-	"github.com/roguekeyboards/kbdb/internal/repoapi"
-	"github.com/roguekeyboards/kbdb/internal/repository"
-	"github.com/roguekeyboards/kbdb/internal/uploadlimit"
+	"github.com/roguekeyboards/mykeebs-api/internal/accountdelete"
+	"github.com/roguekeyboards/mykeebs-api/internal/authz"
+	"github.com/roguekeyboards/mykeebs-api/internal/handlers/api"
+	"github.com/roguekeyboards/mykeebs-api/internal/log"
+	"github.com/roguekeyboards/mykeebs-api/internal/lookup"
+	"github.com/roguekeyboards/mykeebs-api/internal/problem"
+	"github.com/roguekeyboards/mykeebs-api/internal/profileread"
+	"github.com/roguekeyboards/mykeebs-api/internal/profilevalidate"
+	"github.com/roguekeyboards/mykeebs-api/internal/repoapi"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
+	"github.com/roguekeyboards/mykeebs-api/internal/uploadlimit"
 )
 
 // validateProfileInput writes a 400 listing every field-level violation and

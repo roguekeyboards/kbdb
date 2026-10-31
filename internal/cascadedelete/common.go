@@ -1,8 +1,8 @@
 // Package cascadedelete implements the block/cascade on_delete
 // policy for deleting an item that may still be referenced by one or more
 // Builds. Both the REST handlers
-// ([github.com/roguekeyboards/kbdb/internal/handlers]) and the MCP tools
-// ([github.com/roguekeyboards/kbdb/internal/mcp]) call the DeleteX function
+// ([github.com/roguekeyboards/mykeebs-api/internal/handlers]) and the MCP tools
+// ([github.com/roguekeyboards/mykeebs-api/internal/mcp]) call the DeleteX function
 // for the entity being deleted directly and map its result/error to their
 // own response shape, rather than each reimplementing the
 // find-then-decide-then-delete flow.

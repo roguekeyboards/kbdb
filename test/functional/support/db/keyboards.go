@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/roguekeyboards/kbdb/test/functional/support"
+	"github.com/roguekeyboards/mykeebs-api/test/functional/support"
 )
 
 // The seeded keyboard's one plate and one PCB. The plate has its own

@@ -4,7 +4,7 @@ set -euo pipefail
 # shellcheck source=scripts/samconfig-env.sh
 source "$(dirname "$0")/samconfig-env.sh"
 
-if [ "$KBDB_ENV" = "prod" ]; then
+if [ "$MYKEEBS_ENV" = "prod" ]; then
   echo "Refusing to tear down prod." >&2
   exit 1
 fi
@@ -31,4 +31,4 @@ if aws ecr describe-repositories --repository-names "$REPO_NAME" --region "$REGI
   aws ecr delete-repository --repository-name "$REPO_NAME" --force --region "$REGION" >/dev/null
 fi
 
-echo "$KBDB_ENV torn down."
+echo "$MYKEEBS_ENV torn down."

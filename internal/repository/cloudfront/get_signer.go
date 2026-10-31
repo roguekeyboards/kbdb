@@ -9,7 +9,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/feature/cloudfront/sign"
 
-	"github.com/roguekeyboards/kbdb/internal/repository"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
 type urlSigner interface {

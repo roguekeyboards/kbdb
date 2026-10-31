@@ -3,8 +3,8 @@ package repomcp
 import (
 	"math"
 
-	"github.com/roguekeyboards/kbdb/internal/mcp/schema"
-	"github.com/roguekeyboards/kbdb/internal/repository"
+	"github.com/roguekeyboards/mykeebs-api/internal/mcp/schema"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
 // KeycapSet maps repository.KeycapSet to and from its MCP tool shape. It

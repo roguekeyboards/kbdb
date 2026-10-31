@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/roguekeyboards/kbdb/test/functional/support"
+	"github.com/roguekeyboards/mykeebs-api/test/functional/support"
 )
 
 // SeedSwitch PutItems a switch directly into DynamoDB, bypassing the API -

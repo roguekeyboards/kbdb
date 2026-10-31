@@ -13,7 +13,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 OUT_DIR="${CLIENT_GEN_OUT_DIR:-ts-client}"
 GENERATOR_IMAGE="openapitools/openapi-generator-cli:v7.24.0"
-ADDITIONAL_PROPS="npmName=@roguekeyboards/kbdb-api-client,supportsES6=true"
+ADDITIONAL_PROPS="npmName=@roguekeyboards/mykeebs-api-api-client,supportsES6=true"
 if [ -n "${CLIENT_GEN_VERSION:-}" ]; then
   ADDITIONAL_PROPS="${ADDITIONAL_PROPS},npmVersion=${CLIENT_GEN_VERSION}"
 fi
@@ -29,7 +29,7 @@ docker run --rm \
   -g typescript-fetch \
   -o "/local/$OUT_DIR" \
   --git-user-id roguekeyboards \
-  --git-repo-id kbdb \
+  --git-repo-id mykeebs-api \
   --additional-properties="$ADDITIONAL_PROPS"
 
 echo "Generated TypeScript client at $OUT_DIR/"

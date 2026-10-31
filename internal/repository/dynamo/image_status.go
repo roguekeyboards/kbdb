@@ -3,7 +3,7 @@ package dynamo
 import (
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/expression"
 
-	"github.com/roguekeyboards/kbdb/internal/repository"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
 // statusIs matches an image whose status attribute is from. Images stored

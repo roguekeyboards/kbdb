@@ -1,8 +1,8 @@
 package repomcp
 
 import (
-	"github.com/roguekeyboards/kbdb/internal/mcp/schema"
-	"github.com/roguekeyboards/kbdb/internal/repository"
+	"github.com/roguekeyboards/mykeebs-api/internal/mcp/schema"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
 // Profile maps repository.Profile to and from its MCP tool shape. It has

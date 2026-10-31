@@ -10,7 +10,7 @@ import (
 
 	"github.com/getkin/kin-openapi/openapi3"
 
-	"github.com/roguekeyboards/kbdb/internal/gatewayroutes"
+	"github.com/roguekeyboards/mykeebs-api/internal/gatewayroutes"
 )
 
 func main() {

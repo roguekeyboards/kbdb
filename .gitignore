@@ -13,7 +13,7 @@
 *.test
 
 # `go build ./cmd/...` from the repo root drops binaries here
-/kbdb-migrate
+/mykeebs-migrate
 
 # Code coverage profiles and other test artifacts
 *.out

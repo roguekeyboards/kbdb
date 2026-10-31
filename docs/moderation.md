@@ -1,6 +1,6 @@
 # Image moderation: operator guide
 
-How to review what the moderation function rejected, take down an image someone reported, and undo either decision. There's no admin UI; everything here is a `mise run moderation-*` task backed by `cmd/kbdb-moderation`.
+How to review what the moderation function rejected, take down an image someone reported, and undo either decision. There's no admin UI; everything here is a `mise run moderation-*` task backed by `cmd/mykeebs-moderation`.
 
 ## How moderation works
 

@@ -14,9 +14,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 
-	"github.com/roguekeyboards/kbdb/internal/moderation"
-	"github.com/roguekeyboards/kbdb/internal/repository/cloudfront"
-	"github.com/roguekeyboards/kbdb/internal/repository/dynamo"
+	"github.com/roguekeyboards/mykeebs-api/internal/moderation"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository/cloudfront"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository/dynamo"
 )
 
 // stack is one environment's resources, looked up by their logical IDs in

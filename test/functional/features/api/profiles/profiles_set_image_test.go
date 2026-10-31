@@ -10,8 +10,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/roguekeyboards/kbdb/test/functional/support/api"
-	"github.com/roguekeyboards/kbdb/test/functional/support/db"
+	"github.com/roguekeyboards/mykeebs-api/test/functional/support/api"
+	"github.com/roguekeyboards/mykeebs-api/test/functional/support/db"
 )
 
 const approvedImageContentType = "image/webp"

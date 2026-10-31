@@ -10,5 +10,5 @@ aws cloudformation deploy --template-file bootstrap/ecr-repo.yaml \
   --parameter-overrides "RepositoryName=${REPO_NAME}" ExpireBy=count \
   --no-fail-on-empty-changeset
 
-"$(dirname "$0")/deploy.sh" "$KBDB_ENV"
-"$(dirname "$0")/dns.sh" "$KBDB_ENV"
+"$(dirname "$0")/deploy.sh" "$MYKEEBS_ENV"
+"$(dirname "$0")/dns.sh" "$MYKEEBS_ENV"

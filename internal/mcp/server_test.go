@@ -14,9 +14,9 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/roguekeyboards/kbdb/internal/accountdelete"
-	"github.com/roguekeyboards/kbdb/internal/auth"
-	authmocks "github.com/roguekeyboards/kbdb/internal/auth/mocks"
+	"github.com/roguekeyboards/mykeebs-api/internal/accountdelete"
+	"github.com/roguekeyboards/mykeebs-api/internal/auth"
+	authmocks "github.com/roguekeyboards/mykeebs-api/internal/auth/mocks"
 )
 
 type NewSuite struct {

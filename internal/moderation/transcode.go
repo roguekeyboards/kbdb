@@ -12,7 +12,7 @@ import (
 	"golang.org/x/image/draw"
 	"golang.org/x/image/webp"
 
-	"github.com/roguekeyboards/kbdb/internal/repository"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
 // maxSide keeps the JPEG well under Rekognition's 5 MiB Bytes limit, and is

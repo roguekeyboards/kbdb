@@ -1,4 +1,4 @@
-// Command kbdb-migrate dumps a user's profile and every entity they own
+// Command mykeebs-migrate dumps a user's profile and every entity they own
 // (keyboards, switches, keycap sets, builds), with every associated S3 image,
 // to a local directory, and restores such a dump into another environment
 // through the same public REST API.
@@ -13,18 +13,18 @@
 // The repo convention (see CLAUDE.md) is that the Lambda *function* entrypoint
 // lives at functions/api/, deliberately not cmd/api/, because functions/api/
 // signals "this is a Lambda function" in an AWS-specific codebase. That
-// reasoning is specific to the deployed service. kbdb-migrate is a standalone
+// reasoning is specific to the deployed service. mykeebs-migrate is a standalone
 // operational CLI run from a developer's machine, which is exactly what
 // golang-standards/project-layout's cmd/<name>/ is for, and what internal/ and
 // test/ in this repo already follow. So this one command does live under cmd/.
 //
 // # Subcommands
 //
-//	kbdb-migrate login    - obtain an access token via browser OAuth (Discord)
-//	kbdb-migrate dump      - download the profile + every entity + image into --out
+//	mykeebs-migrate login    - obtain an access token via browser OAuth (Discord)
+//	mykeebs-migrate dump      - download the profile + every entity + image into --out
 //	                         (--impersonate: as the user a Stytch dashboard impersonation opens)
-//	kbdb-migrate restore   - recreate a dump's entities + images in --base-url's environment
-//	kbdb-migrate verify    - check a restore against the dump (fields + image hashes)
+//	mykeebs-migrate restore   - recreate a dump's entities + images in --base-url's environment
+//	mykeebs-migrate verify    - check a restore against the dump (fields + image hashes)
 //
 // # Images
 //

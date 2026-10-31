@@ -194,19 +194,19 @@ Images aren't restored: an item that points to a since-deleted image shows it as
 
 ### Backing up images
 
-A `kbdb-migrate dump` (next section) is the only backup of an account's images.
+A `mykeebs-migrate dump` (next section) is the only backup of an account's images.
 
-### Running `kbdb-migrate` against prod
+### Running `mykeebs-migrate` against prod
 
-`dump --impersonate` works against prod because the Stytch Live project has `http://localhost:8765/impersonate` as its default Login redirect URL and `http://localhost:8765` as an authorized SDK domain. Don't remove them. `kbdb-migrate login` needs neither: its redirect is registered on the OAuth client it creates.
+`dump --impersonate` works against prod because the Stytch Live project has `http://localhost:8765/impersonate` as its default Login redirect URL and `http://localhost:8765` as an authorized SDK domain. Don't remove them. `mykeebs-migrate login` needs neither: its redirect is registered on the OAuth client it creates.
 
 ```sh
 mise run migrate-build
-bin/kbdb-migrate login --issuer https://auth.mykeebs.info
-bin/kbdb-migrate dump --issuer https://auth.mykeebs.info --base-url https://api.mykeebs.info --out ./prod-dump
+bin/mykeebs-migrate login --issuer https://auth.mykeebs.info
+bin/mykeebs-migrate dump --issuer https://auth.mykeebs.info --base-url https://api.mykeebs.info --out ./prod-dump
 ```
 
-After a `restore`, run `verify`. See [`kbdb-migrate`](../CONTRIBUTING.md#backing-up--moving-a-users-data-kbdb-migrate) for the full tool.
+After a `restore`, run `verify`. See [`mykeebs-migrate`](../CONTRIBUTING.md#backing-up--moving-a-users-data-mykeebs-migrate) for the full tool.
 
 ### Exporting a user's data on request
 
@@ -216,7 +216,7 @@ Use `dump --impersonate` to dump their account; see [Exporting another user's ac
 
 `mise run teardown prod` refuses on purpose. Taking prod down is a manual job, with the admin profile. The terms promise users 30 days' notice first, so they can save their data, and Discord's developer terms require deleting everything received through Discord once the app stops.
 
-1. Take a `kbdb-migrate dump` of every account whose data you want to keep. Don't keep those dumps once they've been restored somewhere else.
+1. Take a `mykeebs-migrate dump` of every account whose data you want to keep. Don't keep those dumps once they've been restored somewhere else.
 2. Turn off deletion protection on every table:
    ```sh
    for t in $(aws dynamodb list-tables --query 'TableNames[?starts_with(@, `kbdb-prod-`)]' --output text); do

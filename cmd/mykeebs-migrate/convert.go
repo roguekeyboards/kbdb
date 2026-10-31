@@ -14,7 +14,7 @@ import (
 	"golang.org/x/image/draw"
 	"golang.org/x/image/math/f64"
 
-	"github.com/roguekeyboards/kbdb/internal/repository"
+	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
 // maxEdge and webpQuality match mykeebs-web's src/lib/image-resize.ts, so a

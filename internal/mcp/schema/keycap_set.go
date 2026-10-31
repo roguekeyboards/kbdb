@@ -72,7 +72,7 @@ type KeycapKit struct {
 // KeycapKitPurchase is a kit's purchase and order lifecycle, independent of
 // the parent set's - a set can be assembled from kits bought separately.
 // Dates are strings, not a date type - see
-// [github.com/roguekeyboards/kbdb/internal/repomcp.KeycapKitToMCP].
+// [github.com/roguekeyboards/mykeebs-api/internal/repomcp.KeycapKitToMCP].
 type KeycapKitPurchase struct {
 	Vendor       *string  `json:"vendor,omitempty" jsonschema:"where the kit was bought"`
 	Price        *float64 `json:"price,omitempty" jsonschema:"price paid"`
