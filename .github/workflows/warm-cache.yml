@@ -11,9 +11,6 @@ concurrency:
 permissions:
   contents: read
 
-# ci.yml's arm64 functional job and x64 jobs have separate keys. Each job names its runner in
-# runs-on, not a matrix, because Renovate only updates a literal runs-on, and the arm64 one has to
-# move with ci.yml's.
 jobs:
   warm-x64:
     name: Warm mise cache (x64)
