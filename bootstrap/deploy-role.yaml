@@ -56,12 +56,18 @@ Resources:
               - IsCI
               - StringEquals:
                   token.actions.githubusercontent.com:aud: sts.amazonaws.com
-                  token.actions.githubusercontent.com:sub: repo:roguekeyboards@350380721/kbdb@1288529592:pull_request
+                  token.actions.githubusercontent.com:sub:
+                    - repo:roguekeyboards@350380721/kbdb@1288529592:pull_request
+                    - repo:roguekeyboards@350380721/mykeebs-api@1288529592:pull_request
               - StringEquals:
                   token.actions.githubusercontent.com:aud: sts.amazonaws.com
                 StringLike:
-                  token.actions.githubusercontent.com:sub: repo:roguekeyboards@350380721/kbdb@1288529592:ref:refs/tags/v*
-                  token.actions.githubusercontent.com:job_workflow_ref: roguekeyboards/kbdb/.github/workflows/deploy-prod.yml@refs/tags/v*
+                  token.actions.githubusercontent.com:sub:
+                    - repo:roguekeyboards@350380721/kbdb@1288529592:ref:refs/tags/v*
+                    - repo:roguekeyboards@350380721/mykeebs-api@1288529592:ref:refs/tags/v*
+                  token.actions.githubusercontent.com:job_workflow_ref:
+                    - roguekeyboards/kbdb/.github/workflows/deploy-prod.yml@refs/tags/v*
+                    - roguekeyboards/mykeebs-api/.github/workflows/deploy-prod.yml@refs/tags/v*
       Policies:
         - PolicyName: kbdb-deploy-permissions
           PolicyDocument:
