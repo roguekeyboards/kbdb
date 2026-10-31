@@ -1,0 +1,5 @@
+# actionlint's built-in runner list stops at 24.04, and its latest release (v1.7.12) predates 26.04.
+# Remove this once a release knows the label. It's a GitHub-hosted runner, not a self-hosted one.
+self-hosted-runner:
+  labels:
+    - ubuntu-26.04-arm

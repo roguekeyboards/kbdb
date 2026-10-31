@@ -11,14 +11,22 @@ concurrency:
 permissions:
   contents: read
 
+# ci.yml's arm64 functional job and x64 jobs have separate keys. Each job names its runner in
+# runs-on, not a matrix, because Renovate only updates a literal runs-on, and the arm64 one has to
+# move with ci.yml's.
 jobs:
-  warm:
-    name: Warm mise cache (${{ matrix.runner }})
-    strategy:
-      matrix:
-        # ci.yml's arm64 functional job and x64 jobs have separate keys.
-        runner: [ubuntu-latest, ubuntu-24.04-arm]
-    runs-on: ${{ matrix.runner }}
+  warm-x64:
+    name: Warm mise cache (x64)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up mise
+        uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
+
+  warm-arm64:
+    name: Warm mise cache (arm64)
+    runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
