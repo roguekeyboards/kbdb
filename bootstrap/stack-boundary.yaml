@@ -5,7 +5,7 @@ Resources:
   StackBoundary:
     Type: AWS::IAM::ManagedPolicy
     Properties:
-      ManagedPolicyName: kbdb-stack-boundary
+      ManagedPolicyName: mykeebs-api-stack-boundary
       Description: Maximum permissions for the roles template.yaml creates
       PolicyDocument:
         Version: '2012-10-17'
@@ -17,8 +17,8 @@ Resources:
               - logs:CreateLogStream
               - logs:PutLogEvents
             Resource:
-              - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-*
-              - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kbdb-*:*
+              - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mykeebs-api-*
+              - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mykeebs-api-*:*
           - Sid: Tables
             Effect: Allow
             Action:
@@ -30,8 +30,8 @@ Resources:
               - dynamodb:TransactWriteItems
               - dynamodb:BatchWriteItem
             Resource:
-              - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/kbdb-*
-              - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/kbdb-*/index/*
+              - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/mykeebs-api-*
+              - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/mykeebs-api-*/index/*
           - Sid: Images
             Effect: Allow
             Action:
@@ -39,15 +39,15 @@ Resources:
               - s3:PutObject
               - s3:DeleteObject
               - s3:PutObjectTagging
-            Resource: !Sub arn:aws:s3:::kbdb-images-${AWS::AccountId}-*/*
+            Resource: !Sub arn:aws:s3:::mykeebs-images-${AWS::AccountId}-*/*
           - Sid: AccountDeleteNotices
             Effect: Allow
             Action: sns:Publish
-            Resource: !Sub arn:aws:sns:${AWS::Region}:${AWS::AccountId}:kbdb-*
+            Resource: !Sub arn:aws:sns:${AWS::Region}:${AWS::AccountId}:mykeebs-api-*
           - Sid: ImagesList
             Effect: Allow
             Action: s3:ListBucket
-            Resource: !Sub arn:aws:s3:::kbdb-images-${AWS::AccountId}-*
+            Resource: !Sub arn:aws:s3:::mykeebs-images-${AWS::AccountId}-*
           - Sid: Moderation
             Effect: Allow
             Action: rekognition:DetectModerationLabels
@@ -55,13 +55,13 @@ Resources:
           - Sid: ModerationDlq
             Effect: Allow
             Action: sqs:SendMessage
-            Resource: !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:kbdb-*
+            Resource: !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:mykeebs-api-*
           - Sid: ImageSigningKey
             Effect: Allow
             Action: ssm:GetParameters
             Resource:
-              - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/kbdb/image-delivery/private-key
-              - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/kbdb/image-delivery/public-key-id
+              - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/mykeebs-api/image-delivery/private-key
+              - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/mykeebs-api/image-delivery/public-key-id
           - Sid: ImagesInvalidation
             Effect: Allow
             Action: cloudfront:CreateInvalidation

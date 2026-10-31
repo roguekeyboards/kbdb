@@ -12,7 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
@@ -127,7 +127,7 @@ func (r *KeyboardRepository) Get(ctx context.Context, ownerID, id string) (*repo
 
 // Create implements repository.KeyboardRepository.
 func (r *KeyboardRepository) Create(ctx context.Context, kb repository.Keyboard) (*repository.Keyboard, error) {
-	ownerID, ok := kbdbctx.UserID(ctx)
+	ownerID, ok := apictx.UserID(ctx)
 	if !ok {
 		return nil, fmt.Errorf("creating keyboard %q: %w", kb.ID, repository.ErrNoUserID)
 	}
@@ -173,7 +173,7 @@ func keyboardKey(ownerID, keyboardID string) map[string]types.AttributeValue {
 // id is the sort key, so a failed attribute_exists(id) can only mean the
 // keyboard is gone -> ErrNotFound.
 func (r *KeyboardRepository) Update(ctx context.Context, kb repository.Keyboard) (*repository.Keyboard, error) {
-	ownerID, ok := kbdbctx.UserID(ctx)
+	ownerID, ok := apictx.UserID(ctx)
 	if !ok {
 		return nil, fmt.Errorf("updating keyboard %q: %w", kb.ID, repository.ErrNoUserID)
 	}
@@ -223,7 +223,7 @@ func (r *KeyboardRepository) Update(ctx context.Context, kb repository.Keyboard)
 // Delete implements repository.KeyboardRepository. Idempotent: a
 // nonexistent id is not an error.
 func (r *KeyboardRepository) Delete(ctx context.Context, id string) error {
-	ownerID, ok := kbdbctx.UserID(ctx)
+	ownerID, ok := apictx.UserID(ctx)
 	if !ok {
 		return fmt.Errorf("deleting keyboard %q: %w", id, repository.ErrNoUserID)
 	}
@@ -256,7 +256,7 @@ func (r *KeyboardRepository) AddImage(ctx context.Context, keyboardID string, im
 		return fmt.Errorf("adding image to keyboard %q: %w", keyboardID, errEmptyKeyboardImageID)
 	}
 
-	ownerID, ok := kbdbctx.UserID(ctx)
+	ownerID, ok := apictx.UserID(ctx)
 	if !ok {
 		return fmt.Errorf("adding image to keyboard %q: %w", keyboardID, repository.ErrNoUserID)
 	}
@@ -322,7 +322,7 @@ func (r *KeyboardRepository) keyboardExists(ctx context.Context, ownerID, id str
 // path is the returned key. A missing id (condition fails but the keyboard
 // exists) is a nil-nil success.
 func (r *KeyboardRepository) DeleteImage(ctx context.Context, keyboardID, imageID string) (*repository.KeyboardImageKey, error) {
-	ownerID, ok := kbdbctx.UserID(ctx)
+	ownerID, ok := apictx.UserID(ctx)
 	if !ok {
 		return nil, fmt.Errorf("deleting image from keyboard %q: %w", keyboardID, repository.ErrNoUserID)
 	}

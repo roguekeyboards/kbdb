@@ -40,7 +40,7 @@ mise run func-test     # runs the functional test suite against it
 mise run func-teardown # tears it all down
 ```
 
-`func-setup` deploys kbdb's real `template.yaml` to [floci](https://github.com/floci-io/floci) (a local AWS emulator) via a genuine `sam deploy` — not `sam local start-api`, which never emulates API Gateway's native JWT authorizer, so it couldn't exercise any auth-required write route (see `internal/middleware.RequireAuthorizerIdentity`). It also runs [`oidc-testkit-gen`](https://github.com/roguekeyboards/oidc-testkit) to produce the signing key + discovery doc + JWKS. All `MYKEEBS_*` values land in `.env.floci`, which `func-test` sources automatically.
+`func-setup` deploys mykeebs-api's real `template.yaml` to [floci](https://github.com/floci-io/floci) (a local AWS emulator) via a genuine `sam deploy` — not `sam local start-api`, which never emulates API Gateway's native JWT authorizer, so it couldn't exercise any auth-required write route (see `internal/middleware.RequireAuthorizerIdentity`). It also runs [`oidc-testkit-gen`](https://github.com/roguekeyboards/oidc-testkit) to produce the signing key + discovery doc + JWKS. All `MYKEEBS_*` values land in `.env.floci`, which `func-test` sources automatically.
 
 Most iteration just needs `mise run func-test` again — Go code and test changes are picked up automatically. Restart (`mise run func-teardown && mise run func-setup`) after editing `template.yaml` or `docker-compose.floci.yml`.
 
@@ -65,7 +65,7 @@ bin/mykeebs-migrate restore --issuer <target issuer> --base-url <target base url
 bin/mykeebs-migrate verify --issuer <target issuer> --base-url <target base url> --in ./dump
 ```
 
-`login` runs a standard OAuth 2.0 authorization-code + PKCE flow and binds a **fixed** localhost port (`8765`) for the redirect, because IdP redirect URIs are exact-match. That redirect, `http://localhost:8765/authorize.html`, is registered on the OAuth client `login` creates through dynamic client registration, which both kbdb Stytch projects (dev and Live) allow, so no client ID or project redirect URL is needed. An IdP without dynamic registration needs `--client-id` (or `MYKEEBS_OIDC_CLIENT_ID`). The token is cached under `~/.config/mykeebs-migrate/` keyed by issuer host; `dump`/`restore`/`verify` find that cached token only through `--issuer` (or `MYKEEBS_OIDC_ISSUER_BASE_URL`), or take one directly with `--token` / `MYKEEBS_AUTH_TOKEN`.
+`login` runs a standard OAuth 2.0 authorization-code + PKCE flow and binds a **fixed** localhost port (`8765`) for the redirect, because IdP redirect URIs are exact-match. That redirect, `http://localhost:8765/authorize.html`, is registered on the OAuth client `login` creates through dynamic client registration, which both mykeebs-api Stytch projects (dev and Live) allow, so no client ID or project redirect URL is needed. An IdP without dynamic registration needs `--client-id` (or `MYKEEBS_OIDC_CLIENT_ID`). The token is cached under `~/.config/mykeebs-migrate/` keyed by issuer host; `dump`/`restore`/`verify` find that cached token only through `--issuer` (or `MYKEEBS_OIDC_ISSUER_BASE_URL`), or take one directly with `--token` / `MYKEEBS_AUTH_TOKEN`.
 
 **Moving data between two accounts on the same issuer** (step 1 and step 3 are different people): the second `login` opens the browser with the first account's IdP session still live, so it lands on the consent screen already "Signed in" as the wrong account. Click **"Not you? Use a different account"** on that page to drop the session and sign in as the target account.
 
@@ -86,7 +86,7 @@ bin/mykeebs-migrate dump --impersonate --issuer https://auth.mykeebs.info --base
 
 Then, in the Stytch dashboard: turn on **Allow user impersonation** (Password and User Policies), open the user, click **Impersonate user**, give a reason, and click **Launch in new tab**. The tab says when it's done, and the dump runs in the terminal. Turn impersonation off again afterwards; leave it off between exports. Stytch logs every impersonation with its reason.
 
-Each Stytch project needs, once: `http://localhost:8765/impersonate` as the **default Login** redirect URL, `http://localhost:8765` as an authorized SDK domain, and **Authenticate user impersonation tokens** on in the Frontend SDK configuration. Both kbdb projects (dev and Live) have them. The session JWT lasts 5 minutes, which is plenty for one account; a dump that runs longer fails with a 401.
+Each Stytch project needs, once: `http://localhost:8765/impersonate` as the **default Login** redirect URL, `http://localhost:8765` as an authorized SDK domain, and **Authenticate user impersonation tokens** on in the Frontend SDK configuration. Both mykeebs-api projects (dev and Live) have them. The session JWT lasts 5 minutes, which is plenty for one account; a dump that runs longer fails with a 401.
 
 A data-request export also needs what Stytch holds for the user (their Discord name, avatar and email), from the user's page in the dashboard.
 
@@ -104,11 +104,11 @@ mise run deploy [env]    # deploy your current code to it
 mise run teardown [env]  # delete the stack, the ECR repo stack and the repo itself
 ```
 
-`env` defaults to `dev-$(whoami)`. Developers each get their own isolated stack, so nobody can break anyone else's testing. To add yours, copy the `[dev-jay.deploy.parameters]` section to `[dev-<your-name>.deploy.parameters]` and change its values: `stack_name` must be `kbdb-dev-<your-name>`, and the ECR repo in `image_repositories` must be `kbdb-api-<stack_name>`. None of the values are secret; commit the section. Want a second stack? Add a second section, e.g. `dev-<your-name>-test`.
+`env` defaults to `dev-$(whoami)`. Developers each get their own isolated stack, so nobody can break anyone else's testing. To add yours, copy the `[dev-jay.deploy.parameters]` section to `[dev-<your-name>.deploy.parameters]` and change its values: `stack_name` must be `mykeebs-api-dev-<your-name>`, and the ECR repo in `image_repositories` must be `mykeebs-api-<stack_name>`. None of the values are secret; commit the section. Want a second stack? Add a second section, e.g. `dev-<your-name>-test`.
 
 Put every template parameter in the section's `parameter_overrides`. Passing `--parameter-overrides` on the command line replaces that list wholesale rather than merging with it, so the scripts never do.
 
-Before changing anything, each task checks that your active AWS credentials belong to the account in the section's `s3_bucket` (`kbdb-sam-artifacts-<account-id>`) and stops if not. `teardown` refuses `prod` outright.
+Before changing anything, each task checks that your active AWS credentials belong to the account in the section's `s3_bucket` (`mykeebs-sam-artifacts-<account-id>`) and stops if not. `teardown` refuses `prod` outright.
 
 **Prod** is deployed only by GitHub Actions, from releases; don't run `deploy prod` by hand. See the [prod runbook](docs/runbook-prod.md).
 
@@ -116,7 +116,7 @@ You just need an active, authenticated AWS session — any profile works, there'
 
 ### IdP OIDC config (`OidcIssuerBaseUrl`/`OidcAudience`/`IdpConsentPublicToken`)
 
-kbdb is IdP-agnostic (see [Identity provider requirements](README.md#identity-provider-requirements)); this project is currently run against a Stytch **Test** project, and the parenthetical guidance below reflects that.
+mykeebs-api is IdP-agnostic (see [Identity provider requirements](README.md#identity-provider-requirements)); this project is currently run against a Stytch **Test** project, and the parenthetical guidance below reflects that.
 
 - `OidcIssuerBaseUrl` — your IdP project's OIDC issuer base URL (for a Stytch Test project: `https://test.stytch.com/v1/public/{project_id}`).
 - `OidcAudience` — the `aud` claim on every access token, REST and MCP alike: typically your IdP project ID. Some IdPs (Stytch included) put the project ID in `aud` regardless of client type, so one value covers both flows — no separate MCP audience needed.
@@ -130,7 +130,7 @@ A comma-separated list of browser origins (each scheme + host + port) allowed to
 
 ### Custom domains (`<your-name>.api.mykeebs.dev`, `<your-name>.images.mykeebs.dev`)
 
-Optional. They give your stack stable domains instead of its default `execute-api.amazonaws.com` and `*.cloudfront.net` ones, which a web app's CSP can name. There's nothing to request per developer: two wildcard certificates in the `kbdb-dev` account cover everyone. `*.api.mykeebs.dev` is in `us-east-2`, for API Gateway. `*.images.mykeebs.dev` is in `us-east-1`, because CloudFront only takes certificates from there. Their ARNs are in `[dev-jay.deploy.parameters]`.
+Optional. They give your stack stable domains instead of its default `execute-api.amazonaws.com` and `*.cloudfront.net` ones, which a web app's CSP can name. There's nothing to request per developer: two wildcard certificates in the `mykeebs-api-dev` account cover everyone. `*.api.mykeebs.dev` is in `us-east-2`, for API Gateway. `*.images.mykeebs.dev` is in `us-east-1`, because CloudFront only takes certificates from there. Their ARNs are in `[dev-jay.deploy.parameters]`.
 
 1. **Add `CustomDomainName=<your-name>.api.mykeebs.dev`, `ImagesDomainName=<your-name>.images.mykeebs.dev` and the two certificate ARNs** to your section's `parameter_overrides`.
 2. **Run `mise run setup`** (or `mise run dns` if the stack already exists). After deploying, it creates the DNS-only `<your-name>.api` and `<your-name>.images` CNAMEs in the `mykeebs.dev` Cloudflare zone, pointed at the stack's `ApiCustomDomainTarget` and `ImagesDomainTarget` outputs. It needs a Cloudflare login: `mise run cf-login` once (see [Setup](#setup)).
@@ -162,17 +162,17 @@ It checks the credentials belong to that account, then deploys its bootstrap sta
 
 Then the steps a script can't do:
 
-- **`kbdb-ci`:** set the `kbdb-bootstrap-jwks` stack's `JWKSBucketName` output as the `JWKS_BUCKET_NAME` GitHub Actions repo variable (Settings → Secrets and variables → Actions → Variables). `ci.yml`'s functional-test job fails at "Generate OIDC signing material" until it's set.
-- **`kbdb-prod`:** set the `kbdb-prod-oidc` stack's `GitHubActionsDeployRoleArn` output as the `PROD_DEPLOY_ROLE_ARN` repo variable. CI's role ARN is in `.github/actions/kbdb-pr-stack/action.yml`.
+- **`kbdb-ci` account:** set the `mykeebs-api-bootstrap-jwks` stack's `JWKSBucketName` output as the `JWKS_BUCKET_NAME` GitHub Actions repo variable (Settings → Secrets and variables → Actions → Variables). `ci.yml`'s functional-test job fails at "Generate OIDC signing material" until it's set.
+- **`kbdb-prod` account:** set the `mykeebs-api-prod-oidc` stack's `GitHubActionsDeployRoleArn` output as the `PROD_DEPLOY_ROLE_ARN` repo variable. CI's role ARN is in `.github/actions/mykeebs-api-pr-stack/action.yml`.
 - **Every account:** confirm the cost budget's email subscription. Its link only works while you're signed in to that account's console.
 
 CI and the prod deploy both run `mise run bootstrap-check`, which stops them when one of the account's bootstrap stacks is behind the repo. After merging a change to a bootstrap template, run `mise run bootstrap` for each account it's in.
 
 #### Stack permissions boundary
 
-`template.yaml` puts `bootstrap/stack-boundary.yaml`'s managed policy on every role it creates. It's the most any stack role can do, so a change that needs a new AWS permission updates this template in every account (`kbdb-ci` first, or the PR's functional tests fail), then merges.
+`template.yaml` puts `bootstrap/stack-boundary.yaml`'s managed policy on every role it creates. It's the most any stack role can do, so a change that needs a new AWS permission updates this template in every account (`mykeebs-api-ci` first, or the PR's functional tests fail), then merges.
 
-#### Setting up `kbdb-prod`
+#### Setting up `mykeebs-api-prod`
 
 After `mise run bootstrap prod`:
 
@@ -184,7 +184,7 @@ After `mise run bootstrap prod`:
 
 #### ECR repos
 
-`sam deploy` pushes the function's image before it creates or updates the stack, so a repo can't live in `template.yaml`: it's in its own permanent stack from `bootstrap/ecr-repo.yaml`. `mise run setup` deploys one per environment. CI's per-PR stacks all share one, `kbdb-ecr-bootstrap`, which `mise run bootstrap ci` deploys. Its defaults (`RepositoryName=kbdb-api`, `ExpireBy=age`) are CI's: images expire 2 days after push, since nothing there is long-lived.
+`sam deploy` pushes the function's image before it creates or updates the stack, so a repo can't live in `template.yaml`: it's in its own permanent stack from `bootstrap/ecr-repo.yaml`. `mise run setup` deploys one per environment. CI's per-PR stacks all share one, `mykeebs-api-ecr-bootstrap`, which `mise run bootstrap ci` deploys. Its defaults (`RepositoryName=mykeebs-api`, `ExpireBy=age`) are CI's: images expire 2 days after push, since nothing there is long-lived.
 
 ## Testing strategy
 
@@ -196,7 +196,7 @@ Two test layers, kept separate — don't mix them:
 
 Functional specs follow a consistent BDD shape: `Describe` the subject (and, for multi-action resources, a nested `Describe` per action) → `Context("given <precondition>")` → `When("<action>")` → one `It` with a `By(...)` per assertion. Build the actual request inside the innermost `BeforeEach`, not an outer one — Ginkgo's context is scoped to the node that received it.
 
-Functional tests run no auth server. [`oidc-testkit`](https://github.com/roguekeyboards/oidc-testkit) generates a signing key + discovery doc + JWKS pre-deploy; the JSON is published where the deployed authorizer and `auth.NewVerifier` can fetch it (floci's S3 locally, the public `kbdb-jwks` bucket in CI), and the suite signs its own tokens via `pkg/oidctest` (see `test/functional/support/api/token.go`).
+Functional tests run no auth server. [`oidc-testkit`](https://github.com/roguekeyboards/oidc-testkit) generates a signing key + discovery doc + JWKS pre-deploy; the JSON is published where the deployed authorizer and `auth.NewVerifier` can fetch it (floci's S3 locally, the public `mykeebs-jwks` bucket in CI), and the suite signs its own tokens via `pkg/oidctest` (see `test/functional/support/api/token.go`).
 
 ## Conventions
 

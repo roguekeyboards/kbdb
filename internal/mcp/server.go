@@ -83,7 +83,7 @@ func New(
 	// open a subscriptions/listen POST the server holds open, and Lambda
 	// buffers responses, so that POST can only end in a timeout. The tool
 	// list never changes at runtime anyway.
-	mcpServer := sdkmcp.NewServer(&sdkmcp.Implementation{Name: "kbdb", Version: version}, &sdkmcp.ServerOptions{
+	mcpServer := sdkmcp.NewServer(&sdkmcp.Implementation{Name: "mykeebs-api", Version: version}, &sdkmcp.ServerOptions{
 		Capabilities: &sdkmcp.ServerCapabilities{Tools: &sdkmcp.ToolCapabilities{}},
 	})
 	mcpServer.AddReceivingMiddleware(identityMiddleware())
@@ -122,7 +122,7 @@ var errNoTokenInfo = errors.New("no verified identity on context")
 // already wrote onto context at the HTTP layer (see New) and writes it into
 // logpkg the same way REST's handlers see it, so tool handlers only depend
 // on those shared, transport-agnostic packages. Nothing populates ctxpkg's
-// groups value on this path (kbdb's tokens carry no groups-equivalent
+// groups value on this path (mykeebs-api's tokens carry no groups-equivalent
 // claim), so groups handling was dropped rather than kept as dead code
 // that always sees nil.
 func identityMiddleware() sdkmcp.Middleware {

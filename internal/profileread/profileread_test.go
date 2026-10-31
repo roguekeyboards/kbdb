@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 	"github.com/roguekeyboards/mykeebs-api/internal/profileread"
 	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 	"github.com/roguekeyboards/mykeebs-api/internal/repository/mocks"
@@ -63,7 +63,7 @@ func (s *ResolveSuite) TestByUsername_MixedCaseIdentifier_LowercasedForClaimLook
 }
 
 func (s *ResolveSuite) TestNonDiscoverable_Owner_Returned() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "user-alice")
+	ctx := apictx.WithUserID(s.T().Context(), "user-alice")
 	s.repo.EXPECT().Get(ctx, "user-alice").
 		Return(&repository.Profile{OwnerID: "user-alice", Username: "alice", Discoverable: false}, nil)
 
@@ -75,7 +75,7 @@ func (s *ResolveSuite) TestNonDiscoverable_Owner_Returned() {
 }
 
 func (s *ResolveSuite) TestNonDiscoverable_OtherCaller_NotFound() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "user-bob")
+	ctx := apictx.WithUserID(s.T().Context(), "user-bob")
 	s.repo.EXPECT().Get(ctx, "user-alice").
 		Return(&repository.Profile{OwnerID: "user-alice", Username: "alice", Discoverable: false}, nil)
 

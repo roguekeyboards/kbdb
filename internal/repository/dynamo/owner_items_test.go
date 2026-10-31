@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 	"github.com/roguekeyboards/mykeebs-api/internal/repository/dynamo/mocks"
 )
@@ -60,7 +60,7 @@ func (s *DeleteOwnerItemsSuite) TestDeletesEveryPageInBatchesOf25() {
 		}).
 		Return(&dynamodb.BatchWriteItemOutput{}, nil)
 
-	err := deleteOwnerItems(kbdbctx.WithUserID(s.T().Context(), "alice"), s.mockClient, "t")
+	err := deleteOwnerItems(apictx.WithUserID(s.T().Context(), "alice"), s.mockClient, "t")
 
 	s.Require().NoError(err)
 	s.Equal([]int{25, 5, 1}, batchSizes)
@@ -77,13 +77,13 @@ func (s *DeleteOwnerItemsSuite) TestResendsUnprocessed() {
 		BatchWriteItem(mock.Anything, mock.MatchedBy(func(in *dynamodb.BatchWriteItemInput) bool { return len(in.RequestItems["t"]) == 1 })).
 		Return(&dynamodb.BatchWriteItemOutput{}, nil).Once()
 
-	s.Require().NoError(deleteOwnerItems(kbdbctx.WithUserID(s.T().Context(), "alice"), s.mockClient, "t"))
+	s.Require().NoError(deleteOwnerItems(apictx.WithUserID(s.T().Context(), "alice"), s.mockClient, "t"))
 }
 
 func (s *DeleteOwnerItemsSuite) TestQueryFails_Error() {
 	s.mockClient.EXPECT().Query(mock.Anything, mock.Anything).Return(nil, errors.New("dynamo down"))
 
-	s.Require().Error(deleteOwnerItems(kbdbctx.WithUserID(s.T().Context(), "alice"), s.mockClient, "t"))
+	s.Require().Error(deleteOwnerItems(apictx.WithUserID(s.T().Context(), "alice"), s.mockClient, "t"))
 }
 
 func (s *DeleteOwnerItemsSuite) TestNoCaller_ErrNoUserID() {

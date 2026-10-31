@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sort"
 
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 )
 
 // BuildSwitchEntry is one entry in Build.Switches.
@@ -205,7 +205,7 @@ type BuildImageKey string
 // NewBuildImageKey takes ownerID from ctx, not a parameter, so a caller
 // can't build a key addressing anyone else's prefix.
 func NewBuildImageKey(ctx context.Context, buildID, imageID string) (BuildImageKey, error) {
-	ownerID, ok := kbdbctx.UserID(ctx)
+	ownerID, ok := apictx.UserID(ctx)
 	if !ok {
 		return "", ErrNoUserID
 	}

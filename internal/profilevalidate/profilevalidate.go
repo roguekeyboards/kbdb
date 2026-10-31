@@ -28,7 +28,7 @@ const (
 
 // usernamePattern mirrors ProfileInput.username in api/openapi.yaml: the
 // Discord-handle rule plus hyphen and a 3-char minimum, so every valid
-// Discord username is also a valid kbdb username. RE2 has no lookahead, so
+// Discord username is also a valid mykeebs-api username. RE2 has no lookahead, so
 // the no-consecutive-periods rule is a separate strings.Contains check.
 var usernamePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_.-]{1,30}[a-z0-9]$`)
 
@@ -42,7 +42,7 @@ func validDiscordUsername(s string) bool {
 	return discordUsernamePattern.MatchString(s) && !strings.Contains(s, "..")
 }
 
-// currencyPattern checks shape only (3 uppercase letters) - kbdb doesn't
+// currencyPattern checks shape only (3 uppercase letters) - mykeebs-api doesn't
 // maintain or validate against the actual ISO 4217 code list.
 var currencyPattern = regexp.MustCompile(`^[A-Z]{3}$`)
 

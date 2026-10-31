@@ -25,7 +25,7 @@ type MCPClient struct {
 // authToken, if non-empty, is sent as a Bearer token on every request.
 func NewMCPClient(endpoint, authToken string) *MCPClient {
 	return &MCPClient{
-		client:   mcp.NewClient(&mcp.Implementation{Name: "kbdb-functional-test", Version: "1.0"}, nil),
+		client:   mcp.NewClient(&mcp.Implementation{Name: "mykeebs-api-functional-test", Version: "1.0"}, nil),
 		endpoint: endpoint,
 		rt:       bearerTokenTransport{token: authToken},
 	}

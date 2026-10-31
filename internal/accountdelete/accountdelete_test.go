@@ -12,7 +12,7 @@ import (
 
 	"github.com/roguekeyboards/mykeebs-api/internal/accountdelete"
 	admocks "github.com/roguekeyboards/mykeebs-api/internal/accountdelete/mocks"
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 	"github.com/roguekeyboards/mykeebs-api/internal/log"
 	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 	"github.com/roguekeyboards/mykeebs-api/internal/repository/mocks"
@@ -61,7 +61,7 @@ func (s *DeleteSuite) SetupTest() {
 
 // ctx is alice's request context, logging to s.logs.
 func (s *DeleteSuite) ctx() context.Context {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	return log.WithLogger(ctx, slog.New(slog.NewTextHandler(&s.logs, nil)))
 }
 

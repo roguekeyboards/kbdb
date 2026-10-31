@@ -24,7 +24,7 @@ if [ -z "$STACK_NAME" ] || [ -z "$REGION" ] || [ -z "$S3_BUCKET" ] || [ -z "$REP
   exit 1
 fi
 
-EXPECTED_ACCOUNT="${S3_BUCKET#kbdb-sam-artifacts-}"
+EXPECTED_ACCOUNT="${S3_BUCKET#mykeebs-sam-artifacts-}"
 ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
 if [ "$ACCOUNT" != "$EXPECTED_ACCOUNT" ]; then
   echo "$MYKEEBS_ENV deploys to account $EXPECTED_ACCOUNT, but the active AWS credentials are for $ACCOUNT." >&2

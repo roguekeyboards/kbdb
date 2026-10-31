@@ -203,7 +203,7 @@ mise/*.local.toml
 # https://mise.jdx.dev/configuration.html#tool-versions
 #.tool-versions
 
-### Project-specific (kbdb) ###
+### Project-specific (mykeebs-api) ###
 # Additional env file patterns beyond the Go template's .env
 .env.*
 

@@ -1,11 +1,11 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  One-time-per-account bootstrap (kbdb-ci only): a fixed, long-lived
+  One-time-per-account bootstrap (CI account only): a fixed, long-lived
   public S3 bucket holding the OIDC discovery doc + JWKS oidc-testkit-gen
-  generates per CI run, so a kbdb-pr-<N> stack's native JWT authorizer has
+  generates per CI run, so a mykeebs-api-pr-<N> stack's native JWT authorizer has
   a publicly-fetchable issuer/JWKS to verify against. Deployed manually,
   once, via `aws cloudformation deploy --template-file
-  bootstrap/jwks-bucket.yaml --stack-name kbdb-bootstrap-jwks` by a human
+  bootstrap/jwks-bucket.yaml --stack-name mykeebs-api-bootstrap-jwks` by a human
   operator with the kbdb-ci-admin profile.
 
 Resources:
@@ -14,7 +14,7 @@ Resources:
   JWKSBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub kbdb-jwks-${AWS::AccountId}
+      BucketName: !Sub mykeebs-jwks-${AWS::AccountId}
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerEnforced

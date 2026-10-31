@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 env:
-  ECR_REPOSITORY_URI: 475976462467.dkr.ecr.us-east-2.amazonaws.com/kbdb-api
+  ECR_REPOSITORY_URI: 475976462467.dkr.ecr.us-east-2.amazonaws.com/mykeebs-api
 
 jobs:
   lint:
@@ -67,9 +67,9 @@ jobs:
           fetch-depth: 0
           filter: blob:none
 
-      - name: Set up kbdb PR stack (OIDC auth + stack name)
+      - name: Set up mykeebs-api PR stack (OIDC auth + stack name)
         id: pr-stack
-        uses: ./.github/actions/kbdb-pr-stack
+        uses: ./.github/actions/mykeebs-api-pr-stack
 
       - name: Set up mise
         uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5.2.4
@@ -94,7 +94,7 @@ jobs:
       - name: sam build
         run: sam build --config-env ci
 
-      # The JWKS/discovery JSON go to the public kbdb-jwks bucket for the
+      # The JWKS/discovery JSON go to the public mykeebs-jwks bucket for the
       # deployed authorizer to fetch; the signing key stays on the runner. The
       # region-specific S3 host is the issuer - API Gateway's authorizer won't
       # follow the generic host's 307 redirect - and the S3 keys mirror it 1:1.
@@ -103,7 +103,7 @@ jobs:
         run: |
           PR="${{ github.event.pull_request.number }}"
           BUCKET="${{ vars.JWKS_BUCKET_NAME }}"
-          PREFIX="jwks/kbdb-pr-${PR}"
+          PREFIX="jwks/mykeebs-api-pr-${PR}"
           ISSUER="https://${BUCKET}.s3.us-east-2.amazonaws.com/${PREFIX}"
           OIDC_DIR="${RUNNER_TEMP}/oidc"
           KEY_PATH="${OIDC_DIR}/signing-key.pem"
@@ -117,7 +117,7 @@ jobs:
             --content-type application/json
           {
             echo "issuer=$ISSUER"
-            echo "audience=client_local_kbdb"
+            echo "audience=client_local_mykeebs-api"
             echo "key-path=$KEY_PATH"
           } >> "$GITHUB_OUTPUT"
 
@@ -145,11 +145,11 @@ jobs:
             --parameter-overrides \
               "OidcIssuerBaseUrl=${{ steps.oidc.outputs.issuer }}" \
               "OidcAudience=${{ steps.oidc.outputs.audience }}" \
-              "IdpConsentPublicToken=public-token-test-local-kbdb" \
+              "IdpConsentPublicToken=public-token-test-local-mykeebs-api" \
               "CorsAllowOrigins=http://localhost:5173" \
               "DailyUploadLimit=1000000" \
               "InvalidateImages=false" \
-            --tags "kbdb:pr=pr-${{ github.event.pull_request.number }}" \
+            --tags "mykeebs-api:pr=pr-${{ github.event.pull_request.number }}" \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset
 

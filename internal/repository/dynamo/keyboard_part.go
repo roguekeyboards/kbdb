@@ -11,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
@@ -110,7 +110,7 @@ func (r *KeyboardRepository) addPart(ctx context.Context, keyboardID, attr, id s
 		return fmt.Errorf("adding %s %q to keyboard %q: %w", attr, id, keyboardID, errInvalidMapKey)
 	}
 
-	ownerID, ok := kbdbctx.UserID(ctx)
+	ownerID, ok := apictx.UserID(ctx)
 	if !ok {
 		return fmt.Errorf("adding %s to keyboard %q: %w", attr, keyboardID, repository.ErrNoUserID)
 	}
@@ -155,7 +155,7 @@ func (r *KeyboardRepository) addPart(ctx context.Context, keyboardID, attr, id s
 func (r *KeyboardRepository) updatePart(
 	ctx context.Context, keyboardID, attr, id string, entry expression.NameBuilder, update expression.UpdateBuilder,
 ) (*repository.Keyboard, error) {
-	ownerID, ok := kbdbctx.UserID(ctx)
+	ownerID, ok := apictx.UserID(ctx)
 	if !ok {
 		return nil, fmt.Errorf("updating %s on keyboard %q: %w", attr, keyboardID, repository.ErrNoUserID)
 	}
@@ -196,7 +196,7 @@ func (r *KeyboardRepository) updatePart(
 // (ErrNotFound) from an id already gone (idempotent success). An id mapKey
 // refuses can't be stored, so it's already gone too.
 func (r *KeyboardRepository) deletePart(ctx context.Context, keyboardID, attr, id string) error {
-	ownerID, ok := kbdbctx.UserID(ctx)
+	ownerID, ok := apictx.UserID(ctx)
 	if !ok {
 		return fmt.Errorf("deleting %s from keyboard %q: %w", attr, keyboardID, repository.ErrNoUserID)
 	}

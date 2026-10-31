@@ -1,6 +1,6 @@
 // Package consent serves the IdP consent/authorization page at GET /authorize,
 // which also handles OIDC logout requests, so MCP clients can authenticate
-// against kbdb standalone without depending on mykeebs-web being deployed. The
+// against mykeebs-api standalone without depending on mykeebs-web being deployed. The
 // page itself is built in github.com/roguekeyboards/mykeebs-consent.
 package consent
 
@@ -11,7 +11,7 @@ import (
 	consentpage "github.com/roguekeyboards/mykeebs-consent"
 )
 
-// Handler serves GET /authorize: kbdb's IdP consent, login and logout page.
+// Handler serves GET /authorize: mykeebs-api's IdP consent, login and logout page.
 func Handler(idpConsentPublicToken, oidcIssuerBaseURL string) http.Handler {
 	page, err := consentpage.Page(consentpage.Config{
 		PublicToken:   idpConsentPublicToken,

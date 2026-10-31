@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  kbdb - keyboard database. Infrastructure for the kbdb API: a Lambda
+  mykeebs-api - keyboard database. Infrastructure for the mykeebs-api API: a Lambda
   function fronted by an HTTP API with a native OIDC JWT authorizer, DynamoDB
   tables, and an S3 bucket for images with an event-driven moderation
   function.
@@ -12,7 +12,7 @@ Globals:
     MemorySize: 128
     # bootstrap/stack-boundary.yaml, deployed to every account before any
     # stack.
-    PermissionsBoundary: !Sub arn:aws:iam::${AWS::AccountId}:policy/kbdb-stack-boundary
+    PermissionsBoundary: !Sub arn:aws:iam::${AWS::AccountId}:policy/mykeebs-api-stack-boundary
 
 Parameters:
   OidcIssuerBaseUrl:
@@ -79,12 +79,12 @@ Parameters:
       distribution moved onto one keeps its ACL across stack updates.
   ImagesKeyGroupId:
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /kbdb/image-delivery/key-group-id
+    Default: /mykeebs-api/image-delivery/key-group-id
     Description: >-
       The account's image signing key group, from bootstrap/image-delivery.yaml.
   ImagesResponseHeadersPolicyId:
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /kbdb/image-delivery/response-headers-policy-id
+    Default: /mykeebs-api/image-delivery/response-headers-policy-id
     Description: >-
       The account's images response headers policy, from
       bootstrap/image-delivery.yaml.
@@ -217,8 +217,8 @@ Resources:
     DependsOn: ModerateFunctionS3Permission
     Properties:
       # AccountId+StackName suffix: S3 bucket names are globally unique, and
-      # multiple kbdb-pr-<N> stacks share the kbdb-ci account.
-      BucketName: !Sub kbdb-images-${AWS::AccountId}-${AWS::StackName}
+      # multiple mykeebs-api-pr-<N> stacks share the mykeebs-api-ci account.
+      BucketName: !Sub mykeebs-images-${AWS::AccountId}-${AWS::StackName}
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
@@ -255,7 +255,7 @@ Resources:
     Type: AWS::CloudFront::OriginAccessControl
     Properties:
       OriginAccessControlConfig:
-        Name: !Sub kbdb-images-${AWS::StackName}
+        Name: !Sub mykeebs-images-${AWS::StackName}
         OriginAccessControlOriginType: s3
         SigningBehavior: always
         SigningProtocol: sigv4
@@ -269,7 +269,7 @@ Resources:
     Properties:
       DistributionConfig:
         Enabled: true
-        Comment: !Sub kbdb images (${AWS::StackName})
+        Comment: !Sub mykeebs-api images (${AWS::StackName})
         PriceClass: PriceClass_100
         HttpVersion: http2and3
         IPV6Enabled: true
@@ -548,15 +548,15 @@ Resources:
   ApiFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /aws/lambda/kbdb-api-${AWS::StackName}
+      LogGroupName: !Sub /aws/lambda/${AWS::StackName}
       RetentionInDays: 14
 
-  # Added after kbdb#371's unexplained 401s left nothing to diagnose once
+  # Added after mykeebs-api#371's unexplained 401s left nothing to diagnose once
   # the per-PR stack tore down.
   HttpApiAccessLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /aws/apigateway/kbdb-api-${AWS::StackName}
+      LogGroupName: !Sub /aws/apigateway/${AWS::StackName}
       RetentionInDays: 14
 
   # Longer than RejectedImageExpirationDays's default, so a rejection's
@@ -565,7 +565,7 @@ Resources:
   ModerateFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /aws/lambda/kbdb-moderate-${AWS::StackName}
+      LogGroupName: !Sub /aws/lambda/${AWS::StackName}-moderate
       RetentionInDays: 60
 
   # Events the moderation function still failed after Lambda's retries,
@@ -583,7 +583,7 @@ Resources:
   ModerateFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub kbdb-moderate-${AWS::StackName}
+      FunctionName: !Sub ${AWS::StackName}-moderate
       PackageType: Image
       Architectures:
         - arm64
@@ -608,7 +608,7 @@ Resources:
               Action:
                 - s3:GetObject
                 - s3:PutObjectTagging
-              Resource: !Sub "arn:aws:s3:::kbdb-images-${AWS::AccountId}-${AWS::StackName}/*"
+              Resource: !Sub "arn:aws:s3:::mykeebs-images-${AWS::AccountId}-${AWS::StackName}/*"
             - Effect: Allow
               Action: rekognition:DetectModerationLabels
               Resource: "*"
@@ -643,7 +643,7 @@ Resources:
       FunctionName: !GetAtt ModerateFunction.Arn
       Principal: s3.amazonaws.com
       SourceAccount: !Ref AWS::AccountId
-      SourceArn: !Sub "arn:aws:s3:::kbdb-images-${AWS::AccountId}-${AWS::StackName}"
+      SourceArn: !Sub "arn:aws:s3:::mykeebs-images-${AWS::AccountId}-${AWS::StackName}"
 
   AlarmTopic:
     Type: AWS::SNS::Topic
@@ -737,7 +737,7 @@ Resources:
       LogGroupName: !Ref ApiFunctionLogGroup
       FilterPattern: '"account delete notice failed"'
       MetricTransformations:
-        - MetricNamespace: kbdb
+        - MetricNamespace: mykeebs-api
           MetricName: !Sub AccountDeleteNoticeFailed-${AWS::StackName}
           MetricValue: '1'
 
@@ -748,7 +748,7 @@ Resources:
         An account delete notice failed to send. Find "account delete notice
         failed" in the API function's logs and remove that owner_id from the
         identity provider by hand.
-      Namespace: kbdb
+      Namespace: mykeebs-api
       MetricName: !Sub AccountDeleteNoticeFailed-${AWS::StackName}
       Statistic: Sum
       Period: 300
@@ -766,7 +766,7 @@ Resources:
   ApiFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub kbdb-api-${AWS::StackName}
+      FunctionName: !Sub ${AWS::StackName}
       PackageType: Image
       # Lambda's CPU scales with memory, and a list fans out dozens of
       # concurrent DynamoDB calls. At 256 MB a 34-build list took 60-220 ms
@@ -792,8 +792,8 @@ Resources:
               - HasImagesDomain
               - !Sub https://${ImagesDomainName}
               - !Sub https://${ImagesDistribution.DomainName}
-          IMAGES_SIGNING_KEY_PARAM: /kbdb/image-delivery/private-key
-          IMAGES_SIGNING_KEY_ID_PARAM: /kbdb/image-delivery/public-key-id
+          IMAGES_SIGNING_KEY_PARAM: /mykeebs-api/image-delivery/private-key
+          IMAGES_SIGNING_KEY_ID_PARAM: /mykeebs-api/image-delivery/public-key-id
           IMAGES_DISTRIBUTION_ID: !If [HasImageInvalidation, !Ref ImagesDistribution, '']
           SWITCH_TABLE_NAME: !Ref SwitchTable
           KEYBOARD_TABLE_NAME: !Ref KeyboardTable
@@ -833,8 +833,8 @@ Resources:
             - Effect: Allow
               Action: ssm:GetParameters
               Resource:
-                - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/kbdb/image-delivery/private-key
-                - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/kbdb/image-delivery/public-key-id
+                - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/mykeebs-api/image-delivery/private-key
+                - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/mykeebs-api/image-delivery/public-key-id
             - !If
               - HasImageInvalidation
               - Effect: Allow

@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 	"github.com/roguekeyboards/mykeebs-api/internal/repository/dynamo/mocks"
 )
@@ -33,7 +33,7 @@ func (s *KeyboardPartRepositorySuite) SetupTest() {
 }
 
 func (s *KeyboardPartRepositorySuite) ctx() context.Context {
-	return kbdbctx.WithUserID(s.T().Context(), "alice")
+	return apictx.WithUserID(s.T().Context(), "alice")
 }
 
 // names reports whether every want appears among an expression's names.

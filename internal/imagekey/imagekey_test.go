@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
@@ -20,7 +20,7 @@ func TestParseSuite(t *testing.T) {
 }
 
 func (s *ParseSuite) SetupTest() {
-	s.ctx = kbdbctx.WithUserID(context.Background(), "owner-1")
+	s.ctx = apictx.WithUserID(context.Background(), "owner-1")
 }
 
 func (s *ParseSuite) parse(key string, err error) Ref {

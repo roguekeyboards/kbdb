@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/roguekeyboards/mykeebs-api/internal/accountdelete"
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 	"github.com/roguekeyboards/mykeebs-api/internal/handlers/api"
 	"github.com/roguekeyboards/mykeebs-api/internal/problem"
 	"github.com/roguekeyboards/mykeebs-api/internal/repoapi"
@@ -76,7 +76,7 @@ func (s *GetProfileSuite) TestDiscoverableByUsername_200() {
 }
 
 func (s *GetProfileSuite) TestNonDiscoverable_Owner_200() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "user-alice")
+	ctx := apictx.WithUserID(s.T().Context(), "user-alice")
 	s.mockRepo.EXPECT().Get(ctx, "user-alice").
 		Return(&repository.Profile{
 			OwnerID: "user-alice", Username: "alice", Discoverable: false,
@@ -94,7 +94,7 @@ func (s *GetProfileSuite) TestNonDiscoverable_Owner_200() {
 }
 
 func (s *GetProfileSuite) TestNonDiscoverable_OtherCaller_404() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "user-bob")
+	ctx := apictx.WithUserID(s.T().Context(), "user-bob")
 	s.mockRepo.EXPECT().Get(ctx, "user-alice").
 		Return(&repository.Profile{OwnerID: "user-alice", Username: "alice", Discoverable: false}, nil)
 
@@ -171,7 +171,7 @@ func (s *CreateProfileSuite) post(caller string, body any) *httptest.ResponseRec
 
 	ctx := s.T().Context()
 	if caller != "" {
-		ctx = kbdbctx.WithUserID(ctx, caller)
+		ctx = apictx.WithUserID(ctx, caller)
 	}
 
 	req := httptest.NewRequestWithContext(ctx, http.MethodPost, "/v1/profile/"+profileUserID, strings.NewReader(string(raw)))
@@ -339,7 +339,7 @@ func (s *UpdateProfileSuite) put(caller string, body any) *httptest.ResponseReco
 
 	ctx := s.T().Context()
 	if caller != "" {
-		ctx = kbdbctx.WithUserID(ctx, caller)
+		ctx = apictx.WithUserID(ctx, caller)
 	}
 
 	req := httptest.NewRequestWithContext(ctx, http.MethodPut, "/v1/profile/"+profileUserID, strings.NewReader(string(raw)))
@@ -466,7 +466,7 @@ func (s *DeleteProfileSuite) del(caller string) *httptest.ResponseRecorder {
 
 	ctx := s.T().Context()
 	if caller != "" {
-		ctx = kbdbctx.WithUserID(ctx, caller)
+		ctx = apictx.WithUserID(ctx, caller)
 	}
 
 	req := httptest.NewRequestWithContext(ctx, http.MethodDelete, "/v1/profile/"+profileUserID, nil)
@@ -565,7 +565,7 @@ func (s *ListProfilesSuite) TestFullProfiles_PreferencesOnlyOnCallersOwnRow() {
 			{OwnerID: "user-bob", Username: "bob", Discoverable: true, Bio: strp("bob's keebs"), Preferences: repository.ProfilePreferences{Currency: "GBP"}},
 		}, "", nil)
 
-	req := httptest.NewRequestWithContext(kbdbctx.WithUserID(s.T().Context(), "user-alice"), http.MethodGet, "/v1/profiles?limit=20", nil)
+	req := httptest.NewRequestWithContext(apictx.WithUserID(s.T().Context(), "user-alice"), http.MethodGet, "/v1/profiles?limit=20", nil)
 	rec := httptest.NewRecorder()
 	s.handler(rec, req)
 
@@ -708,7 +708,7 @@ func (s *SetProfileImageSuite) newRequest(ctx context.Context, identifier, body 
 }
 
 func (s *SetProfileImageSuite) ownerCtx() context.Context {
-	return kbdbctx.WithUserID(s.T().Context(), "user-alice")
+	return apictx.WithUserID(s.T().Context(), "user-alice")
 }
 
 const previousProfileImageTestKey = repository.ProfileImageKey("profiles/user-alice/avatar/old-upload")
@@ -760,7 +760,7 @@ func (s *SetProfileImageSuite) TestReplacingAvatar_DeletesPreviousObjectFirst() 
 }
 
 func (s *SetProfileImageSuite) TestNotOwner_404() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "user-bob")
+	ctx := apictx.WithUserID(s.T().Context(), "user-bob")
 
 	rec := httptest.NewRecorder()
 	s.handler(rec, s.newRequest(ctx, "user-alice", `{"content_type":"image/webp","size_bytes":524288}`))
@@ -868,7 +868,7 @@ func (s *DeleteProfileImageSuite) newRequest(ctx context.Context) *http.Request 
 }
 
 func (s *DeleteProfileImageSuite) ownerCtx() context.Context {
-	return kbdbctx.WithUserID(s.T().Context(), "user-alice")
+	return apictx.WithUserID(s.T().Context(), "user-alice")
 }
 
 var deleteProfileImageTestKey = repository.ProfileImageKey("profiles/user-alice/avatar/up1")
@@ -908,7 +908,7 @@ func (s *DeleteProfileImageSuite) TestNoAvatar_204_WithoutS3Call() {
 }
 
 func (s *DeleteProfileImageSuite) TestNotOwner_404() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "user-bob")
+	ctx := apictx.WithUserID(s.T().Context(), "user-bob")
 
 	rec := httptest.NewRecorder()
 	s.handler(rec, s.newRequest(ctx))

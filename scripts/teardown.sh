@@ -9,7 +9,7 @@ if [ "$MYKEEBS_ENV" = "prod" ]; then
   exit 1
 fi
 
-BOOTSTRAP_STACK="kbdb-ecr-bootstrap-${STACK_NAME}"
+BOOTSTRAP_STACK="mykeebs-api-ecr-bootstrap-${STACK_NAME}"
 
 # CloudFormation can't delete a non-empty bucket.
 BUCKET=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region "$REGION" \

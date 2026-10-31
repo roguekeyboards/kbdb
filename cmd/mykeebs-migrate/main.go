@@ -19,7 +19,7 @@ func main() {
 	var cli CLI
 	kctx := kong.Parse(&cli,
 		kong.Name("mykeebs-migrate"),
-		kong.Description("Dump and restore a kbdb user's entities and images via the public REST API."),
+		kong.Description("Dump and restore a mykeebs-api user's entities and images via the public REST API."),
 		kong.UsageOnError(),
 		kong.BindTo(context.Background(), (*context.Context)(nil)),
 	)

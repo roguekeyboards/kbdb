@@ -6,7 +6,7 @@ import (
 	"math"
 	"sort"
 
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 )
 
 // KeyboardMaterialColor is a physical part described by material and color
@@ -378,7 +378,7 @@ type KeyboardImageKey string
 // image within keyboardID. ownerID comes from ctx, not a parameter, so a
 // caller can't build a key addressing anyone else's prefix.
 func NewKeyboardImageKey(ctx context.Context, keyboardID, imageID string) (KeyboardImageKey, error) {
-	ownerID, ok := kbdbctx.UserID(ctx)
+	ownerID, ok := apictx.UserID(ctx)
 	if !ok {
 		return "", ErrNoUserID
 	}

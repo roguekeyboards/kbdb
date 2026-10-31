@@ -1,5 +1,5 @@
 // Package deletenotice tells the operator an account was deleted, so they
-// can remove the user from the identity provider by hand: kbdb holds no
+// can remove the user from the identity provider by hand: mykeebs-api holds no
 // credential that could do it (see #554).
 package deletenotice
 
@@ -31,9 +31,9 @@ func NewSNS(client *sns.Client, topicARN string) *SNS {
 func (s *SNS) Notify(ctx context.Context, userID string) error {
 	_, err := s.client.Publish(ctx, &sns.PublishInput{
 		TopicArn: aws.String(s.topicARN),
-		Subject:  aws.String("kbdb: account deleted, remove the user from the identity provider"),
+		Subject:  aws.String("mykeebs-api: account deleted, remove the user from the identity provider"),
 		Message: aws.String(fmt.Sprintf(
-			"Account %s was deleted from kbdb. Remove this user from the identity provider.", userID)),
+			"Account %s was deleted from mykeebs-api. Remove this user from the identity provider.", userID)),
 	})
 	if err != nil {
 		return fmt.Errorf("publishing account delete notice to %s: %w", s.topicARN, err)

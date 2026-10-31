@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 )
 
@@ -19,7 +19,7 @@ func TestNewBuildImageKeySuite(t *testing.T) {
 }
 
 func (s *NewBuildImageKeySuite) TestSucceeds() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 
 	key, err := repository.NewBuildImageKey(ctx, "b1", "img1")
 

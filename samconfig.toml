@@ -10,13 +10,13 @@ version = 0.1
 region = "us-east-2"
 
 [dev-jay.deploy.parameters]
-stack_name = "kbdb-dev-jay"
-s3_bucket = "kbdb-sam-artifacts-992234857260"
+stack_name = "mykeebs-api-dev-jay"
+s3_bucket = "mykeebs-sam-artifacts-992234857260"
 # Both functions push to the one repo; SAM tags each image with its
 # function's name, so they don't collide.
 image_repositories = [
-  "ApiFunction=992234857260.dkr.ecr.us-east-2.amazonaws.com/kbdb-api-kbdb-dev-jay",
-  "ModerateFunction=992234857260.dkr.ecr.us-east-2.amazonaws.com/kbdb-api-kbdb-dev-jay",
+  "ApiFunction=992234857260.dkr.ecr.us-east-2.amazonaws.com/mykeebs-api-dev-jay",
+  "ModerateFunction=992234857260.dkr.ecr.us-east-2.amazonaws.com/mykeebs-api-dev-jay",
 ]
 region = "us-east-2"
 capabilities = "CAPABILITY_IAM"
@@ -35,11 +35,11 @@ parameter_overrides = """\
   """
 
 [prod.deploy.parameters]
-stack_name = "kbdb-prod"
-s3_bucket = "kbdb-sam-artifacts-416860882648"
+stack_name = "mykeebs-api-prod"
+s3_bucket = "mykeebs-sam-artifacts-416860882648"
 image_repositories = [
-  "ApiFunction=416860882648.dkr.ecr.us-east-2.amazonaws.com/kbdb-api-kbdb-prod",
-  "ModerateFunction=416860882648.dkr.ecr.us-east-2.amazonaws.com/kbdb-api-kbdb-prod",
+  "ApiFunction=416860882648.dkr.ecr.us-east-2.amazonaws.com/mykeebs-api-prod",
+  "ModerateFunction=416860882648.dkr.ecr.us-east-2.amazonaws.com/mykeebs-api-prod",
 ]
 region = "us-east-2"
 capabilities = "CAPABILITY_IAM"
@@ -61,13 +61,13 @@ parameter_overrides = """\
   AlarmEmail=kbdb-alerts-prd@mykeebs.com\
   """
 
-# CI deploys per-PR stacks into the separate kbdb-ci account (475976462467),
+# CI deploys per-PR stacks into the separate mykeebs-api-ci account (475976462467),
 # selected via `sam build/deploy --config-env ci`. stack_name,
 # image_repositories and parameter_overrides are deliberately NOT set here -
-# all are supplied per-run on the command line (--stack-name kbdb-pr-<N>,
-# computed by .github/actions/kbdb-pr-stack).
+# all are supplied per-run on the command line (--stack-name mykeebs-api-pr-<N>,
+# computed by .github/actions/mykeebs-api-pr-stack).
 [ci.deploy.parameters]
-s3_bucket = "kbdb-sam-artifacts-475976462467"
+s3_bucket = "mykeebs-sam-artifacts-475976462467"
 region = "us-east-2"
 capabilities = "CAPABILITY_IAM"
 confirm_changeset = false

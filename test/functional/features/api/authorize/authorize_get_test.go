@@ -42,7 +42,7 @@ var _ = Describe("Fetching the IdP consent page", func() {
 				Expect(readErr).NotTo(HaveOccurred())
 				// Matches scripts/func-setup.sh's IdpConsentPublicToken deploy
 				// parameter for this stack.
-				Expect(string(body)).To(ContainSubstring(`{"publicToken":"public-token-test-local-kbdb"`))
+				Expect(string(body)).To(ContainSubstring(`{"publicToken":"public-token-test-local-mykeebs-api"`))
 			})
 		})
 	})

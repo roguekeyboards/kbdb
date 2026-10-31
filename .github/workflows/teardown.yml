@@ -15,9 +15,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Set up kbdb PR stack (OIDC auth + stack name)
+      - name: Set up mykeebs-api PR stack (OIDC auth + stack name)
         id: pr-stack
-        uses: ./.github/actions/kbdb-pr-stack
+        uses: ./.github/actions/mykeebs-api-pr-stack
 
       - name: Empty ImagesBucket
         run: |
@@ -34,7 +34,7 @@ jobs:
       - name: Empty this PR's JWKS prefix
         run: |
           if [ -n "${{ vars.JWKS_BUCKET_NAME }}" ]; then
-            aws s3 rm "s3://${{ vars.JWKS_BUCKET_NAME }}/jwks/kbdb-pr-${{ github.event.pull_request.number }}/" --recursive
+            aws s3 rm "s3://${{ vars.JWKS_BUCKET_NAME }}/jwks/mykeebs-api-pr-${{ github.event.pull_request.number }}/" --recursive
           fi
 
       - name: Delete stack

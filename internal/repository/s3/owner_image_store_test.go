@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 	"github.com/roguekeyboards/mykeebs-api/internal/repository"
 	"github.com/roguekeyboards/mykeebs-api/internal/repository/s3/mocks"
 )
@@ -33,7 +33,7 @@ func (s *OwnerImageStoreSuite) SetupTest() {
 	s.mockClient = mocks.NewMockS3API(s.T())
 	s.mockCDN = mocks.NewMockInvalidator(s.T())
 	s.store = &OwnerImageStore{client: s.mockClient, bucket: "images-bucket", cdn: s.mockCDN}
-	s.ctx = kbdbctx.WithUserID(s.T().Context(), "alice")
+	s.ctx = apictx.WithUserID(s.T().Context(), "alice")
 }
 
 func (s *OwnerImageStoreSuite) TestDeletesEveryObjectUnderEachPrefix() {

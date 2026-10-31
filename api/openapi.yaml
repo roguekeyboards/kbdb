@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: kbdb API
+  title: mykeebs-api API
   description: >
     API for tracking a personal mechanical keyboard collection: keyboards,
     switches, keycap sets, and the builds that combine them. Routes are
@@ -1680,7 +1680,7 @@ components:
       example: USD
       description: >
         An ISO 4217 currency code, from the item owner's
-        preferences.currency. Display-only: kbdb stores no currency with a
+        preferences.currency. Display-only: mykeebs-api stores no currency with a
         price and does no conversion.
 
     Visibility:
@@ -2334,7 +2334,7 @@ components:
           description: >
             An ISO 4217 currency code (case-insensitive on write, always
             returned uppercase). Display-only: a hint for which currency a
-            client should label or convert prices in. kbdb does not store
+            client should label or convert prices in. mykeebs-api does not store
             a currency alongside any item's price and performs no
             conversion itself.
         show_price_to_me:

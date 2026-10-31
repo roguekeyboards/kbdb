@@ -1,6 +1,6 @@
-# kbdb
+# mykeebs-api
 
-kbdb is a keyboard collection database — keyboards, switches, keycap sets, and the builds assembled from them. It's multi-user: each item has a visibility of private (owner only), authenticated (any signed-in user), or public (no auth needed), set per item by its owner.
+mykeebs-api is a keyboard collection database — keyboards, switches, keycap sets, and the builds assembled from them. It's multi-user: each item has a visibility of private (owner only), authenticated (any signed-in user), or public (no auth needed), set per item by its owner.
 
 It exposes two first-class APIs — REST and an MCP server, so you can manage your collection from an AI chat client — backed by the same service/repository layer, so they never drift out of sync with each other.
 
@@ -22,19 +22,19 @@ It exposes two first-class APIs — REST and an MCP server, so you can manage yo
 
 **The sign-in page at `GET /authorize` is built in [mykeebs-consent](https://github.com/roguekeyboards/mykeebs-consent)**, which delivers it as one self-contained file through a Go module, and the logo and fonts in it come from [mykeebs-brand](https://github.com/roguekeyboards/mykeebs-brand).
 
-**The privacy policy, terms and MCP guide live in [mykeebs.com](https://github.com/roguekeyboards/mykeebs.com)**, and kbdb redirects its old `/privacy`, `/terms` and `/help/mcp` paths there. Changes here still drive them: the privacy policy names the processors and retention periods in `template.yaml`, and the MCP guide describes what the MCP tools can do, so change those pages when these change.
+**The privacy policy, terms and MCP guide live in [mykeebs.com](https://github.com/roguekeyboards/mykeebs.com)**, and mykeebs-api redirects its old `/privacy`, `/terms` and `/help/mcp` paths there. Changes here still drive them: the privacy policy names the processors and retention periods in `template.yaml`, and the MCP guide describes what the MCP tools can do, so change those pages when these change.
 
 **The whole stack runs at effectively $0** on AWS free-tier usage — a cost-budget tripwire is wired into every AWS account, so a real bill showing up is itself the alarm.
 
 ## Identity provider requirements
 
-kbdb's backend has no IdP-specific code (the one exception is the `GET /authorize` login page, built in [mykeebs-consent](https://github.com/roguekeyboards/mykeebs-consent), which uses the deployment's IdP browser SDK). It's currently deployed against Stytch but doesn't depend on it. Any IdP works as long as it:
+mykeebs-api's backend has no IdP-specific code (the one exception is the `GET /authorize` login page, built in [mykeebs-consent](https://github.com/roguekeyboards/mykeebs-consent), which uses the deployment's IdP browser SDK). It's currently deployed against Stytch but doesn't depend on it. Any IdP works as long as it:
 
 - Publishes standard OIDC discovery (`.well-known/openid-configuration`) and a JWKS endpoint, since both API Gateway's native JWT authorizer and the application's own `go-oidc`-based verifier resolve signing keys that way.
 - Issues RS256-signed JWTs with standard `iss`, `aud`, and `exp` claims.
 - Includes a `sub` claim that's a stable, immutable identifier for the user — it's used as the partition key for every entity table, so it must never change or be reused for a different person.
 - Serves OAuth 2.0 Authorization Server Metadata (RFC 8414) at that issuer, so MCP clients doing OAuth discovery can find its authorization/token endpoints. The MCP endpoint advertises the issuer as its authorization server via RFC 9728 Protected Resource Metadata (`/.well-known/oauth-protected-resource`) — an IdP without RFC 8414 metadata breaks MCP client login even though REST and hand-issued tokens would still work fine.
-- Supports RFC 7591 Dynamic Client Registration, so an MCP client like Claude Code can register itself against kbdb without a human manually provisioning it a client ID first. This requirement, together with the next one, rules out some managed IdP options that would otherwise fit.
+- Supports RFC 7591 Dynamic Client Registration, so an MCP client like Claude Code can register itself against mykeebs-api without a human manually provisioning it a client ID first. This requirement, together with the next one, rules out some managed IdP options that would otherwise fit.
 - Supports RFC 8252 loopback wildcard-port redirect URIs, since that's how a locally-running MCP client completes its OAuth redirect.
 
 ## Getting started

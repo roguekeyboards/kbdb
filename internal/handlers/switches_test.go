@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	kbdbctx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
+	apictx "github.com/roguekeyboards/mykeebs-api/internal/ctx"
 	"github.com/roguekeyboards/mykeebs-api/internal/handlers/api"
 	"github.com/roguekeyboards/mykeebs-api/internal/ownerprefs"
 	"github.com/roguekeyboards/mykeebs-api/internal/problem"
@@ -50,7 +50,7 @@ func (s *ListSwitchesSuite) newRequest(ctx context.Context, query string) *http.
 }
 
 func (s *ListSwitchesSuite) TestListSwitches_Owner_RequestsAllVisibilities() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 
 	s.mockRepo.EXPECT().
 		List(mock.Anything, "alice", mock.MatchedBy(func(vis []repository.Visibility) bool {
@@ -85,7 +85,7 @@ func (s *ListSwitchesSuite) TestListSwitches_Anonymous_RequestsPublicOnly() {
 }
 
 func (s *ListSwitchesSuite) TestListSwitches_OtherUser_RequestsPublicAndAuthenticated() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	s.mockRepo.EXPECT().
 		List(mock.Anything, "alice", mock.MatchedBy(func(vis []repository.Visibility) bool {
@@ -101,7 +101,7 @@ func (s *ListSwitchesSuite) TestListSwitches_OtherUser_RequestsPublicAndAuthenti
 }
 
 func (s *ListSwitchesSuite) TestListSwitches_OwnerShowPriceToMeTrue_IncludesPrice() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	price := 8.50
 
 	s.mockRepo.EXPECT().
@@ -125,7 +125,7 @@ func (s *ListSwitchesSuite) TestListSwitches_OwnerShowPriceToMeTrue_IncludesPric
 }
 
 func (s *ListSwitchesSuite) TestListSwitches_OwnerShowPriceToMeFalse_OmitsPrice() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	price := 8.50
 
 	s.mockRepo.EXPECT().
@@ -144,7 +144,7 @@ func (s *ListSwitchesSuite) TestListSwitches_OwnerShowPriceToMeFalse_OmitsPrice(
 }
 
 func (s *ListSwitchesSuite) TestListSwitches_OwnerShowPriceToMeFalse_KeepsRestOfPurchase() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	price := 8.50
 	vendor := "CannonKeys"
 
@@ -169,7 +169,7 @@ func (s *ListSwitchesSuite) TestListSwitches_OwnerShowPriceToMeFalse_KeepsRestOf
 }
 
 func (s *ListSwitchesSuite) TestListSwitches_NonOwnerShowPriceToOthersFalse_OmitsPrice() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 	price := 8.50
 
 	s.mockRepo.EXPECT().
@@ -188,7 +188,7 @@ func (s *ListSwitchesSuite) TestListSwitches_NonOwnerShowPriceToOthersFalse_Omit
 }
 
 func (s *ListSwitchesSuite) TestListSwitches_NonOwnerShowPriceToOthersTrue_IncludesPrice() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 	price := 8.50
 
 	s.mockRepo.EXPECT().
@@ -291,7 +291,7 @@ func (s *GetSwitchSuite) newRequest(ctx context.Context) *http.Request {
 }
 
 func (s *GetSwitchSuite) TestGetSwitch_Owner_Succeeds() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	s.prefs = repository.DefaultProfilePreferences()
 
 	s.mockRepo.EXPECT().
@@ -336,7 +336,7 @@ func (s *GetSwitchSuite) TestGetSwitch_AnonymousReadingPrivateSwitch_Returns404(
 }
 
 func (s *GetSwitchSuite) TestGetSwitch_OtherUserReadingAuthenticatedSwitch_Succeeds() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	s.mockRepo.EXPECT().
 		Get(mock.Anything, "alice", "sw1").
@@ -354,7 +354,7 @@ func (s *GetSwitchSuite) TestGetSwitch_OtherUserReadingAuthenticatedSwitch_Succe
 }
 
 func (s *GetSwitchSuite) TestGetSwitch_NonOwnerShowPriceToOthersTrue_IncludesPrice() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 	price := 8.50
 
 	s.mockRepo.EXPECT().
@@ -376,7 +376,7 @@ func (s *GetSwitchSuite) TestGetSwitch_NonOwnerShowPriceToOthersTrue_IncludesPri
 }
 
 func (s *GetSwitchSuite) TestGetSwitch_NonOwnerShowPriceToOthersFalse_OmitsPrice() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 	price := 8.50
 
 	s.mockRepo.EXPECT().
@@ -397,7 +397,7 @@ func (s *GetSwitchSuite) TestGetSwitch_NonOwnerShowPriceToOthersFalse_OmitsPrice
 }
 
 func (s *GetSwitchSuite) TestGetSwitch_Owner_AlwaysIncludesPriceAndCurrency() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "alice")
+	ctx := apictx.WithUserID(s.T().Context(), "alice")
 	price := 8.50
 
 	s.mockRepo.EXPECT().
@@ -421,7 +421,7 @@ func (s *GetSwitchSuite) TestGetSwitch_Owner_AlwaysIncludesPriceAndCurrency() {
 }
 
 func (s *GetSwitchSuite) TestGetSwitch_OtherUserReadingPrivateSwitch_Returns404() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	s.mockRepo.EXPECT().
 		Get(mock.Anything, "alice", "sw1").
@@ -504,7 +504,7 @@ func (s *CreateSwitchSuite) newRequest(ctx context.Context, body string) *http.R
 }
 
 func (s *CreateSwitchSuite) ownerCtx() context.Context {
-	return kbdbctx.WithUserID(s.T().Context(), "alice")
+	return apictx.WithUserID(s.T().Context(), "alice")
 }
 
 func (s *CreateSwitchSuite) TestCreateSwitch_Succeeds() {
@@ -599,7 +599,7 @@ func (s *CreateSwitchSuite) TestCreateSwitch_MultipleInvalidFields_NamesAll() {
 }
 
 func (s *CreateSwitchSuite) TestCreateSwitch_NotOwner_Returns404() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	req := s.newRequest(ctx, `{"brand":"Gateron","name":"Yellow","type":"Linear"}`)
 	rec := httptest.NewRecorder()
@@ -719,7 +719,7 @@ func (s *UpdateSwitchSuite) newRequest(ctx context.Context, body string) *http.R
 }
 
 func (s *UpdateSwitchSuite) ownerCtx() context.Context {
-	return kbdbctx.WithUserID(s.T().Context(), "alice")
+	return apictx.WithUserID(s.T().Context(), "alice")
 }
 
 func (s *UpdateSwitchSuite) TestUpdateSwitch_Succeeds() {
@@ -814,7 +814,7 @@ func (s *UpdateSwitchSuite) TestUpdateSwitch_MultipleInvalidFields_NamesAll() {
 }
 
 func (s *UpdateSwitchSuite) TestUpdateSwitch_NotOwner_Returns404() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	req := s.newRequest(ctx, `{"brand":"Gateron","name":"Yellow","type":"Linear"}`)
 	rec := httptest.NewRecorder()
@@ -939,7 +939,7 @@ func (s *DeleteSwitchSuite) newRequest(ctx context.Context, onDelete string) *ht
 }
 
 func (s *DeleteSwitchSuite) ownerCtx() context.Context {
-	return kbdbctx.WithUserID(s.T().Context(), "alice")
+	return apictx.WithUserID(s.T().Context(), "alice")
 }
 
 func (s *DeleteSwitchSuite) TestDeleteSwitch_Owner_DefaultOnDelete_NoReferences_Returns204() {
@@ -1014,7 +1014,7 @@ func (s *DeleteSwitchSuite) TestDeleteSwitch_Owner_InvalidOnDelete_Returns400() 
 }
 
 func (s *DeleteSwitchSuite) TestDeleteSwitch_NotOwner_Returns404() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	rec := httptest.NewRecorder()
 	s.handler(rec, s.newRequest(ctx, ""))
@@ -1098,7 +1098,7 @@ func (s *SetSwitchImageSuite) newRequest(ctx context.Context, body string) *http
 }
 
 func (s *SetSwitchImageSuite) ownerCtx() context.Context {
-	return kbdbctx.WithUserID(s.T().Context(), "alice")
+	return apictx.WithUserID(s.T().Context(), "alice")
 }
 
 const previousSwitchImageTestKey = repository.SwitchImageKey("switches/alice/sw1/image/old-upload")
@@ -1167,7 +1167,7 @@ func (s *SetSwitchImageSuite) TestSetSwitchImage_ReplacingImage_DeletesPreviousO
 }
 
 func (s *SetSwitchImageSuite) TestSetSwitchImage_NotOwner_Returns404() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	req := s.newRequest(ctx, `{"content_type":"image/webp","size_bytes":524288}`)
 	rec := httptest.NewRecorder()
@@ -1313,7 +1313,7 @@ func (s *DeleteSwitchImageSuite) newRequest(ctx context.Context) *http.Request {
 }
 
 func (s *DeleteSwitchImageSuite) ownerCtx() context.Context {
-	return kbdbctx.WithUserID(s.T().Context(), "alice")
+	return apictx.WithUserID(s.T().Context(), "alice")
 }
 
 var deleteSwitchImageTestKey = repository.SwitchImageKey("switches/alice/sw1/image/up1")
@@ -1367,7 +1367,7 @@ func (s *DeleteSwitchImageSuite) TestDeleteSwitchImage_AlreadyAbsent_SucceedsWit
 }
 
 func (s *DeleteSwitchImageSuite) TestDeleteSwitchImage_NotOwner_Returns404() {
-	ctx := kbdbctx.WithUserID(s.T().Context(), "bob")
+	ctx := apictx.WithUserID(s.T().Context(), "bob")
 
 	req := s.newRequest(ctx)
 	rec := httptest.NewRecorder()

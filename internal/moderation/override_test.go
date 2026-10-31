@@ -174,7 +174,7 @@ func (s *OverridesSuite) TestApprove_UntagFails() {
 func (s *OverridesSuite) TestApprove_KeepsOtherTags() {
 	s.exists()
 	s.stored(testKey, repository.ImageStatusRejected)
-	s.tags(tag("team", "kbdb"), tag("moderation", "rejected"))
+	s.tags(tag("team", "mykeebs-api"), tag("moderation", "rejected"))
 	s.s3.EXPECT().PutObjectTagging(mock.Anything, mock.MatchedBy(func(in *s3.PutObjectTaggingInput) bool {
 		tags := in.Tagging.TagSet
 		return aws.ToString(in.Key) == testKey && len(tags) == 1 && aws.ToString(tags[0].Key) == "team"
@@ -316,7 +316,7 @@ func (s *OverridesSuite) TestReject_InterruptedTakedown() {
 func (s *OverridesSuite) TestReject_KeepsOtherTags() {
 	reason := "manual"
 	s.setStatus(repository.ImageStatusApproved, repository.ImageStatusRejected, &reason, true)
-	s.tags(tag("team", "kbdb"))
+	s.tags(tag("team", "mykeebs-api"))
 	s.s3.EXPECT().PutObjectTagging(mock.Anything, mock.MatchedBy(func(in *s3.PutObjectTaggingInput) bool {
 		tags := in.Tagging.TagSet
 		return len(tags) == 2 && aws.ToString(tags[0].Key) == "team" &&

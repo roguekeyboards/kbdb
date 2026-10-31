@@ -13,16 +13,16 @@ export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-us-east-2}"
 # flag, which is all samlocal wraps.
 export AWS_ENDPOINT_URL="${MYKEEBS_FLOCI_ENDPOINT:-http://localhost.floci.io:4566}"
 
-STACK="${MYKEEBS_FLOCI_STACK:-kbdb-floci}"
+STACK="${MYKEEBS_FLOCI_STACK:-mykeebs-api-floci}"
 ENDPOINT="${MYKEEBS_FLOCI_ENDPOINT:-http://localhost.floci.io:4566}"
-OIDC_BUCKET="kbdb-floci-oidc"
+OIDC_BUCKET="mykeebs-api-floci-oidc"
 # The issuer is just where the discovery doc + JWKS are published; the same
 # string is threaded to --issuer, OidcIssuerBaseUrl, and MYKEEBS_OIDC_ISSUER.
 # It must be https: floci's JWT authorizer refuses a plain-http issuer
 # unless its host is a literal private IP. floci serves http and https on
 # the same port, so only the issuer changes scheme.
 ISSUER="${ENDPOINT/#http:/https:}/$OIDC_BUCKET"
-AUDIENCE="client_local_kbdb"
+AUDIENCE="client_local_mykeebs-api"
 OIDC_TESTKIT_VERSION="v1.0.4"
 
 # floci serves TLS with a certificate from our own CA, generated before floci
@@ -39,7 +39,7 @@ if [[ ! -f "$CERT_DIR/truststore.p12" ]] ||
 
   openssl req -x509 -newkey rsa:2048 -nodes -days 3650 \
     -keyout "$CERT_DIR/ca.key" -out "$CERT_DIR/ca.crt" \
-    -subj "/CN=kbdb floci test CA" \
+    -subj "/CN=mykeebs-api floci test CA" \
     -addext "basicConstraints=critical,CA:TRUE" \
     -addext "keyUsage=critical,keyCertSign,cRLSign"
 
@@ -68,7 +68,7 @@ if [[ ! -f "$CERT_DIR/truststore.p12" ]] ||
     keytool -importkeystore -noprompt \
       -srckeystore "$JAVA_HOME/lib/security/cacerts" -srcstorepass changeit \
       -destkeystore /w/truststore.p12 -deststoretype PKCS12 -deststorepass changeit &&
-    keytool -importcert -noprompt -alias kbdb-floci-ca -file /w/ca.crt \
+    keytool -importcert -noprompt -alias mykeebs-api-floci-ca -file /w/ca.crt \
       -keystore /w/truststore.p12 -storetype PKCS12 -storepass changeit' >/dev/null 2>&1 ||
     { echo "func-setup: could not build $CERT_DIR/truststore.p12" >&2; exit 1; }
 fi
@@ -87,7 +87,7 @@ sam build
 # tries to push to a real AWS host. samconfig.toml/ci.yml already avoid
 # --resolve-image-repos for the equivalent real-AWS reason - mirror that:
 # create the repo explicitly and pass --image-repositories.
-ECR_REPO="kbdb-floci"
+ECR_REPO="mykeebs-api-floci"
 aws ecr create-repository --repository-name "$ECR_REPO" >/dev/null 2>&1 || true
 REPO_URI=$(aws ecr describe-repositories \
   --repository-names "$ECR_REPO" --query 'repositories[0].repositoryUri' --output text)
@@ -139,7 +139,7 @@ sam deploy \
   --parameter-overrides \
     "OidcIssuerBaseUrl=$ISSUER" \
     "OidcAudience=$AUDIENCE" \
-    "IdpConsentPublicToken=public-token-test-local-kbdb" \
+    "IdpConsentPublicToken=public-token-test-local-mykeebs-api" \
     "CorsAllowOrigins=http://localhost:5173" \
     "DailyUploadLimit=1000000" \
     "ImagesDomainName=$IMAGES_DOMAIN" \
